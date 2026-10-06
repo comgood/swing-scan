@@ -48,5 +48,5 @@ known-first-party = ["engine", "api"]
 [tool.mypy]
 strict = true
 python_version = "3.12"
-files = ["engine/src", "services/api/src", "engine/tests", "services/api/tests"]
+files = ["engine/src", "services/api/src", "engine/tests", "services/api/tests", "scripts"]
 mypy_path = ["engine/src", "services/api/src"]

@@ -1,0 +1,40 @@
+# Runs on every commit (install once with `make hooks`). CI reruns the same checks,
+# because local hooks can be skipped. Typecheck runs in `make typecheck` and CI only.
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
+
+  - repo: local
+    hooks:
+      - id: data-leak-guard
+        name: data leak guard (D-6)
+        entry: uv run python scripts/guards/data_leak.py
+        language: system
+      - id: oracle-guard
+        name: oracle guard (tests/oracle/ is owner only)
+        entry: uv run python scripts/guards/oracle_guard.py
+        language: system
+      - id: ruff-check
+        name: ruff check
+        entry: uv run ruff check --force-exclude
+        language: system
+        types: [python]
+      - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format --check --force-exclude
+        language: system
+        types: [python]
+      - id: eslint
+        name: eslint (web)
+        entry: pnpm --filter web lint
+        language: system
+        files: ^apps/web/
+        pass_filenames: false
+      - id: prettier
+        name: prettier (web)
+        entry: pnpm --filter web format:check
+        language: system
+        files: ^apps/web/
+        pass_filenames: false

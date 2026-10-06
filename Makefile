@@ -7,8 +7,8 @@ export PATH := $(HOME)/.local/bin:$(PATH)
 API_IMAGE ?= swing-scan-api
 API_PLATFORM ?= linux/amd64
 
-.PHONY: setup dev dev-api dev-web lint format typecheck test build-web build-api smoke \
-        test-oracle openapi gen-client data guards load-live ci
+.PHONY: setup dev dev-api dev-web lint format typecheck test hooks guards build-web build-api smoke \
+        test-oracle openapi gen-client data load-live ci
 
 setup: ## Install all JS and Python dependencies from the lockfiles
 	pnpm install --frozen-lockfile
@@ -47,8 +47,15 @@ build-web: ## Static export of the web app into apps/web/out
 build-api: ## Build the Lambda container image (x86_64)
 	docker build --platform $(API_PLATFORM) -f services/api/Dockerfile -t $(API_IMAGE) .
 
+hooks: ## Install the pre-commit hooks into .git/hooks (run once per clone)
+	uv run pre-commit install
+
+guards: ## Data leak guard on every tracked file, plus gitleaks over the files
+	uv run python scripts/guards/data_leak.py --all
+	uv run pre-commit run gitleaks --all-files
+
 smoke: ## Smoke test a deployed API: make smoke API_URL=https://...
 	scripts/smoke.sh "$(API_URL)"
 
-test-oracle openapi gen-client data guards load-live ci:
+test-oracle openapi gen-client data load-live ci:
 	@echo "make $@ is not implemented yet (see docs/scope/scope.md, features 2, 3, 6, 7 and 14)"; exit 1
