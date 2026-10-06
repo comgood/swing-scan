@@ -1,0 +1,1 @@
+"""Swing Scan HTTP API."""

@@ -1,0 +1,13 @@
+[project]
+name = "swing-engine"
+version = "0.1.0"
+description = "Swing Scan trading logic: data, indicators, rules, exits, simulator. Must not import any web framework."
+requires-python = ">=3.12,<3.13"
+dependencies = []
+
+[build-system]
+requires = ["uv_build>=0.9,<1"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "engine"

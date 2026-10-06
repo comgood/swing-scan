@@ -1,0 +1,26 @@
+[project]
+name = "swing-scan"
+version = "0.1.0"
+description = "Swing Scan monorepo root (uv workspace). Not a package; see engine/ and services/api/."
+requires-python = ">=3.12,<3.13"
+dependencies = ["swing-engine", "swing-api"]
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["engine", "services/api"]
+
+[tool.uv.sources]
+swing-engine = { workspace = true }
+swing-api = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "httpx>=0.28",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["services/api/tests", "engine/tests"]
+addopts = "-ra"

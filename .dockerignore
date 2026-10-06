@@ -1,0 +1,9 @@
+**
+!pyproject.toml
+!uv.lock
+!.python-version
+!engine/
+!services/api/
+**/__pycache__
+**/.pytest_cache
+**/tests

@@ -1,0 +1,14 @@
+{
+  "name": "swing-scan",
+  "private": true,
+  "description": "Swing trading scanner and research tool (portfolio project, not investment advice)",
+  "packageManager": "pnpm@12.9.1",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev:web": "pnpm --filter web dev",
+    "build:web": "pnpm --filter web build",
+    "lint:web": "pnpm --filter web lint"
+  }
+}

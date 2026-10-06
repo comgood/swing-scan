@@ -1,0 +1,20 @@
+[project]
+name = "swing-api"
+version = "0.1.0"
+description = "Swing Scan HTTP API: a thin FastAPI layer over the engine package."
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "swing-engine",
+    "fastapi>=0.115",
+    "uvicorn>=0.32",
+]
+
+[build-system]
+requires = ["uv_build>=0.9,<1"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "api"
+
+[tool.uv.sources]
+swing-engine = { workspace = true }

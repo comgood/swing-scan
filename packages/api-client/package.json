@@ -1,0 +1,6 @@
+{
+  "name": "@swing-scan/api-client",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Typed client generated from contracts/openapi.json (filled in by the contracts feature)"
+}
