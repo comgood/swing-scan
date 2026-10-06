@@ -1,0 +1,39 @@
+# Lane ownership from doc 02 section 15.2. Replace @OWNER with your GitHub username once
+# the repo exists. All lanes run under one account, so every path resolves to the owner;
+# the lane comments say which agent writes there.
+
+# Default: the owner reviews everything.
+*                         @OWNER
+
+# Owner only, never edited by agents (also guarded by pre-commit and the CI label check).
+/tests/oracle/            @OWNER
+
+# DI lane: root config, CI, infra, data generation.
+/Makefile                 @OWNER
+/pyproject.toml           @OWNER
+/package.json             @OWNER
+/.pre-commit-config.yaml  @OWNER
+/.github/                 @OWNER
+/infra/                   @OWNER
+/scripts/                 @OWNER
+
+# BE lane: engine domain modules and the API.
+/engine/                  @OWNER
+/services/api/            @OWNER
+# DI owns these (listed after /engine/ and /services/api/ because the last match wins).
+/services/api/Dockerfile  @OWNER
+/engine/src/engine/synthetic/  @OWNER
+/engine/src/engine/data/  @OWNER
+
+# FE lane: the web app.
+/apps/web/                @OWNER
+
+# QA lane: acceptance tests, golden references, test plan.
+/tests/acceptance/        @OWNER
+/tests/golden/            @OWNER
+/apps/web/tests/acceptance/  @OWNER
+/docs/qa/                 @OWNER
+
+# Contracts: owner approves every change (contract-change PRs).
+/contracts/               @OWNER
+/packages/api-client/     @OWNER

@@ -57,5 +57,7 @@ guards: ## Data leak guard on every tracked file, plus gitleaks over the files
 smoke: ## Smoke test a deployed API: make smoke API_URL=https://...
 	scripts/smoke.sh "$(API_URL)"
 
-test-oracle openapi gen-client data load-live ci:
+ci: lint typecheck test build-web guards ## Every check CI runs, in one command
+
+test-oracle openapi gen-client data load-live:
 	@echo "make $@ is not implemented yet (see docs/scope/scope.md, features 2, 3, 6, 7 and 14)"; exit 1
