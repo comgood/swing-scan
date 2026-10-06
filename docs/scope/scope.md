@@ -14,7 +14,7 @@ _Source of truth: acceptance criteria IDs (D, R, S, B, X, U) and settled default
 | # | Feature | Phase | Status |
 |---|---------|-------|--------|
 | 1 | Stack & architecture | Foundation | in-progress |
-| 2 | Coding standards & tooling | Foundation | planned |
+| 2 | Coding standards & tooling | Foundation | in-progress |
 | 3 | Contracts & data model | Foundation | planned |
 | 4 | Design system & UI foundation | Foundation | planned |
 | 5 | Acceptance test harness & traceability | Foundation | planned |
@@ -43,10 +43,16 @@ Lane DI. Record the stack already chosen in doc 02 (Next.js on Vercel Hobby, Fas
 - [ ] Test it: `/test stack & architecture`
 Spec [0001](../specs/0001-stack-architecture/index.md) · code in `./` (`apps/web`, `services/api`, `engine`)
 
-### 2. Coding standards & tooling · planned
+### 2. Coding standards & tooling · in-progress
 Lane DI. Capture conventions from the real scaffold into root `AGENTS.md` (including lane ownership, the protected `tests/oracle/` folder, and the no real data rule), then install lint, format, typecheck, CI, secret scanning, the data leak guard, and `CODEOWNERS`.
 **Done when:** root `AGENTS.md` reflects the real stack and lanes, CI runs lint, typecheck and tests on every PR, and a commit with price data or an API key is blocked (D-6).
-- [ ] Capture conventions + tooling choices: `/audit`
+- [x] Capture conventions + tooling choices: `/audit`
+- [x] Build it: `/develop tooling`
+  - [x] Ruff lint and format, mypy strict (engine, api, scripts)
+  - [x] Prettier with ESLint in the web app
+  - [x] pre-commit: gitleaks, data leak guard (D-6), oracle guard
+  - [x] CI (checks + guards, oracle label check), `CODEOWNERS`, `make ci`
+Spec [0001](../specs/0001-stack-architecture/index.md) · code in `.pre-commit-config.yaml`, `.github/`, `scripts/guards/`, `Makefile`
 
 ### 3. Contracts & data model · planned · needs a decision
 Lane orchestrator with your sign off. Freeze the shared shapes every lane builds against: rule JSON schema with Pydantic and generated TypeScript types, the bars schema, the exit config schema, the OpenAPI contract with mock responses, and the test fixture format.
