@@ -25,10 +25,12 @@ dev-web:
 
 lint: ## Lint and check formatting for web and Python
 	pnpm --filter web lint
+	pnpm --filter web format:check
 	uv run ruff check .
 	uv run ruff format --check .
 
 format: ## Apply formatting to web and Python
+	pnpm --filter web format
 	uv run ruff check --fix .
 	uv run ruff format .
 
