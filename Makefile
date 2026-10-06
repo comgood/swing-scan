@@ -7,7 +7,7 @@ export PATH := $(HOME)/.local/bin:$(PATH)
 API_IMAGE ?= swing-scan-api
 API_PLATFORM ?= linux/amd64
 
-.PHONY: setup dev dev-api dev-web lint typecheck test build-web build-api smoke \
+.PHONY: setup dev dev-api dev-web lint format typecheck test build-web build-api smoke \
         test-oracle openapi gen-client data guards load-live ci
 
 setup: ## Install all JS and Python dependencies from the lockfiles
@@ -23,11 +23,18 @@ dev-api:
 dev-web:
 	pnpm --filter web dev
 
-lint: ## Lint the web app (Python lint arrives with the tooling feature)
+lint: ## Lint and check formatting for web and Python
 	pnpm --filter web lint
+	uv run ruff check .
+	uv run ruff format --check .
 
-typecheck: ## Typecheck the web app
+format: ## Apply formatting to web and Python
+	uv run ruff check --fix .
+	uv run ruff format .
+
+typecheck: ## Typecheck the web app (tsc) and Python (mypy strict on engine and api)
 	pnpm --filter web typecheck
+	uv run mypy
 
 test: ## Run the Python test suite
 	uv run pytest

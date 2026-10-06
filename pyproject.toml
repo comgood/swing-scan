@@ -19,8 +19,34 @@ swing-api = { workspace = true }
 dev = [
     "pytest>=8.3",
     "httpx>=0.28",
+    "ruff>=0.16.10",
+    "mypy>=2.4.0",
+    "pre-commit>=4.6.2",
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["services/api/tests", "engine/tests"]
 addopts = "-ra"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = [".claude", ".agents", "docs"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "S"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["engine", "api"]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests use assert, and scripts run git as a subprocess on purpose.
+"**/tests/**" = ["S101", "S603"]
+"tests/**" = ["S101"]
+"scripts/**" = ["S603", "S607"]
+
+[tool.mypy]
+strict = true
+python_version = "3.12"
+files = ["engine/src", "services/api/src", "engine/tests", "services/api/tests"]
+mypy_path = ["engine/src", "services/api/src"]
