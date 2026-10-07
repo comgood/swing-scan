@@ -73,6 +73,12 @@
       "skillPath": "skills/pnpm/SKILL.md",
       "computedHash": "d1bd6f4fd38ff1ba33b857223c58a832d1cd5b488163ba0d389db449be472603"
     },
+    "pydantic": {
+      "source": "pydantic/skills",
+      "sourceType": "github",
+      "skillPath": "skills/pydantic/SKILL.md",
+      "computedHash": "65f68dbab0f7e60bfd26998350d674a104848daf23311067e0829758a7cf6f91"
+    },
     "python-testing-patterns": {
       "source": "wshobson/agents",
       "sourceType": "github",

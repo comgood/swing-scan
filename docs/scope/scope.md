@@ -15,7 +15,7 @@ _Source of truth: acceptance criteria IDs (D, R, S, B, X, U) and settled default
 |---|---------|-------|--------|
 | 1 | Stack & architecture | Foundation | in-progress |
 | 2 | Coding standards & tooling | Foundation | done |
-| 3 | Contracts & data model | Foundation | planned |
+| 3 | Contracts & data model | Foundation | in-progress |
 | 4 | Design system & UI foundation | Foundation | planned |
 | 5 | Acceptance test harness & traceability | Foundation | planned |
 | 6 | Backtest correctness oracles | Foundation | planned |
@@ -54,10 +54,18 @@ Lane DI. Capture conventions from the real scaffold into root `AGENTS.md` (inclu
   - [x] CI (checks + guards, oracle label check), `CODEOWNERS`, `make ci`
 Spec [0001](../specs/0001-stack-architecture/index.md) · code in `.pre-commit-config.yaml`, `.github/`, `scripts/guards/`, `Makefile`
 
-### 3. Contracts & data model · planned · needs a decision
+### 3. Contracts & data model · in-progress
 Lane orchestrator with your sign off. Freeze the shared shapes every lane builds against: rule JSON schema with Pydantic and generated TypeScript types, the bars schema, the exit config schema, the OpenAPI contract with mock responses, and the test fixture format.
 **Done when:** contracts are tagged `contracts-v1`, mocks validate against the schema in CI, the generated client compiles, and you have signed off SO-1 to SO-3.
-- [ ] Design it (spec): `/architect contracts & data model`
+- [x] Design it (spec): `/architect contracts & data model`
+- [ ] Build it: `/develop contracts & data model`
+  - [ ] Thin thread: rule models, `/scan` (422 then 501), OpenAPI and generated client, one mock through MSW in Vitest (AC-1, AC-2, AC-5, AC-6, AC-13, AC-15)
+  - [ ] Full shapes: exits, sim, backtest responses, static GET routes, trial keys (AC-3, AC-4, AC-6 to AC-9, AC-14)
+  - [ ] Data and fixtures: market schema, `validate_market`, fixture loader and builder (AC-10, AC-11)
+  - [ ] Mocks and freeze: `make mocks`, every MSW handler, CI drift checks, SO-2 and SO-3, tag `contracts-v1` (AC-1, AC-12, AC-13, AC-16)
+- [ ] Verify it: `/check verify contracts & data model`
+- [ ] Test it: `/test contracts & data model`
+Spec [0002](../specs/0002-contracts-data-model/index.md)
 
 ### 4. Design system & UI foundation · planned · needs a decision
 Lane FE. A small, calm visual language and base components: page layout, data table, form controls, number inputs, banners, and loading and error states.
