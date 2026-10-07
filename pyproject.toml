@@ -25,7 +25,7 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["services/api/tests", "engine/tests"]
+testpaths = ["services/api/tests", "engine/tests", "tests/golden", "tests/acceptance"]
 addopts = "-ra"
 
 [tool.ruff]
@@ -39,7 +39,7 @@ select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "S"]
 allowed-confusables = ["×"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["engine", "api"]
+known-first-party = ["engine", "api", "acceptance", "golden"]
 
 [tool.ruff.lint.per-file-ignores]
 # Tests use assert, and scripts run git as a subprocess on purpose.
@@ -50,5 +50,13 @@ known-first-party = ["engine", "api"]
 [tool.mypy]
 strict = true
 python_version = "3.12"
-files = ["engine/src", "services/api/src", "engine/tests", "services/api/tests", "scripts"]
-mypy_path = ["engine/src", "services/api/src"]
+files = [
+    "engine/src",
+    "services/api/src",
+    "engine/tests",
+    "services/api/tests",
+    "tests/acceptance",
+    "tests/golden",
+    "scripts",
+]
+mypy_path = ["engine/src", "services/api/src", "tests"]

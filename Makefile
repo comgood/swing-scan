@@ -7,8 +7,8 @@ export PATH := $(HOME)/.local/bin:$(PATH)
 API_IMAGE ?= swing-scan-api
 API_PLATFORM ?= linux/amd64
 
-.PHONY: setup dev dev-api dev-web lint format typecheck test hooks guards build-web build-api smoke \
-        test-oracle openapi gen-client mocks contracts contracts-check data load-live ci
+.PHONY: setup dev dev-api dev-web lint format typecheck test test-acceptance hooks guards build-web \
+        build-api smoke test-oracle openapi gen-client mocks contracts contracts-check data load-live ci
 
 setup: ## Install all JS and Python dependencies from the lockfiles
 	pnpm install --frozen-lockfile
@@ -42,6 +42,9 @@ typecheck: ## Typecheck the web app and API client (tsc) and Python (mypy strict
 test: ## Run the Python suite, then the web Vitest suite (MSW on by default)
 	uv run pytest
 	pnpm --filter web test
+
+test-acceptance: ## QA acceptance and golden suites; only IDs marked required in status.yaml can fail
+	uv run pytest tests/golden tests/acceptance -rfEX
 
 openapi: ## Write contracts/openapi.json from the FastAPI app (spec 0002)
 	uv run python scripts/export_openapi.py

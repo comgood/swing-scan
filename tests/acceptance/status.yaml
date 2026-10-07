@@ -1,0 +1,73 @@
+# Acceptance gate (doc 02 section 15.4). One line per MUST criterion in doc 01 section 6.
+#
+#   pending   the tests run and report, but never fail CI (they run as non strict xfail)
+#   required  any failing test for this ID fails CI
+#
+# QA flips an ID to `required` in a follow up PR once its tests pass on `main`.
+# Builders never edit this file. Disputed IDs stay `pending` until the ruling in
+# docs/qa/ac-questions.md. The matrix in docs/qa/traceability.md mirrors this file, and
+# tests/acceptance/test_traceability.py fails when the two disagree.
+
+# Data
+D-1: pending
+D-2: pending
+D-3: pending
+D-4: pending
+D-5: pending
+D-6: required
+
+# Rule builder
+R-1: pending
+R-2: pending
+R-3: pending
+R-4: pending
+R-5: pending
+R-6: required
+R-7: pending
+R-8: pending
+R-9: required
+R-10: pending
+
+# Scan
+S-1: pending
+S-2: pending
+S-3: pending
+S-4: pending
+
+# Backtest and exits
+B-1: pending
+B-2: pending
+B-3: pending
+B-4: pending
+B-5: pending
+B-6: pending
+B-7: pending
+B-8: pending
+B-9: pending
+B-10: pending
+B-11: pending
+B-13: pending
+B-14: pending
+B-15: pending
+B-16: pending
+
+# Exit lab
+X-1: pending
+X-2: pending
+X-3: pending
+X-4: pending
+X-5: pending
+X-7: pending
+X-8: pending
+X-9: pending
+X-10: pending
+
+# UI and honesty
+U-1: pending
+U-2: pending
+U-3: pending
+U-4: pending
+U-5: pending
+U-6: pending
+U-7: pending
+U-8: pending
