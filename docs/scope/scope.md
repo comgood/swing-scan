@@ -19,7 +19,7 @@ _Source of truth: acceptance criteria IDs (D, R, S, B, X, U) and settled default
 | 4 | Design system & UI foundation | Foundation | done |
 | 5 | Acceptance test harness & traceability | Foundation | done |
 | 6 | Backtest correctness oracles | Foundation | planned |
-| 7 | Synthetic market | Slice 1 | planned |
+| 7 | Synthetic market | Slice 1 | in-progress |
 | 8 | Template scan | Slice 1 | planned |
 | 9 | Portfolio backtest core | Slice 1 | planned |
 | 10 | Rule builder | Slice 2 | planned |
@@ -146,10 +146,10 @@ Lane QA drafts, you approve. Hand computed fixtures for each fill and exit rule 
 
 Generated data, one template scan, one simple backtest, shown on the deployed page. Every layer real, just narrow.
 
-### 7. Synthetic market · planned
+### 7. Synthetic market · in-progress
 Lane DI. A seeded generated market of 500 invented tickers over 5 years with regimes, planted delistings, and a demo index, built into the API image.
 **Done when:** the same seed gives identical data, every bar passes sanity checks, and at least one bear segment and 20 delisted tickers exist (D-1 to D-3).
-- [ ] Build it: `/develop synthetic market`
+- [x] Build it: `/develop synthetic market` · spec [0006](../specs/0006-synthetic-market/index.md) (assumed decision, owes `/architect synthetic market` to ratify) · code in `engine/src/engine/synthetic/`, `engine/src/engine/data/`
 
 ### 8. Template scan · planned · needs a decision
 Lanes BE and FE. Indicators, rule evaluation with the valid rising edge and the signal based cooldown, the two templates, the `/scan` endpoint, and a sortable results table on the landing page.
