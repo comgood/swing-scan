@@ -64,7 +64,7 @@ Lane orchestrator with your sign off. Freeze the shared shapes every lane builds
   - [x] Data and fixtures: market schema, `validate_market`, fixture loader and builder (AC-10, AC-11)
   - [ ] Mocks and freeze: `make mocks`, every MSW handler, CI drift checks, SO-2 and SO-3, tag `contracts-v1` (AC-1, AC-12, AC-13, AC-16) (built; your SO-2 and SO-3 sign offs and the `contracts-v1` tag at merge are still open)
 - [ ] Verify it: `/check verify contracts & data model`
-- [ ] Test it: `/test contracts & data model`
+- [x] Test it: `/test contracts & data model`
 Spec [0002](../specs/0002-contracts-data-model/index.md) · code in `engine/src/engine/contracts/`, `engine/src/engine/data/fixtures.py`, `services/api/src/api/routes/`, `contracts/`, `packages/api-client/`, `apps/web/src/mocks/`
 
 ### 4. Design system & UI foundation · planned · needs a decision

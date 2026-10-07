@@ -1,0 +1,9 @@
+{
+  "tool": "pytest",
+  "gate": null,
+  "additionalTools": ["vitest"],
+  "e2eTool": "none",
+  "testDir": "engine/tests and services/api/tests (pytest, test_*.py); beside the source in apps/web (vitest, *.test.ts)",
+  "filePattern": "test_*.py / *.test.ts",
+  "packageManager": "pnpm (web), uv (python)"
+}

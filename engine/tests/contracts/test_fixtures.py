@@ -74,6 +74,11 @@ HEADER = "ticker,bar,open,high,low,close,volume\n"
         ("AAA,1,1,1,x,1,1\n", "low is 'x'"),
         ("AAA,1,1,1,1,1,1\nAAA,3,1,1,1,1,1\n", "gap in bars"),
         ("AAA,1,1,1,1,1,1\nAAA,2,1,1,1,1,1\nFIXTURE-INDEX,2,1,1,1,1,1\n", "must cover every bar"),
+        ("AAA,1.5,1,1,1,1,1\n", "not a 1 based integer"),
+        ("AAA,0,1,1,1,1,1\n", "not a 1 based integer"),
+        ("AAA,1,1,1,1,1,1\nAAA,1,1,1,1,1,1\n", "appears twice"),
+        (",1,1,1,1,1,1\n", "ticker is blank"),
+        ("AAA,1,1,1,1,1\n", "expected 7 values"),
     ],
 )
 def test_load_errors(tmp_path: Path, body: str, message: str) -> None:
@@ -141,3 +146,29 @@ def test_make_market_close_only_defaults_and_long_series() -> None:
 def test_make_market_rejects_an_end_bar_before_the_data() -> None:
     with pytest.raises(FixtureError, match="end_bar"):
         make_market({"A": FrameSpec(1, [1.0, 2.0])}, end_bar=1)
+
+
+def test_comment_lines_are_ignored(tmp_path: Path) -> None:  # covers: AC-11
+    body = (
+        "# hand math: 10 * 1.1 = 11\n"
+        + HEADER
+        + "# bar 2 below\nAAA,1,10,10,10,10,1\nAAA,2,11,11,11,11,1\n"
+    )
+    market = load_fixture(write(tmp_path, "commented.csv", body))
+    assert market.bars.filter(pl.col("ticker") == "AAA")["close"].to_list() == [10.0, 11.0]
+
+
+def test_a_csv_benchmark_is_kept_instead_of_the_flat_one(tmp_path: Path) -> None:
+    body = HEADER + "AAA,1,1,1,1,1,1\nFIXTURE-INDEX,1,50,50,50,50,1\n"
+    market = load_fixture(write(tmp_path, "own_index.csv", body))
+    assert market.bars.filter(pl.col("ticker") == BENCHMARK)["close"].to_list() == [50.0]
+
+
+def test_frame_spec_rejects_mismatched_list_lengths() -> None:
+    with pytest.raises(ValueError, match="open has 1 values"):
+        make_market({"A": FrameSpec(1, [1.0, 2.0], open=[1.0])})
+
+
+def test_bar_numbers_start_at_one() -> None:
+    with pytest.raises(ValueError):
+        bar_date(0)

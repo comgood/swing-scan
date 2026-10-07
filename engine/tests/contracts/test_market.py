@@ -78,3 +78,20 @@ CASES: list[tuple[str, Breaker, str]] = [
 def test_each_problem_is_named(market: Market, label: str, breaker: Breaker, message: str) -> None:
     with pytest.raises(MarketError, match=message.replace("(", r"\(").replace(")", r"\)")):
         validate_market(breaker(market))
+
+
+def test_duplicate_securities_are_named(market: Market) -> None:  # covers: AC-10
+    doubled = replace(market, securities=pl.concat([market.securities, market.securities.head(1)]))
+    with pytest.raises(MarketError, match="duplicate tickers"):
+        validate_market(doubled)
+
+
+def test_every_key_problem_is_listed_at_once(market: Market) -> None:  # covers: AC-10
+    broken = replace(
+        market,
+        bars=market.bars.reverse(),
+        meta=market.meta.model_copy(update={"benchmark": "NOPE"}),
+    )
+    with pytest.raises(MarketError) as caught:
+        validate_market(broken)
+    assert len(caught.value.problems) == 2

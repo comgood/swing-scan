@@ -138,3 +138,75 @@ def test_no_entries_mock_is_all_null() -> None:
     assert data["trades"] == [] and data["metrics"]["is"]["n_trades"] == 0
     assert data["metrics"]["is"]["cagr_pct"] is None
     assert [w["code"] for w in data["warnings"]] == ["no_entries"]
+
+
+def test_scan_and_backtest_declare_their_501_in_openapi() -> None:  # covers: AC-6
+    paths = json.loads((ROOT / "contracts" / "openapi.json").read_text())["paths"]
+    for path in ("/api/v1/scan", "/api/v1/backtest"):
+        responses = paths[path]["post"]["responses"]
+        assert {"200", "422", "501"} <= set(responses)
+
+
+def _reject_constant(name: str) -> None:
+    raise ValueError(f"non finite number {name} in a mock")
+
+
+@pytest.mark.parametrize("name", sorted(MODELS))
+def test_mocks_hold_no_nan_or_infinity(name: str) -> None:  # covers: AC-14
+    json.loads((MOCKS / name).read_text(), parse_constant=_reject_constant)
+
+
+DATE_KEYS = ("date", "as_of", "oos_start", "start", "end", "entry_date", "exit_date")
+
+
+def _dates(value: Any) -> list[str]:
+    found: list[str] = []
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if key in DATE_KEYS and isinstance(item, str):
+                found.append(item)
+            found.extend(_dates(item))
+    elif isinstance(value, list):
+        for item in value:
+            found.extend(_dates(item))
+    return found
+
+
+def test_every_mock_date_is_yyyy_mm_dd() -> None:  # covers: AC-14
+    import re
+
+    dates = [d for name in MODELS if not name.startswith("4") for d in _dates(load(name))]
+    assert len(dates) > 1000
+    assert all(re.fullmatch(r"\d{4}-\d{2}-\d{2}", d) for d in dates)
+
+
+def test_strided_equity_keeps_first_last_and_oos_start() -> None:  # covers: AC-14
+    data = load("backtest.portfolio.json")
+    days = [p["date"] for p in data["equity"]]
+    assert len(days) <= 500 and days == sorted(days)
+    assert data["oos_start"] in days
+    assert days[0] < data["oos_start"] < days[-1]
+
+
+def test_assumptions_follow_the_mode() -> None:  # Value sourcing: assumptions per mode
+    portfolio = load("backtest.portfolio.json")["assumptions"]
+    lab = load("backtest.trade_lab.json")["assumptions"]
+    assert (
+        portfolio["sizing"],
+        portfolio["same_ticker_overlap"],
+        portfolio["horizon_bars"],
+        portfolio["seed"],
+    ) == ("equal_weight", False, None, None)
+    assert (lab["sizing"], lab["same_ticker_overlap"], lab["max_positions"]) == (
+        "unit_notional",
+        True,
+        None,
+    )
+    assert portfolio["baseline_config_index"] == lab["baseline_config_index"] == 0
+
+
+def test_best_is_never_points_at_a_missing_value() -> None:  # Value sourcing: best_is
+    data = load("backtest.trade_lab.json")
+    for metric, index in data["best_is"].items():
+        if index is not None:
+            assert data["rows"][index]["strategy"]["is"][metric] is not None
