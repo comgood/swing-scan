@@ -34,6 +34,8 @@ make build-api                 # Lambda image, linux/amd64
 - `DATA_MODE` is `synthetic` only until scope feature 14; live mode must refuse to start on Lambda, in CI, or bound to anything but `127.0.0.1` (D-5).
 - Function URLs do not compress responses, so `GZipMiddleware` stays on.
 - After any schema change run `make openapi` and `make gen-client` and commit both outputs; CI fails on a diff.
+- The image generates the market into `/data` and sets `SYNTHETIC_DATA_DIR=/data`; routes load it with `engine.data.read_market()` (wired with feature 8, spec 0005).
+- On Apple Silicon `make build-api` (linux/amd64) segfaults at the data step: Polars crashes under x86 emulation. Check locally with an arm64 copy of the Dockerfile; the real x86 build runs on CI or at deploy.
 
 ## Related specs
 

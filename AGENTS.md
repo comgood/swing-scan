@@ -24,6 +24,8 @@ make hooks      # once per clone: install the pre-commit hooks
 make lint && make typecheck
 make format     # apply Prettier and Ruff fixes
 make test       # pytest (oracle tests first once they exist)
+make test-acceptance  # QA golden + acceptance suites; only `required` IDs can fail
+make data       # generate the synthetic market into data/synthetic (gitignored), SEED=42
 make ci         # every check CI runs, in one command
 ```
 
