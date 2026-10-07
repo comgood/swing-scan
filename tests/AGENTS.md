@@ -11,12 +11,14 @@ Repo level test suites that check the engine and API from the outside: owner app
 | `oracle/` | Owner written correctness oracles (protected, owner only) |
 | `acceptance/` | QA tests written from criteria IDs and contracts; `status.yaml` marks each ID `pending` or `required` |
 | `golden/` | QA's naive loop based reference implementations (R-2, B-14 to B-16, S-3) |
+| `../apps/web/tests/acceptance/` | QA's Vitest UI acceptance tests (U-1, U-2, U-5 to U-7), run by the web suite |
 
 ## Commands
 
 ```bash
-make test-oracle   # oracles only, stop on first failure (arrives with scope feature 6)
+make test-oracle   # placeholder until the DI lane wires it; meanwhile `uv run pytest tests/oracle -x` (fails until feature 9 builds the simulator)
 uv run pytest tests/acceptance
+make test-acceptance   # golden + acceptance, with the gate summary
 ```
 
 ## Conventions
@@ -26,6 +28,8 @@ uv run pytest tests/acceptance
 - Acceptance tests call `engine.api.scan`, `engine.api.backtest` and FastAPI's `TestClient`, never engine internals.
 - CI blocks only on `required` IDs. QA flips an ID to `required` once it passes on `main`; builders never edit QA files.
 - A disputed criterion goes to `docs/qa/ac-questions.md#<ID>`; the test stays `pending` until the ruling.
+- Every acceptance test carries `@pytest.mark.ac("<ID>")`; a missing or unknown ID aborts collection. `test_traceability.py` fails when `status.yaml`, `docs/qa/traceability.md` and the markers fall out of step.
+- `oracle/` is not in the default `testpaths`, so the oracles (failing until the engine exists) never turn `make test` red.
 
 ## Related specs
 

@@ -18,7 +18,7 @@ _Source of truth: acceptance criteria IDs (D, R, S, B, X, U) and settled default
 | 3 | Contracts & data model | Foundation | done |
 | 4 | Design system & UI foundation | Foundation | done |
 | 5 | Acceptance test harness & traceability | Foundation | done |
-| 6 | Backtest correctness oracles | Foundation | planned |
+| 6 | Backtest correctness oracles | Foundation | done |
 | 7 | Synthetic market | Slice 1 | in-progress |
 | 8 | Template scan | Slice 1 | in-progress |
 | 9 | Portfolio backtest core | Slice 1 | planned |
@@ -137,10 +137,10 @@ Lane QA. The independent test suite, written from doc 01 criteria and the contra
   - [x] Matrix and criteria questions in `docs/qa/`, kept in step by a harness test
 No spec (built from doc 02 section 15.4) · code in `tests/acceptance/`, `tests/golden/`, `docs/qa/`
 
-### 6. Backtest correctness oracles · planned · GA
+### 6. Backtest correctness oracles · done · GA
 Lane QA drafts, you approve. Hand computed fixtures for each fill and exit rule plus the poisoned future look ahead test, kept in the protected `tests/oracle/` folder.
 **Done when:** B-1, B-2, B-7 to B-10 and B-14 to B-16 exist with hand calculations you have recomputed and approved; agents cannot edit the folder.
-- [ ] Write and approve the oracles: `/test backtest oracles`
+- [x] Write and approve the oracles: `/test backtest oracles` (approved in PR #9, code in `tests/oracle/`)
 
 ## Slice 1: Thin real thread (walking skeleton)
 
