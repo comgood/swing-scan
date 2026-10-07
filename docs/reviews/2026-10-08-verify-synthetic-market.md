@@ -45,7 +45,9 @@ Missing surfaces: none. Not applied: none.
 These do not touch D-1 to D-3. They are worth a look when someone runs `/architect synthetic market` to ratify spec 0006.
 
 - **Delisting reason split.** The spec says "60% are `bankruptcy` … and 40% are `acquired`". The generator draws each reason as an independent coin flip with p = 0.6 (`generator.py:180`), so seed 42 gives 12 bankruptcy and 13 acquired (48%). Either the spec should say "each with probability 60%", or the generator should assign exactly `round(0.6 × 25) = 15`. Changing the generator changes the data, so it would need a `data_version` bump.
-- **Test folder name.** The spec's code area lists `engine/tests/data/`; the real folder is `engine/tests/dataset/` (likely renamed so it does not shadow the `data` name). The spec line is stale.
+- **Test folder name.** The spec's code area lists `engine/tests/data/`; the real folder is `engine/tests/dataset/` (per `engine/AGENTS.md`, because `.gitignore` ignores every folder named `data/`). The spec line is stale.
+- **Session ranges.** Mid sample listings draw from sessions `[round(0.2n), round(0.8n)]` = [252, 1,008] (spec says [252, 1,000]), and delistings from `[round(0.16n), n − 20)` = [202, 1,239] (spec says [200, 1,240]). Small, harmless differences; the ratified spec should state whichever is intended.
+- **QA acceptance hook owed.** `tests/acceptance/test_data.py` holds D-1 to D-3 as `pending`, failing with `owed: entry point that generates the synthetic market for seed 42 (feature 7)`. The entry point exists (`engine.synthetic.generate`, `engine.data.read_market`); the QA lane can now wire the hook and flip D-1 to D-3 to `required`.
 
 ## For /check review
 
