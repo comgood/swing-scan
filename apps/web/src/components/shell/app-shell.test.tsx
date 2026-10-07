@@ -61,4 +61,11 @@ describe("AppShell (AC-3, AC-4)", () => {
     );
     await screen.findByText(/API ready/);
   });
+
+  it("does not link to the hidden /ui gallery from the shell (AC-15)", async () => {
+    renderShell();
+    const hrefs = screen.getAllByRole("link").map((link) => link.getAttribute("href"));
+    expect(hrefs).toEqual(["#main", "/"]);
+    await screen.findByText(/API ready/);
+  });
 });

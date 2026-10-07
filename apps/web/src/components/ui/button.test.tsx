@@ -44,6 +44,20 @@ describe("Button loading (AC-5)", () => {
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
+  it("requires an aria-label for the icon size, so an icon button always has a name", () => {
+    // @ts-expect-error: size="icon" without aria-label must not compile.
+    const unnamed = <Button size="icon">+</Button>;
+    render(
+      <>
+        {unnamed}
+        <Button size="icon" aria-label="Add condition">
+          +
+        </Button>
+      </>,
+    );
+    expect(screen.getByRole("button", { name: "Add condition" })).toBeInTheDocument();
+  });
+
   it("clicks normally when not loading", async () => {
     const user = userEvent.setup();
     const onClick = vi.fn();

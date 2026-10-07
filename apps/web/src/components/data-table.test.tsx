@@ -155,4 +155,46 @@ describe("DataTable (AC-8)", () => {
     );
     expect(screen.queryByRole("button", { name: "Next" })).not.toBeInTheDocument();
   });
+
+  it("starts from initialSort and shows a visible caption when asked", () => {
+    render(
+      <DataTable
+        columns={COLUMNS}
+        data={ROWS}
+        getRowId={(r) => r.id}
+        caption="Scores"
+        captionVisible
+        initialSort={{ id: "score", desc: true }}
+      />,
+    );
+    expect(header("Score")).toHaveAttribute("aria-sort", "descending");
+    expect(names()).toEqual(["charlie", "bravo", "delta", "Alpha", "alpha"]);
+    expect(screen.getByText("Scores", { selector: "caption" })).not.toHaveClass("sr-only");
+  });
+
+  it("gives a column with sortable false no button and no aria-sort", () => {
+    const columns: DataTableColumn<Row>[] = [
+      { accessorKey: "name", header: "Name", meta: { sortable: false } },
+      COLUMNS[1],
+    ];
+    render(<DataTable columns={columns} data={ROWS} getRowId={(r) => r.id} caption="Scores" />);
+    expect(header("Name")).not.toHaveAttribute("aria-sort");
+    expect(within(header("Name")).queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("hides the sort icon from assistive tech, so the button is named by its header text", () => {
+    render(<DataTable columns={COLUMNS} data={ROWS} getRowId={(r) => r.id} caption="Scores" />);
+    const button = within(header("Score")).getByRole("button", { name: "Score" });
+    expect(button.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("uses the row id from getRowId, so rows keep identity across sorts", async () => {
+    const user = userEvent.setup();
+    render(
+      <DataTable columns={COLUMNS} data={ROWS} getRowId={(r) => `row-${r.id}`} caption="Scores" />,
+    );
+    const before = screen.getByRole("cell", { name: "charlie" }).closest("tr");
+    await user.click(within(header("Score")).getByRole("button"));
+    expect(screen.getByRole("cell", { name: "charlie" }).closest("tr")).toBe(before);
+  });
 });
