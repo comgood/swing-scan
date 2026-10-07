@@ -47,8 +47,8 @@ The trade lab response carries the random counts and metrics, but no random entr
 <a id="D-1"></a>
 ## D-1 to D-3: the synthetic generator's entry point
 
-**Status:** owed (scope feature 7).
-The generator has no frozen public entry point yet. The tests are written against the frozen `Market` shape and call one hook, `load_synthetic_market(seed)` in `tests/acceptance/test_data.py`, which fails until feature 7 names the function.
+**Status:** ruled (feature 7 on `main` names the entry points, spec 0006).
+The hook `load_synthetic_market(seed)` in `tests/acceptance/test_data.py` now calls `engine.synthetic.generate(seed)`, and one test reads the `python -m engine.synthetic --seed 42 --out DIR` output back with `engine.data.read_market`. D-1 to D-3 pass on `main` and are `required` since 2026-10-08.
 D-3's "bear segment" is **ruled** (owner, 2026-10-07): the benchmark closes at least 20% below its running peak at some point. This is what the tests check; feature 7's spec should generate to it.
 
 <a id="D-4"></a>

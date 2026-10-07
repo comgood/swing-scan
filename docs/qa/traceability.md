@@ -26,9 +26,9 @@ Test files are under `tests/acceptance/`. "Oracle" means the owner's protected s
 
 | ID | Criterion | Level | Test file | Fixture | Also covered by | Status | Verified |
 |---|---|---|---|---|---|---|---|
-| D-1 | Same seed gives identical frames | use case | `test_data.py` | synthetic market, seed 42 (owed hook, feature 7) | | pending | |
-| D-2 | Every bar sane, no bars after delisting | use case | `test_data.py` | synthetic market (owed hook) | | pending | |
-| D-3 | A bear segment and at least 20 delistings | use case | `test_data.py` | synthetic market (owed hook) | | pending | |
+| D-1 | Same seed gives identical frames | use case | `test_data.py` | `engine.synthetic.generate` seeds 42 (twice) and 7; the `python -m engine.synthetic` output read back by `read_market` (spec 0006) | `make data-check` | required | 2026-10-08 |
+| D-2 | Every bar sane, no bars after delisting | use case | `test_data.py` | `generate(42)`: bar bands, volume, positive finite prices, no bar outside `listed_from` to `delisted_on` | `make data-check` | required | 2026-10-08 |
+| D-3 | A bear segment and at least 20 delistings | use case | `test_data.py` | `generate(42)`: benchmark drawdown of at least 20%, 20 or more delistings | `make data-check` | required | 2026-10-08 |
 | D-4 | Live load from 2016-01-04, SPY present | local | `test_data.py` | local live data (owed hook) | owner run of `make load-live` | pending | |
 | D-5 | Live mode refuses a non localhost host | use case | `test_data.py` | owed: host detection rule | | pending | |
 | D-6 | Data and keys are blocked at commit | guard | `test_data.py` | temp files under `data/` and a runtime built fake key | CI guards job | required | 2026-10-07 |
@@ -79,7 +79,7 @@ Test files are under `tests/acceptance/`. "Oracle" means the owner's protected s
 | U-7 | 422 shows inline on the row or field | contract, UI | `test_ui.py`; Vitest `apps/web/tests/acceptance/errors-422.test.tsx` (shared helpers) | bad `n` on row 2, bad exit param; the 422 mocks through `fieldErrorsFrom422`; builder and exit editor owed (features 10, 12) | | pending | |
 | U-8 | Procedure note under the exit lab table | UI | `test_ui.py` | owed to Vitest | | pending | |
 
-**Totals:** 52 MUST criteria, 3 required, 49 pending. Stretch criteria (S-5, B-4R, B-12, X-5S, X-6) get a row when they are picked up.
+**Totals:** 52 MUST criteria, 6 required, 46 pending. Stretch criteria (S-5, B-4R, B-12, X-5S, X-6) get a row when they are picked up.
 
 ## Golden reference
 

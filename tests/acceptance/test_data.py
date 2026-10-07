@@ -1,17 +1,21 @@
 """Data criteria D-1 to D-6 (doc 01 section 6.1).
 
-The synthetic generator (scope feature 7) and the live loader (feature 14) have no frozen entry
-point yet, so D-1 to D-5 reach them through one owed hook each. The assertions are written now
-against the frozen `Market` shape (spec 0002, `BARS_SCHEMA`, `SECURITIES_SCHEMA`, `DataMeta`).
-D-6 is checked black box through the guard's command line.
+D-1 to D-3 call the synthetic generator's public entry points (spec 0006):
+`engine.synthetic.generate(seed)`, the `python -m engine.synthetic --seed N --out DIR` command and
+`engine.data.read_market(DIR)`. The live loader (feature 14) has no frozen entry point yet, so
+D-4 and D-5 reach it through an owed hook. The assertions use the frozen `Market` shape
+(spec 0002, `BARS_SCHEMA`, `SECURITIES_SCHEMA`, `DataMeta`). D-6 is checked black box through
+the guard's command line.
 """
 
 from __future__ import annotations
 
+import math
 import shutil
 import subprocess
 import sys
 from datetime import date
+from functools import cache
 from pathlib import Path
 
 import polars as pl
@@ -19,13 +23,21 @@ import pytest
 
 from acceptance.support import owed
 from engine.contracts import Market
+from engine.data import read_market
+from engine.synthetic import generate
 
 REPO = Path(__file__).resolve().parents[2]
 DATA_LEAK_GUARD = REPO / "scripts" / "guards" / "data_leak.py"
 
 
 def load_synthetic_market(seed: int) -> Market:
-    owed("D-1", f"entry point that generates the synthetic market for seed {seed} (feature 7)")
+    """A fresh generation every call, so D-1 compares two independent runs."""
+    return generate(seed)
+
+
+@cache
+def _seed_42() -> Market:
+    return generate(42)
 
 
 def load_live_market() -> Market:
@@ -50,9 +62,30 @@ def test_same_seed_gives_identical_frames() -> None:
     assert first.meta == second.meta
 
 
+@pytest.mark.ac("D-1")
+def test_another_seed_gives_another_market() -> None:
+    assert not load_synthetic_market(7).bars.equals(_seed_42().bars)
+
+
+@pytest.mark.ac("D-1")
+def test_the_command_writes_the_same_market_that_generate_returns(tmp_path: Path) -> None:
+    """Spec 0006: `python -m engine.synthetic --seed 42 --out DIR`, read back by `read_market`."""
+    subprocess.run(
+        [sys.executable, "-m", "engine.synthetic", "--seed", "42", "--out", str(tmp_path)],
+        check=True,
+        capture_output=True,
+        timeout=300,
+    )
+    loaded = read_market(tmp_path)
+    expected = _seed_42()
+    assert loaded.bars.equals(expected.bars)
+    assert loaded.securities.equals(expected.securities)
+    assert loaded.meta == expected.meta
+
+
 @pytest.mark.ac("D-2")
 def test_every_bar_is_sane_and_nothing_trades_after_delisting() -> None:
-    market = load_synthetic_market(42)
+    market = _seed_42()
     assert _bar_sanity_violations(market).height == 0
     delisted = market.securities.filter(pl.col("delisted_on").is_not_null()).select(
         "ticker", "delisted_on"
@@ -61,9 +94,21 @@ def test_every_bar_is_sane_and_nothing_trades_after_delisting() -> None:
     assert late.height == 0
 
 
+@pytest.mark.ac("D-2")
+def test_prices_are_positive_and_nothing_trades_before_listing() -> None:
+    market = _seed_42()
+    prices = market.bars.select("open", "high", "low", "close").to_numpy()
+    assert all(math.isfinite(x) and x > 0 for x in prices.ravel())
+    listed = market.securities.select("ticker", "listed_from")
+    early = market.bars.join(listed, on="ticker").filter(pl.col("date") < pl.col("listed_from"))
+    assert early.height == 0
+    # Every ticker in the bars is in the securities, and the other way round.
+    assert set(market.bars["ticker"].unique()) == set(market.securities["ticker"])
+
+
 @pytest.mark.ac("D-3")
 def test_has_a_bear_segment_and_at_least_20_delistings() -> None:
-    market = load_synthetic_market(42)
+    market = _seed_42()
     n_delisted = market.securities.filter(pl.col("delisted_on").is_not_null()).height
     assert n_delisted >= 20
     # A bear segment, read from the benchmark: a fall of at least 20% from a running peak.
