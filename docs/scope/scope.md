@@ -14,7 +14,7 @@ _Source of truth: acceptance criteria IDs (D, R, S, B, X, U) and settled default
 | # | Feature | Phase | Status |
 |---|---------|-------|--------|
 | 1 | Stack & architecture | Foundation | in-progress |
-| 2 | Coding standards & tooling | Foundation | in-progress |
+| 2 | Coding standards & tooling | Foundation | done |
 | 3 | Contracts & data model | Foundation | planned |
 | 4 | Design system & UI foundation | Foundation | planned |
 | 5 | Acceptance test harness & traceability | Foundation | planned |
@@ -43,7 +43,7 @@ Lane DI. Record the stack already chosen in doc 02 (Next.js on Vercel Hobby, Fas
 - [ ] Test it: `/test stack & architecture`
 Spec [0001](../specs/0001-stack-architecture/index.md) · code in `./` (`apps/web`, `services/api`, `engine`)
 
-### 2. Coding standards & tooling · in-progress
+### 2. Coding standards & tooling · done
 Lane DI. Capture conventions from the real scaffold into root `AGENTS.md` (including lane ownership, the protected `tests/oracle/` folder, and the no real data rule), then install lint, format, typecheck, CI, secret scanning, the data leak guard, and `CODEOWNERS`.
 **Done when:** root `AGENTS.md` reflects the real stack and lanes, CI runs lint, typecheck and tests on every PR, and a commit with price data or an API key is blocked (D-6).
 - [x] Capture conventions + tooling choices: `/audit`

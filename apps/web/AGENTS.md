@@ -13,4 +13,5 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - FE lane owns `apps/web/**`; API types come only from `@swing-scan/api-client`, mocks from `contracts/mocks/`.
 - Folder by feature: `src/features/<name>/`. Static export only (`output: "export"`), no server routes.
 - WCAG AA, keyboard usable, layouts hold at 375 px (U-6). Map 422 errors to their fields (U-7).
-- Commands: `make dev-web`, `pnpm --filter web lint`, `pnpm --filter web typecheck`.
+- Commands: `make dev-web`, `pnpm --filter web lint`, `pnpm --filter web typecheck`, `pnpm --filter web format`.
+- `typecheck` runs `next typegen` before `tsc`: `LayoutProps` and `PageProps` are generated into `.next/types/`, so plain `tsc` fails on a fresh checkout.
