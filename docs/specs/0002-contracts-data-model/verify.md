@@ -18,9 +18,9 @@ _Steps derived from spec 0002 acceptance criteria. `/check verify` runs these; `
 - [x] `GET /api/v1/indicators` → 14 rows with `n_min`, `n_max`, `n_default`; `GET /api/v1/templates` → `breakout_52w`, `pullback_ema21` with `close > 5`; `GET /api/v1/meta` → `contract_version` `1.0.0`, `data: null` → AC-6, AC-7, AC-8
 
 ## UI / manual
-- [ ] `pnpm --filter web dev:mock`, open the app → `mockServiceWorker.js` is served and API calls are answered from the mocks → AC-13
+- [x] `pnpm --filter web dev:mock`, open the app → `mockServiceWorker.js` is served and API calls are answered from the mocks → AC-13 (worker served, checked by `/check verify`; seen running in the browser by the owner, 2026-10-07)
 - [x] `make build-web` without `NEXT_PUBLIC_API_MOCK` → `apps/web/out/mockServiceWorker.js` does not exist → AC-13
-- [ ] Owner signs off SO-2 (contracts, mocks) and SO-3 (fixture format) in the PR; merge commit tagged `contracts-v1` → AC-16
+- [x] Owner signs off SO-2 (contracts, mocks) and SO-3 (fixture format) in the PR; merge commit tagged `contracts-v1` → AC-16 (PR #4, tag on `9fd3879`)
 
 ## Value sourcing
 - [x] Scan `columns` follow the label grammar (golden cases `close`, `highest(252)[1]`, `1.5×avg_volume(50)`, `ema(21)[5]`, `1.01×ema(21)`, `rs(126)`) → scan columns row
