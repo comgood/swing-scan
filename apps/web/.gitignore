@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# MSW service worker, copied in only when NEXT_PUBLIC_API_MOCK=1 (scripts/mock-worker.mjs)
+/public/mockServiceWorker.js
