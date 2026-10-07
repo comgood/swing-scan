@@ -9,7 +9,7 @@ export default defineConfig({
   test: {
     // jsdom for component tests (spec 0003); MSW's node server still patches fetch.
     environment: "jsdom",
-    include: ["src/**/*.test.{ts,tsx}"],
+    include: ["src/**/*.test.{ts,tsx}", "tests/acceptance/**/*.test.{ts,tsx}"],
     setupFiles: ["./src/mocks/vitest.setup.ts", "./src/test/setup.ts"],
   },
 });
