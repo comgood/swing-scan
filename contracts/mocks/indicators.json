@@ -1,0 +1,114 @@
+[
+  {
+    "name": "open",
+    "label": "Open",
+    "windowed": false,
+    "n_min": null,
+    "n_max": null,
+    "n_default": null
+  },
+  {
+    "name": "high",
+    "label": "High",
+    "windowed": false,
+    "n_min": null,
+    "n_max": null,
+    "n_default": null
+  },
+  {
+    "name": "low",
+    "label": "Low",
+    "windowed": false,
+    "n_min": null,
+    "n_max": null,
+    "n_default": null
+  },
+  {
+    "name": "close",
+    "label": "Close",
+    "windowed": false,
+    "n_min": null,
+    "n_max": null,
+    "n_default": null
+  },
+  {
+    "name": "volume",
+    "label": "Volume",
+    "windowed": false,
+    "n_min": null,
+    "n_max": null,
+    "n_default": null
+  },
+  {
+    "name": "sma",
+    "label": "Simple moving average",
+    "windowed": true,
+    "n_min": 2,
+    "n_max": 252,
+    "n_default": null
+  },
+  {
+    "name": "ema",
+    "label": "Exponential moving average",
+    "windowed": true,
+    "n_min": 2,
+    "n_max": 252,
+    "n_default": null
+  },
+  {
+    "name": "rsi",
+    "label": "Relative strength index",
+    "windowed": true,
+    "n_min": 2,
+    "n_max": 50,
+    "n_default": null
+  },
+  {
+    "name": "atr",
+    "label": "Average true range",
+    "windowed": true,
+    "n_min": 2,
+    "n_max": 252,
+    "n_default": null
+  },
+  {
+    "name": "highest",
+    "label": "Highest high",
+    "windowed": true,
+    "n_min": 2,
+    "n_max": 252,
+    "n_default": null
+  },
+  {
+    "name": "lowest",
+    "label": "Lowest low",
+    "windowed": true,
+    "n_min": 2,
+    "n_max": 252,
+    "n_default": null
+  },
+  {
+    "name": "avg_volume",
+    "label": "Average volume",
+    "windowed": true,
+    "n_min": 2,
+    "n_max": 252,
+    "n_default": null
+  },
+  {
+    "name": "ret",
+    "label": "Return over n bars (%)",
+    "windowed": true,
+    "n_min": 2,
+    "n_max": 252,
+    "n_default": null
+  },
+  {
+    "name": "rs",
+    "label": "Relative strength vs the benchmark",
+    "windowed": true,
+    "n_min": 2,
+    "n_max": 252,
+    "n_default": 126
+  }
+]

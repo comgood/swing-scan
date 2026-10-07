@@ -1,0 +1,81 @@
+{
+  "detail": [
+    {
+      "type": "out_of_range",
+      "loc": [
+        "body",
+        "configs"
+      ],
+      "msg": "must be between 1 and 6",
+      "input": [
+        {
+          "name": "Config 1",
+          "exits": [
+            {
+              "type": "stop_pct",
+              "pct": 8
+            }
+          ]
+        },
+        {
+          "name": "Config 2",
+          "exits": [
+            {
+              "type": "stop_pct",
+              "pct": 8
+            }
+          ]
+        },
+        {
+          "name": "Config 3",
+          "exits": [
+            {
+              "type": "stop_pct",
+              "pct": 8
+            }
+          ]
+        },
+        {
+          "name": "Config 4",
+          "exits": [
+            {
+              "type": "stop_pct",
+              "pct": 8
+            }
+          ]
+        },
+        {
+          "name": "Config 5",
+          "exits": [
+            {
+              "type": "stop_pct",
+              "pct": 8
+            }
+          ]
+        },
+        {
+          "name": "Config 6",
+          "exits": [
+            {
+              "type": "stop_pct",
+              "pct": 8
+            }
+          ]
+        },
+        {
+          "name": "Config 7",
+          "exits": [
+            {
+              "type": "stop_pct",
+              "pct": 8
+            }
+          ]
+        }
+      ],
+      "ctx": {
+        "min": 1,
+        "max": 6
+      }
+    }
+  ]
+}

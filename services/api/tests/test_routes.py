@@ -1,0 +1,106 @@
+"""AC-6: routes validate the full request, answer 501 until built, and serve static data."""
+
+from __future__ import annotations
+
+from typing import Any
+
+import pytest
+from fastapi.testclient import TestClient
+
+from api import state
+from api.main import app
+from engine.contracts import CONTRACT_VERSION, TEMPLATES
+
+client = TestClient(app, raise_server_exceptions=False)
+RULE = TEMPLATES[0].rule.model_dump(mode="json")
+
+
+def configs(count: int) -> list[dict[str, Any]]:
+    return [{"name": f"C{i}", "exits": [{"type": "stop_pct", "pct": 8}]} for i in range(count)]
+
+
+def test_valid_scan_is_501_naming_feature_8() -> None:
+    res = client.post("/api/v1/scan", json={"rule": RULE})
+    assert res.status_code == 501
+    assert "feature 8" in res.json()["detail"]
+
+
+@pytest.mark.parametrize("count", [1, 2, 6])
+def test_valid_backtest_is_501_naming_feature_9(count: int) -> None:
+    res = client.post("/api/v1/backtest", json={"rule": RULE, "configs": configs(count)})
+    assert res.status_code == 501
+    assert "feature 9" in res.json()["detail"]
+
+
+def test_seven_configs_is_422_not_501() -> None:
+    res = client.post("/api/v1/backtest", json={"rule": RULE, "configs": configs(7)})
+    assert res.status_code == 422
+    issue = res.json()["detail"][0]
+    assert issue["loc"] == ["body", "configs"]
+    assert issue["ctx"] == {"min": 1, "max": 6}
+
+
+def test_422_uses_fastapis_default_body_with_loc_and_ctx() -> None:
+    bad = {
+        "rule": {
+            **RULE,
+            "conditions": [
+                {**RULE["conditions"][0], "left": {"kind": "ind", "ind": "rsi", "n": 99}}
+            ],
+        }
+    }
+    res = client.post("/api/v1/scan", json=bad)
+    assert res.status_code == 422
+    issue = res.json()["detail"][0]
+    assert set(issue) >= {"type", "loc", "msg", "input", "ctx"}
+    assert issue["loc"] == ["body", "rule", "conditions", 0, "left", "n"]
+    assert issue["ctx"] == {"min": 2, "max": 50}
+
+
+@pytest.mark.parametrize("as_of", ["2024/01/02", "yesterday", 1704153600])
+def test_malformed_as_of_is_422(as_of: object) -> None:
+    res = client.post("/api/v1/scan", json={"rule": RULE, "as_of": as_of})
+    assert res.status_code == 422
+    assert res.json()["detail"][0]["loc"] == ["body", "as_of"]
+
+
+def test_indicators_come_from_the_registry() -> None:
+    body = client.get("/api/v1/indicators").json()
+    assert len(body) == 14
+    assert {
+        "name": "rs",
+        "label": "Relative strength vs the benchmark",
+        "windowed": True,
+        "n_min": 2,
+        "n_max": 252,
+        "n_default": 126,
+    } in body
+
+
+def test_templates_are_served() -> None:
+    body = client.get("/api/v1/templates").json()
+    assert [t["id"] for t in body] == ["breakout_52w", "pullback_ema21"]
+
+
+def test_meta_has_the_contract_version_and_no_data_yet() -> None:
+    body = client.get("/api/v1/meta").json()
+    assert body == {"contract_version": CONTRACT_VERSION, "data": None, "oos_start": None}
+
+
+def test_a_stray_not_implemented_error_stays_a_500(monkeypatch: pytest.MonkeyPatch) -> None:
+    from engine import api as use_cases
+    from engine.data.fixtures import FrameSpec, make_market
+
+    def broken(*_: object) -> None:
+        raise NotImplementedError("a real bug")
+
+    monkeypatch.setattr(state, "market", make_market({"AAA": FrameSpec(1, [1.0, 2.0])}))
+    monkeypatch.setattr(use_cases, "scan", broken)
+    assert client.post("/api/v1/scan", json={"rule": RULE}).status_code == 500
+
+
+def test_with_a_market_loaded_the_stub_still_answers_501(monkeypatch: pytest.MonkeyPatch) -> None:
+    from engine.data.fixtures import FrameSpec, make_market
+
+    monkeypatch.setattr(state, "market", make_market({"AAA": FrameSpec(1, [1.0, 2.0])}))
+    assert client.post("/api/v1/scan", json={"rule": RULE}).status_code == 501

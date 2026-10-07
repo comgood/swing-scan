@@ -8,7 +8,7 @@ API_IMAGE ?= swing-scan-api
 API_PLATFORM ?= linux/amd64
 
 .PHONY: setup dev dev-api dev-web lint format typecheck test hooks guards build-web build-api smoke \
-        test-oracle openapi gen-client data load-live ci
+        test-oracle openapi gen-client mocks contracts contracts-check data load-live ci
 
 setup: ## Install all JS and Python dependencies from the lockfiles
 	pnpm install --frozen-lockfile
@@ -34,12 +34,33 @@ format: ## Apply formatting to web and Python
 	uv run ruff check --fix .
 	uv run ruff format .
 
-typecheck: ## Typecheck the web app (tsc) and Python (mypy strict on engine and api)
+typecheck: ## Typecheck the web app and API client (tsc) and Python (mypy strict)
+	pnpm --filter @swing-scan/api-client typecheck
 	pnpm --filter web typecheck
 	uv run mypy
 
-test: ## Run the Python test suite
+test: ## Run the Python suite, then the web Vitest suite (MSW on by default)
 	uv run pytest
+	pnpm --filter web test
+
+openapi: ## Write contracts/openapi.json from the FastAPI app (spec 0002)
+	uv run python scripts/export_openapi.py
+
+gen-client: ## Regenerate the TypeScript types in packages/api-client from contracts/openapi.json
+	pnpm --filter @swing-scan/api-client gen
+
+mocks: ## Regenerate contracts/mocks/ from the seeded mock builder
+	uv run python scripts/make_mocks.py
+
+contracts: openapi gen-client mocks ## Regenerate every contract artefact after a model change
+
+contracts-check: contracts ## CI: fail if a generated contract file is stale (AC-1, AC-12)
+	@if [ -n "$$(git status --porcelain -- contracts packages/api-client)" ]; then \
+		echo "Generated contract files are stale. Run 'make contracts' and commit the result:"; \
+		git status --porcelain -- contracts packages/api-client; \
+		git --no-pager diff --stat -- contracts packages/api-client; \
+		exit 1; \
+	fi
 
 build-web: ## Static export of the web app into apps/web/out
 	pnpm --filter web build
@@ -57,7 +78,7 @@ guards: ## Data leak guard on every tracked file, plus gitleaks over the files
 smoke: ## Smoke test a deployed API: make smoke API_URL=https://...
 	scripts/smoke.sh "$(API_URL)"
 
-ci: lint typecheck test build-web guards ## Every check CI runs, in one command
+ci: lint typecheck test build-web contracts-check guards ## Every check CI runs, in one command
 
-test-oracle openapi gen-client data load-live:
-	@echo "make $@ is not implemented yet (see docs/scope/scope.md, features 2, 3, 6, 7 and 14)"; exit 1
+test-oracle data load-live:
+	@echo "make $@ is not implemented yet (see docs/scope/scope.md, features 6, 7 and 14)"; exit 1

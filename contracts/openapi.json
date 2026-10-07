@@ -1,0 +1,2272 @@
+{
+  "components": {
+    "schemas": {
+      "Assumptions": {
+        "additionalProperties": false,
+        "description": "Every setting that shaped the result, echoed so a run can be reproduced.",
+        "properties": {
+          "baseline_config_index": {
+            "title": "Baseline Config Index",
+            "type": "integer"
+          },
+          "commission_bps": {
+            "title": "Commission Bps",
+            "type": "number"
+          },
+          "configs": {
+            "items": {
+              "$ref": "#/components/schemas/ExitConfig"
+            },
+            "title": "Configs",
+            "type": "array"
+          },
+          "cooldown_bars": {
+            "title": "Cooldown Bars",
+            "type": "integer"
+          },
+          "cooldown_basis": {
+            "const": "signal",
+            "title": "Cooldown Basis",
+            "type": "string"
+          },
+          "data_mode": {
+            "enum": [
+              "synthetic",
+              "live"
+            ],
+            "title": "Data Mode",
+            "type": "string"
+          },
+          "data_seed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Seed"
+          },
+          "data_version": {
+            "title": "Data Version",
+            "type": "string"
+          },
+          "delisting_rule": {
+            "const": "exit_last_close",
+            "title": "Delisting Rule",
+            "type": "string"
+          },
+          "entry_rising_edge": {
+            "const": true,
+            "title": "Entry Rising Edge",
+            "type": "boolean"
+          },
+          "fill_model": {
+            "const": "signal_close_entry_next_open",
+            "title": "Fill Model",
+            "type": "string"
+          },
+          "horizon_bars": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Horizon Bars"
+          },
+          "max_positions": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Positions"
+          },
+          "no_last_bar_entry": {
+            "const": true,
+            "title": "No Last Bar Entry",
+            "type": "boolean"
+          },
+          "oos_fraction": {
+            "title": "Oos Fraction",
+            "type": "number"
+          },
+          "oos_start": {
+            "format": "date",
+            "title": "Oos Start",
+            "type": "string"
+          },
+          "same_ticker_overlap": {
+            "title": "Same Ticker Overlap",
+            "type": "boolean"
+          },
+          "seed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed"
+          },
+          "sizing": {
+            "enum": [
+              "equal_weight",
+              "unit_notional"
+            ],
+            "title": "Sizing",
+            "type": "string"
+          },
+          "slippage_bps": {
+            "title": "Slippage Bps",
+            "type": "number"
+          }
+        },
+        "required": [
+          "fill_model",
+          "slippage_bps",
+          "commission_bps",
+          "sizing",
+          "max_positions",
+          "entry_rising_edge",
+          "cooldown_bars",
+          "cooldown_basis",
+          "no_last_bar_entry",
+          "same_ticker_overlap",
+          "horizon_bars",
+          "seed",
+          "configs",
+          "baseline_config_index",
+          "delisting_rule",
+          "oos_start",
+          "oos_fraction",
+          "data_mode",
+          "data_version",
+          "data_seed"
+        ],
+        "title": "Assumptions",
+        "type": "object"
+      },
+      "BacktestRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "configs": {
+            "items": {
+              "$ref": "#/components/schemas/ExitConfig"
+            },
+            "maxItems": 6,
+            "minItems": 1,
+            "title": "Configs",
+            "type": "array"
+          },
+          "rule": {
+            "$ref": "#/components/schemas/Rule"
+          },
+          "sim": {
+            "$ref": "#/components/schemas/SimParams"
+          }
+        },
+        "required": [
+          "rule",
+          "configs"
+        ],
+        "title": "BacktestRequest",
+        "type": "object"
+      },
+      "BenchmarkMetrics": {
+        "additionalProperties": false,
+        "properties": {
+          "cagr_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cagr Pct"
+          },
+          "max_dd_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Dd Pct"
+          }
+        },
+        "required": [
+          "cagr_pct",
+          "max_dd_pct"
+        ],
+        "title": "BenchmarkMetrics",
+        "type": "object"
+      },
+      "BenchmarkSplit": {
+        "additionalProperties": false,
+        "properties": {
+          "is": {
+            "$ref": "#/components/schemas/BenchmarkMetrics"
+          },
+          "oos": {
+            "$ref": "#/components/schemas/BenchmarkMetrics"
+          }
+        },
+        "required": [
+          "is",
+          "oos"
+        ],
+        "title": "BenchmarkSplit",
+        "type": "object"
+      },
+      "BestIs": {
+        "additionalProperties": false,
+        "description": "The config index with the best IS value per ranked metric. OOS is never ranked (X-3).",
+        "properties": {
+          "avg_loss_pct": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Loss Pct"
+          },
+          "avg_mae_pct": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Mae Pct"
+          },
+          "avg_mfe_pct": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Mfe Pct"
+          },
+          "avg_win_pct": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Win Pct"
+          },
+          "expectancy_pct": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expectancy Pct"
+          },
+          "expectancy_per_bar_pct": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expectancy Per Bar Pct"
+          },
+          "expectancy_r": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expectancy R"
+          },
+          "horizon_exit_pct": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Horizon Exit Pct"
+          },
+          "profit_factor": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profit Factor"
+          },
+          "win_rate_pct": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Win Rate Pct"
+          }
+        },
+        "required": [
+          "win_rate_pct",
+          "avg_win_pct",
+          "avg_loss_pct",
+          "expectancy_pct",
+          "expectancy_r",
+          "expectancy_per_bar_pct",
+          "profit_factor",
+          "avg_mae_pct",
+          "avg_mfe_pct",
+          "horizon_exit_pct"
+        ],
+        "title": "BestIs",
+        "type": "object"
+      },
+      "CloseBelowMa": {
+        "additionalProperties": false,
+        "description": "Exit at the next open after a close below the moving average.",
+        "properties": {
+          "ma": {
+            "default": "sma",
+            "enum": [
+              "sma",
+              "ema"
+            ],
+            "title": "Ma",
+            "type": "string"
+          },
+          "n": {
+            "default": 21,
+            "maximum": 200.0,
+            "minimum": 5.0,
+            "title": "N",
+            "type": "integer"
+          },
+          "type": {
+            "const": "close_below_ma",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "CloseBelowMa",
+        "type": "object"
+      },
+      "Condition": {
+        "additionalProperties": false,
+        "properties": {
+          "left": {
+            "$ref": "#/components/schemas/IndOperand"
+          },
+          "op": {
+            "enum": [
+              ">",
+              "<",
+              ">=",
+              "<=",
+              "crosses_above",
+              "crosses_below"
+            ],
+            "title": "Op",
+            "type": "string"
+          },
+          "right": {
+            "discriminator": {
+              "mapping": {
+                "ind": "#/components/schemas/IndOperand",
+                "value": "#/components/schemas/ValueOperand"
+              },
+              "propertyName": "kind"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/IndOperand"
+              },
+              {
+                "$ref": "#/components/schemas/ValueOperand"
+              }
+            ],
+            "title": "Right"
+          }
+        },
+        "required": [
+          "left",
+          "op",
+          "right"
+        ],
+        "title": "Condition",
+        "type": "object"
+      },
+      "ConfigRow": {
+        "additionalProperties": false,
+        "properties": {
+          "edge": {
+            "$ref": "#/components/schemas/EdgeSplit"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "random": {
+            "$ref": "#/components/schemas/TradeSplit"
+          },
+          "strategy": {
+            "$ref": "#/components/schemas/TradeSplit"
+          }
+        },
+        "required": [
+          "name",
+          "strategy",
+          "random",
+          "edge"
+        ],
+        "title": "ConfigRow",
+        "type": "object"
+      },
+      "DataMeta": {
+        "additionalProperties": false,
+        "description": "`meta.json`: describes one dataset. `benchmark` is excluded from every universe.",
+        "properties": {
+          "benchmark": {
+            "title": "Benchmark",
+            "type": "string"
+          },
+          "data_mode": {
+            "enum": [
+              "synthetic",
+              "live"
+            ],
+            "title": "Data Mode",
+            "type": "string"
+          },
+          "data_version": {
+            "title": "Data Version",
+            "type": "string"
+          },
+          "end": {
+            "format": "date",
+            "title": "End",
+            "type": "string"
+          },
+          "n_tickers": {
+            "title": "N Tickers",
+            "type": "integer"
+          },
+          "seed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed"
+          },
+          "start": {
+            "format": "date",
+            "title": "Start",
+            "type": "string"
+          },
+          "survivors_only": {
+            "title": "Survivors Only",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "data_mode",
+          "seed",
+          "data_version",
+          "start",
+          "end",
+          "n_tickers",
+          "survivors_only",
+          "benchmark"
+        ],
+        "title": "DataMeta",
+        "type": "object"
+      },
+      "EdgeMetrics": {
+        "additionalProperties": false,
+        "description": "Strategy minus random, per metric. Null when either side is null.",
+        "properties": {
+          "expectancy_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expectancy Pct"
+          },
+          "expectancy_per_bar_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expectancy Per Bar Pct"
+          },
+          "expectancy_r": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expectancy R"
+          },
+          "win_rate_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Win Rate Pct"
+          }
+        },
+        "required": [
+          "expectancy_pct",
+          "expectancy_r",
+          "expectancy_per_bar_pct",
+          "win_rate_pct"
+        ],
+        "title": "EdgeMetrics",
+        "type": "object"
+      },
+      "EdgeSplit": {
+        "additionalProperties": false,
+        "properties": {
+          "is": {
+            "$ref": "#/components/schemas/EdgeMetrics"
+          },
+          "oos": {
+            "$ref": "#/components/schemas/EdgeMetrics"
+          }
+        },
+        "required": [
+          "is",
+          "oos"
+        ],
+        "title": "EdgeSplit",
+        "type": "object"
+      },
+      "Entries": {
+        "additionalProperties": false,
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "distinct_weeks": {
+            "title": "Distinct Weeks",
+            "type": "integer"
+          },
+          "hash": {
+            "title": "Hash",
+            "type": "string"
+          },
+          "is_count": {
+            "title": "Is Count",
+            "type": "integer"
+          },
+          "oos_count": {
+            "title": "Oos Count",
+            "type": "integer"
+          },
+          "random_is_count": {
+            "title": "Random Is Count",
+            "type": "integer"
+          },
+          "random_oos_count": {
+            "title": "Random Oos Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "count",
+          "is_count",
+          "oos_count",
+          "distinct_weeks",
+          "hash",
+          "random_is_count",
+          "random_oos_count"
+        ],
+        "title": "Entries",
+        "type": "object"
+      },
+      "ExitConfig": {
+        "additionalProperties": false,
+        "description": "A named set of 1 to 6 exits, each of a distinct type.",
+        "properties": {
+          "exits": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "close_below_ma": "#/components/schemas/CloseBelowMa",
+                  "stop_atr": "#/components/schemas/StopAtr",
+                  "stop_pct": "#/components/schemas/StopPct",
+                  "target": "#/components/schemas/Target",
+                  "time": "#/components/schemas/TimeExit",
+                  "trail_pct": "#/components/schemas/TrailPct"
+                },
+                "propertyName": "type"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/StopPct"
+                },
+                {
+                  "$ref": "#/components/schemas/StopAtr"
+                },
+                {
+                  "$ref": "#/components/schemas/Target"
+                },
+                {
+                  "$ref": "#/components/schemas/TrailPct"
+                },
+                {
+                  "$ref": "#/components/schemas/CloseBelowMa"
+                },
+                {
+                  "$ref": "#/components/schemas/TimeExit"
+                }
+              ]
+            },
+            "maxItems": 6,
+            "minItems": 1,
+            "title": "Exits",
+            "type": "array"
+          },
+          "name": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "exits"
+        ],
+        "title": "ExitConfig",
+        "type": "object"
+      },
+      "Guides": {
+        "additionalProperties": false,
+        "description": "Stop and target guides from the baseline config's IS trades only (X-5).",
+        "properties": {
+          "mfe_median_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mfe Median Pct"
+          },
+          "winner_mae_p75_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Winner Mae P75 Pct"
+          },
+          "winner_mae_p90_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Winner Mae P90 Pct"
+          }
+        },
+        "required": [
+          "winner_mae_p75_pct",
+          "winner_mae_p90_pct",
+          "mfe_median_pct"
+        ],
+        "title": "Guides",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "IndOperand": {
+        "additionalProperties": false,
+        "description": "An indicator value, optionally shifted back `offset` bars and scaled by `mult`.",
+        "properties": {
+          "ind": {
+            "enum": [
+              "open",
+              "high",
+              "low",
+              "close",
+              "volume",
+              "sma",
+              "ema",
+              "rsi",
+              "atr",
+              "highest",
+              "lowest",
+              "avg_volume",
+              "ret",
+              "rs"
+            ],
+            "title": "Ind",
+            "type": "string"
+          },
+          "kind": {
+            "const": "ind",
+            "title": "Kind",
+            "type": "string"
+          },
+          "mult": {
+            "default": 1.0,
+            "maximum": 10.0,
+            "minimum": 0.1,
+            "title": "Mult",
+            "type": "number"
+          },
+          "n": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "N"
+          },
+          "offset": {
+            "default": 0,
+            "maximum": 20.0,
+            "minimum": 0.0,
+            "title": "Offset",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "ind"
+        ],
+        "title": "IndOperand",
+        "type": "object"
+      },
+      "IndicatorSpec": {
+        "additionalProperties": false,
+        "description": "One registry row. Non windowed indicators (price fields) take no `n`.",
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "n_default": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "N Default"
+          },
+          "n_max": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "N Max"
+          },
+          "n_min": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "N Min"
+          },
+          "name": {
+            "enum": [
+              "open",
+              "high",
+              "low",
+              "close",
+              "volume",
+              "sma",
+              "ema",
+              "rsi",
+              "atr",
+              "highest",
+              "lowest",
+              "avg_volume",
+              "ret",
+              "rs"
+            ],
+            "title": "Name",
+            "type": "string"
+          },
+          "windowed": {
+            "title": "Windowed",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "label",
+          "windowed",
+          "n_min",
+          "n_max",
+          "n_default"
+        ],
+        "title": "IndicatorSpec",
+        "type": "object"
+      },
+      "MetaResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "contract_version": {
+            "title": "Contract Version",
+            "type": "string"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DataMeta"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "oos_start": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oos Start"
+          }
+        },
+        "required": [
+          "contract_version",
+          "data",
+          "oos_start"
+        ],
+        "title": "MetaResponse",
+        "type": "object"
+      },
+      "NotImplementedBody": {
+        "additionalProperties": false,
+        "description": "The 501 body while a use case's scope feature has not landed.",
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          }
+        },
+        "required": [
+          "detail"
+        ],
+        "title": "NotImplementedBody",
+        "type": "object"
+      },
+      "Point": {
+        "additionalProperties": false,
+        "properties": {
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "number"
+          }
+        },
+        "required": [
+          "date",
+          "value"
+        ],
+        "title": "Point",
+        "type": "object"
+      },
+      "PortfolioMetrics": {
+        "additionalProperties": false,
+        "properties": {
+          "avg_bars_held": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Bars Held"
+          },
+          "avg_loss_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Loss Pct"
+          },
+          "avg_win_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Win Pct"
+          },
+          "cagr_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cagr Pct"
+          },
+          "expectancy_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expectancy Pct"
+          },
+          "expectancy_r": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expectancy R"
+          },
+          "exposure_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exposure Pct"
+          },
+          "max_dd_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Dd Pct"
+          },
+          "n_trades": {
+            "title": "N Trades",
+            "type": "integer"
+          },
+          "profit_factor": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profit Factor"
+          },
+          "sharpe": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sharpe"
+          },
+          "win_rate_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Win Rate Pct"
+          }
+        },
+        "required": [
+          "n_trades",
+          "cagr_pct",
+          "max_dd_pct",
+          "sharpe",
+          "win_rate_pct",
+          "avg_win_pct",
+          "avg_loss_pct",
+          "expectancy_pct",
+          "expectancy_r",
+          "profit_factor",
+          "avg_bars_held",
+          "exposure_pct"
+        ],
+        "title": "PortfolioMetrics",
+        "type": "object"
+      },
+      "PortfolioResult": {
+        "additionalProperties": false,
+        "properties": {
+          "assumptions": {
+            "$ref": "#/components/schemas/Assumptions"
+          },
+          "benchmark": {
+            "items": {
+              "$ref": "#/components/schemas/Point"
+            },
+            "maxItems": 500,
+            "minItems": 0,
+            "title": "Benchmark",
+            "type": "array"
+          },
+          "benchmark_metrics": {
+            "$ref": "#/components/schemas/BenchmarkSplit"
+          },
+          "equity": {
+            "items": {
+              "$ref": "#/components/schemas/Point"
+            },
+            "maxItems": 500,
+            "minItems": 0,
+            "title": "Equity",
+            "type": "array"
+          },
+          "metrics": {
+            "$ref": "#/components/schemas/PortfolioSplit"
+          },
+          "mode": {
+            "const": "portfolio",
+            "title": "Mode",
+            "type": "string"
+          },
+          "oos_start": {
+            "format": "date",
+            "title": "Oos Start",
+            "type": "string"
+          },
+          "trades": {
+            "items": {
+              "$ref": "#/components/schemas/Trade"
+            },
+            "maxItems": 2000,
+            "minItems": 0,
+            "title": "Trades",
+            "type": "array"
+          },
+          "trades_total": {
+            "title": "Trades Total",
+            "type": "integer"
+          },
+          "trades_truncated": {
+            "title": "Trades Truncated",
+            "type": "boolean"
+          },
+          "trial": {
+            "$ref": "#/components/schemas/Trial"
+          },
+          "warnings": {
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "mode",
+          "assumptions",
+          "oos_start",
+          "trial",
+          "warnings",
+          "metrics",
+          "benchmark_metrics",
+          "equity",
+          "benchmark",
+          "trades",
+          "trades_total",
+          "trades_truncated"
+        ],
+        "title": "PortfolioResult",
+        "type": "object"
+      },
+      "PortfolioSplit": {
+        "additionalProperties": false,
+        "properties": {
+          "is": {
+            "$ref": "#/components/schemas/PortfolioMetrics"
+          },
+          "oos": {
+            "$ref": "#/components/schemas/PortfolioMetrics"
+          }
+        },
+        "required": [
+          "is",
+          "oos"
+        ],
+        "title": "PortfolioSplit",
+        "type": "object"
+      },
+      "Rule": {
+        "additionalProperties": false,
+        "description": "An entry rule: 1 to 8 conditions joined by AND. No hidden price filter (ADR-013).",
+        "properties": {
+          "conditions": {
+            "items": {
+              "$ref": "#/components/schemas/Condition"
+            },
+            "maxItems": 8,
+            "minItems": 1,
+            "title": "Conditions",
+            "type": "array"
+          },
+          "name": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "conditions"
+        ],
+        "title": "Rule",
+        "type": "object"
+      },
+      "ScanRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "rule": {
+            "$ref": "#/components/schemas/Rule"
+          }
+        },
+        "required": [
+          "rule"
+        ],
+        "title": "ScanRequest",
+        "type": "object"
+      },
+      "ScanResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/ScanRow"
+            },
+            "maxItems": 500,
+            "minItems": 0,
+            "title": "Rows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "as_of",
+          "columns",
+          "rows"
+        ],
+        "title": "ScanResponse",
+        "type": "object"
+      },
+      "ScanRow": {
+        "additionalProperties": false,
+        "properties": {
+          "chg_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chg Pct"
+          },
+          "close": {
+            "title": "Close",
+            "type": "number"
+          },
+          "new_today": {
+            "title": "New Today",
+            "type": "boolean"
+          },
+          "operands": {
+            "items": {
+              "type": "number"
+            },
+            "title": "Operands",
+            "type": "array"
+          },
+          "ticker": {
+            "title": "Ticker",
+            "type": "string"
+          },
+          "vol_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vol Ratio"
+          }
+        },
+        "required": [
+          "ticker",
+          "close",
+          "chg_pct",
+          "vol_ratio",
+          "operands",
+          "new_today"
+        ],
+        "title": "ScanRow",
+        "type": "object"
+      },
+      "SimParams": {
+        "additionalProperties": false,
+        "properties": {
+          "end": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End"
+          },
+          "horizon_bars": {
+            "default": 60,
+            "maximum": 252.0,
+            "minimum": 5.0,
+            "title": "Horizon Bars",
+            "type": "integer"
+          },
+          "max_positions": {
+            "default": 10,
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Max Positions",
+            "type": "integer"
+          },
+          "seed": {
+            "default": 42,
+            "maximum": 2147483647.0,
+            "minimum": 0.0,
+            "title": "Seed",
+            "type": "integer"
+          },
+          "slippage_bps": {
+            "default": 10,
+            "maximum": 50.0,
+            "minimum": 0.0,
+            "title": "Slippage Bps",
+            "type": "number"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start"
+          }
+        },
+        "title": "SimParams",
+        "type": "object"
+      },
+      "StopAtr": {
+        "additionalProperties": false,
+        "description": "Stop loss `k` ATRs (of length `n`) below the entry fill.",
+        "properties": {
+          "k": {
+            "default": 2,
+            "maximum": 6.0,
+            "minimum": 0.5,
+            "title": "K",
+            "type": "number"
+          },
+          "n": {
+            "default": 14,
+            "maximum": 50.0,
+            "minimum": 2.0,
+            "title": "N",
+            "type": "integer"
+          },
+          "type": {
+            "const": "stop_atr",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "StopAtr",
+        "type": "object"
+      },
+      "StopPct": {
+        "additionalProperties": false,
+        "description": "Stop loss a fixed percent below the entry fill.",
+        "properties": {
+          "pct": {
+            "default": 8,
+            "maximum": 30.0,
+            "minimum": 1.0,
+            "title": "Pct",
+            "type": "number"
+          },
+          "type": {
+            "const": "stop_pct",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "StopPct",
+        "type": "object"
+      },
+      "Target": {
+        "additionalProperties": false,
+        "description": "Profit target a fixed percent above the entry fill.",
+        "properties": {
+          "pct": {
+            "default": 15,
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Pct",
+            "type": "number"
+          },
+          "type": {
+            "const": "target",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "Target",
+        "type": "object"
+      },
+      "TemplateOut": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "rule": {
+            "$ref": "#/components/schemas/Rule"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "rule"
+        ],
+        "title": "TemplateOut",
+        "type": "object"
+      },
+      "TimeExit": {
+        "additionalProperties": false,
+        "description": "Exit after a fixed number of bars held.",
+        "properties": {
+          "bars": {
+            "default": 10,
+            "maximum": 120.0,
+            "minimum": 1.0,
+            "title": "Bars",
+            "type": "integer"
+          },
+          "type": {
+            "const": "time",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "TimeExit",
+        "type": "object"
+      },
+      "Trade": {
+        "additionalProperties": false,
+        "properties": {
+          "bars_held": {
+            "title": "Bars Held",
+            "type": "integer"
+          },
+          "entry_date": {
+            "format": "date",
+            "title": "Entry Date",
+            "type": "string"
+          },
+          "entry_price": {
+            "title": "Entry Price",
+            "type": "number"
+          },
+          "exit_date": {
+            "format": "date",
+            "title": "Exit Date",
+            "type": "string"
+          },
+          "exit_price": {
+            "title": "Exit Price",
+            "type": "number"
+          },
+          "exit_reason": {
+            "enum": [
+              "stop_pct",
+              "stop_atr",
+              "trail_pct",
+              "target",
+              "time",
+              "ma",
+              "delisted",
+              "horizon",
+              "end_of_test"
+            ],
+            "title": "Exit Reason",
+            "type": "string"
+          },
+          "mae_pct": {
+            "maximum": 0.0,
+            "title": "Mae Pct",
+            "type": "number"
+          },
+          "mae_r": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mae R"
+          },
+          "mfe_pct": {
+            "minimum": 0.0,
+            "title": "Mfe Pct",
+            "type": "number"
+          },
+          "mfe_r": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mfe R"
+          },
+          "r_multiple": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "R Multiple"
+          },
+          "return_pct": {
+            "title": "Return Pct",
+            "type": "number"
+          },
+          "segment": {
+            "enum": [
+              "is",
+              "oos"
+            ],
+            "title": "Segment",
+            "type": "string"
+          },
+          "ticker": {
+            "title": "Ticker",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ticker",
+          "entry_date",
+          "entry_price",
+          "exit_date",
+          "exit_price",
+          "return_pct",
+          "bars_held",
+          "exit_reason",
+          "r_multiple",
+          "mae_pct",
+          "mfe_pct",
+          "mae_r",
+          "mfe_r",
+          "segment"
+        ],
+        "title": "Trade",
+        "type": "object"
+      },
+      "TradeLabResult": {
+        "additionalProperties": false,
+        "properties": {
+          "assumptions": {
+            "$ref": "#/components/schemas/Assumptions"
+          },
+          "baseline_trades": {
+            "items": {
+              "$ref": "#/components/schemas/Trade"
+            },
+            "maxItems": 2000,
+            "minItems": 0,
+            "title": "Baseline Trades",
+            "type": "array"
+          },
+          "baseline_trades_total": {
+            "title": "Baseline Trades Total",
+            "type": "integer"
+          },
+          "baseline_trades_truncated": {
+            "title": "Baseline Trades Truncated",
+            "type": "boolean"
+          },
+          "best_is": {
+            "$ref": "#/components/schemas/BestIs"
+          },
+          "entries": {
+            "$ref": "#/components/schemas/Entries"
+          },
+          "guides_is": {
+            "$ref": "#/components/schemas/Guides"
+          },
+          "mode": {
+            "const": "trade",
+            "title": "Mode",
+            "type": "string"
+          },
+          "oos_start": {
+            "format": "date",
+            "title": "Oos Start",
+            "type": "string"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/ConfigRow"
+            },
+            "maxItems": 6,
+            "minItems": 2,
+            "title": "Rows",
+            "type": "array"
+          },
+          "trial": {
+            "$ref": "#/components/schemas/Trial"
+          },
+          "warnings": {
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "mode",
+          "assumptions",
+          "oos_start",
+          "trial",
+          "warnings",
+          "entries",
+          "rows",
+          "best_is",
+          "guides_is",
+          "baseline_trades",
+          "baseline_trades_total",
+          "baseline_trades_truncated"
+        ],
+        "title": "TradeLabResult",
+        "type": "object"
+      },
+      "TradeMetrics": {
+        "additionalProperties": false,
+        "description": "Per trade metrics. No CAGR, max DD or Sharpe in trade mode (X-8).",
+        "properties": {
+          "avg_bars_held": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Bars Held"
+          },
+          "avg_loss_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Loss Pct"
+          },
+          "avg_mae_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Mae Pct"
+          },
+          "avg_mfe_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Mfe Pct"
+          },
+          "avg_win_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Win Pct"
+          },
+          "distinct_weeks": {
+            "title": "Distinct Weeks",
+            "type": "integer"
+          },
+          "expectancy_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expectancy Pct"
+          },
+          "expectancy_per_bar_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expectancy Per Bar Pct"
+          },
+          "expectancy_r": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expectancy R"
+          },
+          "horizon_exit_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Horizon Exit Pct"
+          },
+          "n_trades": {
+            "title": "N Trades",
+            "type": "integer"
+          },
+          "profit_factor": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profit Factor"
+          },
+          "win_rate_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Win Rate Pct"
+          }
+        },
+        "required": [
+          "n_trades",
+          "distinct_weeks",
+          "win_rate_pct",
+          "avg_win_pct",
+          "avg_loss_pct",
+          "expectancy_pct",
+          "expectancy_r",
+          "expectancy_per_bar_pct",
+          "profit_factor",
+          "avg_bars_held",
+          "avg_mae_pct",
+          "avg_mfe_pct",
+          "horizon_exit_pct"
+        ],
+        "title": "TradeMetrics",
+        "type": "object"
+      },
+      "TradeSplit": {
+        "additionalProperties": false,
+        "properties": {
+          "is": {
+            "$ref": "#/components/schemas/TradeMetrics"
+          },
+          "oos": {
+            "$ref": "#/components/schemas/TradeMetrics"
+          }
+        },
+        "required": [
+          "is",
+          "oos"
+        ],
+        "title": "TradeSplit",
+        "type": "object"
+      },
+      "TrailPct": {
+        "additionalProperties": false,
+        "description": "Trailing stop a fixed percent below the highest high since entry.",
+        "properties": {
+          "pct": {
+            "default": 10,
+            "maximum": 30.0,
+            "minimum": 2.0,
+            "title": "Pct",
+            "type": "number"
+          },
+          "type": {
+            "const": "trail_pct",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "TrailPct",
+        "type": "object"
+      },
+      "Trial": {
+        "additionalProperties": false,
+        "properties": {
+          "pair_keys": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Pair Keys",
+            "type": "array"
+          },
+          "structure_key": {
+            "title": "Structure Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "structure_key",
+          "pair_keys"
+        ],
+        "title": "Trial",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      },
+      "ValueOperand": {
+        "additionalProperties": false,
+        "description": "A fixed number, such as the 5 in `close > 5`.",
+        "properties": {
+          "kind": {
+            "const": "value",
+            "title": "Kind",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "number"
+          }
+        },
+        "required": [
+          "kind",
+          "value"
+        ],
+        "title": "ValueOperand",
+        "type": "object"
+      },
+      "Warning": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "enum": [
+              "no_entries",
+              "horizon_exits_over_10pct",
+              "trades_truncated"
+            ],
+            "title": "Code",
+            "type": "string"
+          },
+          "config_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config Index"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "config_index",
+          "message"
+        ],
+        "title": "Warning",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "Swing Scan API",
+    "version": "1.0.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/v1/backtest": {
+      "post": {
+        "description": "1 config runs a portfolio backtest; 2 to 6 configs run the exit lab (trade mode).",
+        "operationId": "backtest_api_v1_backtest_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BacktestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "discriminator": {
+                    "mapping": {
+                      "portfolio": "#/components/schemas/PortfolioResult",
+                      "trade": "#/components/schemas/TradeLabResult"
+                    },
+                    "propertyName": "mode"
+                  },
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/PortfolioResult"
+                    },
+                    {
+                      "$ref": "#/components/schemas/TradeLabResult"
+                    }
+                  ],
+                  "title": "Response Backtest Api V1 Backtest Post"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotImplementedBody"
+                }
+              }
+            },
+            "description": "Not implemented yet"
+          }
+        },
+        "summary": "Backtest"
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "description": "Readiness check for the Lambda Web Adapter and the web app's warm up ping.",
+        "operationId": "health_api_v1_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Health Api V1 Health Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health"
+      }
+    },
+    "/api/v1/indicators": {
+      "get": {
+        "description": "Every indicator with its `n` bounds, from the same registry that validates rules.",
+        "operationId": "indicators_api_v1_indicators_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/IndicatorSpec"
+                  },
+                  "title": "Response Indicators Api V1 Indicators Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Indicators"
+      }
+    },
+    "/api/v1/meta": {
+      "get": {
+        "description": "The contract version, plus the dataset once scope feature 7 loads one.",
+        "operationId": "meta_api_v1_meta_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Meta"
+      }
+    },
+    "/api/v1/scan": {
+      "post": {
+        "description": "Tickers whose rule is true on `as_of` (S-1).",
+        "operationId": "scan_api_v1_scan_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScanResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotImplementedBody"
+                }
+              }
+            },
+            "description": "Not implemented yet"
+          }
+        },
+        "summary": "Scan"
+      }
+    },
+    "/api/v1/templates": {
+      "get": {
+        "description": "The two built in rule templates (doc 02 §5.2).",
+        "operationId": "templates_api_v1_templates_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TemplateOut"
+                  },
+                  "title": "Response Templates Api V1 Templates Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Templates"
+      }
+    }
+  }
+}

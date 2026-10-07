@@ -1,0 +1,20 @@
+{
+  "detail": [
+    {
+      "type": "literal_error",
+      "loc": [
+        "body",
+        "rule",
+        "conditions",
+        0,
+        "left",
+        "ind"
+      ],
+      "msg": "Input should be 'open', 'high', 'low', 'close', 'volume', 'sma', 'ema', 'rsi', 'atr', 'highest', 'lowest', 'avg_volume', 'ret' or 'rs'",
+      "input": "macd",
+      "ctx": {
+        "expected": "'open', 'high', 'low', 'close', 'volume', 'sma', 'ema', 'rsi', 'atr', 'highest', 'lowest', 'avg_volume', 'ret' or 'rs'"
+      }
+    }
+  ]
+}

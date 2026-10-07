@@ -1,0 +1,21 @@
+{
+  "detail": [
+    {
+      "type": "out_of_range",
+      "loc": [
+        "body",
+        "rule",
+        "conditions",
+        0,
+        "left",
+        "n"
+      ],
+      "msg": "must be between 2 and 50",
+      "input": 60,
+      "ctx": {
+        "min": 2,
+        "max": 50
+      }
+    }
+  ]
+}

@@ -1,6 +1,8 @@
 # Real market data and private research notes must never be committed (vendor terms, spec 0001)
 data/
 research/
+# The engine's data loading code is source, not data (spec 0002).
+!engine/src/engine/data/
 
 # Secrets
 .env

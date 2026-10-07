@@ -35,6 +35,8 @@ extend-exclude = [".claude", ".agents", "docs"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "S"]
+# Scan column labels use the multiplication sign by contract (spec 0002), e.g. `1.5×ema(21)`.
+allowed-confusables = ["×"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["engine", "api"]

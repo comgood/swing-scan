@@ -59,13 +59,13 @@ Lane orchestrator with your sign off. Freeze the shared shapes every lane builds
 **Done when:** contracts are tagged `contracts-v1`, mocks validate against the schema in CI, the generated client compiles, and you have signed off SO-1 to SO-3.
 - [x] Design it (spec): `/architect contracts & data model`
 - [ ] Build it: `/develop contracts & data model`
-  - [ ] Thin thread: rule models, `/scan` (422 then 501), OpenAPI and generated client, one mock through MSW in Vitest (AC-1, AC-2, AC-5, AC-6, AC-13, AC-15)
-  - [ ] Full shapes: exits, sim, backtest responses, static GET routes, trial keys (AC-3, AC-4, AC-6 to AC-9, AC-14)
-  - [ ] Data and fixtures: market schema, `validate_market`, fixture loader and builder (AC-10, AC-11)
-  - [ ] Mocks and freeze: `make mocks`, every MSW handler, CI drift checks, SO-2 and SO-3, tag `contracts-v1` (AC-1, AC-12, AC-13, AC-16)
+  - [x] Thin thread: rule models, `/scan` (422 then 501), OpenAPI and generated client, one mock through MSW in Vitest (AC-1, AC-2, AC-5, AC-6, AC-13, AC-15)
+  - [x] Full shapes: exits, sim, backtest responses, static GET routes, trial keys (AC-3, AC-4, AC-6 to AC-9, AC-14)
+  - [x] Data and fixtures: market schema, `validate_market`, fixture loader and builder (AC-10, AC-11)
+  - [ ] Mocks and freeze: `make mocks`, every MSW handler, CI drift checks, SO-2 and SO-3, tag `contracts-v1` (AC-1, AC-12, AC-13, AC-16) (built; your SO-2 and SO-3 sign offs and the `contracts-v1` tag at merge are still open)
 - [ ] Verify it: `/check verify contracts & data model`
-- [ ] Test it: `/test contracts & data model`
-Spec [0002](../specs/0002-contracts-data-model/index.md)
+- [x] Test it: `/test contracts & data model`
+Spec [0002](../specs/0002-contracts-data-model/index.md) · code in `engine/src/engine/contracts/`, `engine/src/engine/data/fixtures.py`, `services/api/src/api/routes/`, `contracts/`, `packages/api-client/`, `apps/web/src/mocks/`
 
 ### 4. Design system & UI foundation · planned · needs a decision
 Lane FE. A small, calm visual language and base components: page layout, data table, form controls, number inputs, banners, and loading and error states.

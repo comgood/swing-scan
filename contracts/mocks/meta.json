@@ -1,0 +1,14 @@
+{
+  "contract_version": "1.0.0",
+  "data": {
+    "data_mode": "synthetic",
+    "seed": 42,
+    "data_version": "synthetic:v1:seed42",
+    "start": "2021-01-04",
+    "end": "2025-12-31",
+    "n_tickers": 500,
+    "survivors_only": false,
+    "benchmark": "SYN-INDEX"
+  },
+  "oos_start": "2024-07-03"
+}

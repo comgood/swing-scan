@@ -1,0 +1,12 @@
+# gitleaks config: the default rules plus one narrow allowlist.
+[extend]
+useDefault = true
+
+# Trial keys (`structure_key`, `pair_keys`) in the generated mocks are SHA-256 hashes of
+# a rule's shape, made by a seeded script, not secrets (spec 0002). Only 64 hex character
+# values inside contracts/mocks/ are allowed.
+[[allowlists]]
+description = "SHA-256 trial keys in generated contract mocks"
+condition = "AND"
+paths = ['''^contracts/mocks/[^/]+\.json$''']
+regexes = ['''^[0-9a-f]{64}$''']
