@@ -20,7 +20,6 @@ from acceptance.support import (
     bar_date,
     build_market,
     config,
-    owed,
     random_walk_frames,
     run_backtest,
     trade_lab,
@@ -339,12 +338,3 @@ def test_random_baseline_matches_counts_is_seeded_and_edge_is_a_difference() -> 
     assert [r.random for r in again.rows] == [r.random for r in lab.rows]
     other = trade_lab(STRATEGY, FIVE_CONFIGS, market, seed=7)
     assert [r.random for r in other.rows] != [r.random for r in lab.rows]
-
-
-@pytest.mark.ac("X-10")
-def test_random_entries_are_alive_and_never_on_a_last_bar() -> None:
-    owed(
-        "X-10",
-        "the trade lab response exposes no random entry list, so alive and not last bar "
-        "cannot be checked through the public API",
-    )

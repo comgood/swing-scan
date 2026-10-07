@@ -10,46 +10,46 @@ Status values: **open** (needs a ruling), **ruled** (decided, tests follow it), 
 **Status:** ruled (spec 0002, *Value sourcing*, `new_today`).
 Doc 01 S-3 says the scan's "new today" equals the backtest's **raw** signals, before cooldown and last bar filtering. Spec 0002 freezes doc 02 section 6 instead: `new_today` includes the 10 bar cooldown and ignores only the last bar term.
 **Tests assume:** the spec 0002 ruling. `test_scan.py::test_new_today_equals_the_backtest_entry_signals` compares `new_today` with the golden signal list (cooldown on, last bar ignored), and with the backtest's entries on every bar except a ticker's own last bar.
-**Still to do:** fix the S-3 wording in doc 01 to match (orchestrator).
+**Doc 01 fixed** (2026-10-07): S-3 now reads after the cooldown, ignoring only the last bar term.
 
 <a id="R-2"></a>
 ## R-2 and R-10: the breakout template has 3 conditions or 4?
 
-**Status:** open.
-Doc 01 section 6.2 lists four conditions for the 52 week breakout, including `close > sma(50)`. Doc 02 section 5.2, spec 0002 AC-8 and the frozen `TEMPLATES` have three (no `close > sma(50)`).
-**Tests assume:** the contract. R-2 evaluates whatever `TEMPLATES` holds, so it passes either way; R-10 only checks the visible `close > 5`.
-**Ruling needed:** which list is right, then fix the other doc (and, if doc 01 wins, a contract change PR for `TEMPLATES`).
+**Status:** ruled (owner, 2026-10-07).
+Doc 01 section 6.2 listed four conditions for the 52 week breakout, including `close > sma(50)`. Doc 02 section 5.2, spec 0002 AC-8 and the frozen `TEMPLATES` have three (no `close > sma(50)`).
+**Ruling:** three conditions; the contract stands. A close above the prior 252 day high is almost always above its 50 day SMA, so the fourth condition rarely filters anything. Doc 01 section 6.2 is corrected to match; no contract change.
+**Tests:** unchanged. R-2 evaluates whatever `TEMPLATES` holds; R-10 checks the visible `close > 5`.
 
 <a id="ema-seed"></a>
 ## R-2: how is `ema(n)` seeded, and which bars do windows cover?
 
-**Status:** open.
-No doc fixes the first EMA value or the exact windows. The golden reference uses the common conventions: `sma(n)`, `avg_volume(n)`, `highest(n)` and `lowest(n)` cover the n bars ending today (first value on bar n); `ema(n)` starts on bar n at the simple mean of the first n closes, then `alpha = 2 / (n + 1)`; `ret(n)` is `close[t] / close[t-n] - 1` (first value on bar n + 1).
+**Status:** ruled (owner, 2026-10-07). Recorded in doc 02 section 5.2, so the BE lane builds the engine to it.
+No doc fixed the first EMA value or the exact windows. The golden reference uses the common conventions: `sma(n)`, `avg_volume(n)`, `highest(n)` and `lowest(n)` cover the n bars ending today (first value on bar n); `ema(n)` starts on bar n at the simple mean of the first n closes, then `alpha = 2 / (n + 1)`; `ret(n)` is `close[t] / close[t-n] - 1` (first value on bar n + 1).
 **Why it matters:** a different EMA seed changes values for many bars, so the pullback template could disagree with the golden reference on a few dates.
-**Ruling needed:** confirm these, or state the engine's convention so the golden reference can follow it.
+**Ruling:** these conventions, as the golden reference already uses them (the TA-Lib and StockCharts convention for the EMA seed).
 
 <a id="X-1"></a>
 ## X-1: which date does `entries.hash` use?
 
-**Status:** open.
+**Status:** ruled (owner, 2026-10-07).
 Spec 0002 says `entries.hash` is the sha256 of the sorted `ticker|entry_date` lines. `Trade.entry_date` is the fill date (signal bar + 1).
 **Tests assume:** the fill date, the same as `Trade.entry_date` (`test_backtest.py` B-16 and `test_exit_lab.py` X-1).
-**Ruling needed:** confirm fill date, not signal date.
+**Ruling:** the fill date (signal bar + 1), the same value as `Trade.entry_date`. X-1's entry triple pairs the date with the entry price, which is the fill price.
 
 <a id="X-10"></a>
 ## X-10: how can QA see that random entries are alive and never on a last bar?
 
-**Status:** open.
+**Status:** ruled (owner, 2026-10-07).
 The trade lab response carries the random counts and metrics, but no random entry list or hash, so "all on alive tickers and none on a last bar" cannot be checked through the public API.
-**Tests assume:** nothing; `test_random_entries_are_alive_and_never_on_a_last_bar` is a pending placeholder.
-**Options:** (1) an additive optional field, such as `entries.random_hash` or a capped random entry list (contract change, minor bump); (2) rely on the BE unit tests and the owner's B-10 oracle, and record that QA cannot check it independently.
+**Ruling:** option 2, no contract change. QA checks what the API shows: the random counts equal the strategy's IS and OOS counts, the same seed gives identical random results, another seed changes them, and edge equals strategy minus random. "Alive and never on a last bar" is covered by the BE unit tests and the owner's B-10 oracle; QA records that it cannot check this part independently. The placeholder test was removed, and the matrix row names the other coverage.
+**Options that were considered:** an additive `entries.random_hash`, or a capped random entry list (contract change, minor bump).
 
 <a id="D-1"></a>
 ## D-1 to D-3: the synthetic generator's entry point
 
 **Status:** owed (scope feature 7).
 The generator has no frozen public entry point yet. The tests are written against the frozen `Market` shape and call one hook, `load_synthetic_market(seed)` in `tests/acceptance/test_data.py`, which fails until feature 7 names the function.
-D-3 also needs a definition of a "bear segment". **Tests assume:** the benchmark falls at least 20% from a running peak at some point. Confirm or replace when feature 7 is specced.
+D-3's "bear segment" is **ruled** (owner, 2026-10-07): the benchmark closes at least 20% below its running peak at some point. This is what the tests check; feature 7's spec should generate to it.
 
 <a id="D-4"></a>
 ## D-4: checking the live load
@@ -72,7 +72,7 @@ Doc 02 section 15.4 puts these in `apps/web/tests/acceptance/` as Vitest tests a
 <a id="perf"></a>
 ## S-4, B-13 and X-7: where the time budgets are measured
 
-**Status:** open.
+**Status:** ruled (owner, 2026-10-07).
 The criteria name the deployed API (S-4, X-7) or a warm run (B-13). CI never calls the deployed API, so the acceptance tests time the use case in process on a seeded 500 ticker, 1,260 bar random walk.
 **Tests assume:** an in process pass is the CI gate, and the deployed numbers are a `/check verify` step (`make smoke`).
-**Ruling needed:** confirm that split. Once feature 7 lands, the tests can switch to the real synthetic market.
+**Ruling:** the split stands. The in process timing is the CI gate; the deployed numbers for S-4 and X-7 are a `/check verify` step after a deploy (`make smoke`). Once feature 7 lands, the tests switch to the real synthetic market.

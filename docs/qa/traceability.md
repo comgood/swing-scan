@@ -69,7 +69,7 @@ Test files are under `tests/acceptance/`. "Oracle" means the owner's protected s
 | X-7 | Six configs plus baseline under 10 s and 6 MB | use case | `test_exit_lab.py` | 500 ticker, 1,260 bar random walk (deployed number via verify) | `make smoke` | pending | |
 | X-8 | Per trade metrics only, hand checked | use case | `test_exit_lab.py` | metrics recomputed from baseline trades | | pending | |
 | X-9 | Horizon exit at bar 60 and the warning | use case, UI | `test_exit_lab.py` | steady climb that never trips a 10% trail | Oracle | pending | |
-| X-10 | Random baseline counts, seed and edge | use case | `test_exit_lab.py` | five configs, seeds 42 and 7 | | pending | |
+| X-10 | Random baseline counts, seed and edge | use case | `test_exit_lab.py` | five configs, seeds 42 and 7 | BE unit tests and Oracle B-10 (alive, never on a last bar; ruled 2026-10-07) | pending | |
 | U-1 | First visit: Breakout, results, synthetic banner | contract, UI | `test_ui.py` | `/meta`, `/templates`; Vitest owed | | pending | |
 | U-2 | Survivors badge in live mode | UI | `test_ui.py` | owed to Vitest | | pending | |
 | U-3 | Assumptions header lists every field | contract, UI | `test_ui.py` | OpenAPI `Assumptions`; Vitest owed | | pending | |
