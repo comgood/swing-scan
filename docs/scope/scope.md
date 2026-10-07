@@ -150,7 +150,7 @@ Generated data, one template scan, one simple backtest, shown on the deployed pa
 Lane DI. A seeded generated market of 500 invented tickers over 5 years with regimes, planted delistings, and a demo index, built into the API image.
 **Done when:** the same seed gives identical data, every bar passes sanity checks, and at least one bear segment and 20 delisted tickers exist (D-1 to D-3).
 - [x] Build it: `/develop synthetic market` · spec [0006](../specs/0006-synthetic-market/index.md) (assumed decision, owes `/architect synthetic market` to ratify) · code in `engine/src/engine/synthetic/`, `engine/src/engine/data/`
-- [ ] Verify it: `/check verify synthetic market`
+- [x] Verify it: `/check verify synthetic market` (D-1 to D-3 pass; the image build check is blocked until Docker runs, see [the report](../reviews/2026-10-08-verify-synthetic-market.md))
 - [ ] Test it: `/test synthetic market`
 
 ### 8. Template scan · in-progress
