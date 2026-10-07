@@ -23,7 +23,11 @@ describe("Button loading (AC-5)", () => {
     await user.click(button);
     expect(onClick).not.toHaveBeenCalled();
     expect(button).toHaveFocus();
-    expect(screen.getByText("Run backtest")).toHaveClass("invisible");
+    // jsdom applies no Tailwind CSS, so guard the class itself: `invisible` (visibility:
+    // hidden) would drop the label from the accessibility tree and leave the button unnamed.
+    const label = screen.getByText("Run backtest");
+    expect(label).toHaveClass("opacity-0");
+    for (const hiding of ["invisible", "hidden", "sr-only"]) expect(label).not.toHaveClass(hiding);
   });
 
   it("does not submit its form while loading", async () => {

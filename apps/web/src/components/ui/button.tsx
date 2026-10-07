@@ -74,7 +74,8 @@ function Button({
     >
       {loading ? (
         <>
-          <span className="invisible inline-flex items-center gap-1.5">{children}</span>
+          {/* opacity, not visibility: the label stays the accessible name while hidden. */}
+          <span className="inline-flex items-center gap-1.5 opacity-0">{children}</span>
           <span className="absolute inset-0 flex items-center justify-center" aria-hidden="true">
             <Spinner />
           </span>
