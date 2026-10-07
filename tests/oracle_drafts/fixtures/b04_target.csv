@@ -1,0 +1,27 @@
+# B-4 percent target. Rule: close > 9.5. Config: stop_pct 8 and target 15.
+# Each ticker signals at close(3). Bar 4: F = 10 x 1.001 = 10.01.
+#   Target T = F x 1.15 = 11.5115. Stop L = F x 0.92 = 9.2092.
+# TGI (intraday target): bar 5 opens 10.8 < T, high 12.0 >= T, low 10.6 > L.
+#   Exit = T x 0.999 = 11.5115 x 0.999 = 11.4999885. Reason target.
+# TGG (gap target): bar 5 opens 12.0 >= T, so exit at the open: 12.0 x 0.999 = 11.988. Reason target.
+# TGS (stop and target on the same bar): bar 5 high 12.0 >= T and low 9.0 <= L.
+#   The stop beats the target: exit = L x 0.999 = 9.2092 x 0.999 = 9.1999908. Reason stop_pct.
+ticker,bar,open,high,low,close,volume
+TGI,1,9,9.2,8.8,9,1000000
+TGI,2,9,9.2,8.8,9,1000000
+TGI,3,9.2,10.1,9.1,10,1000000
+TGI,4,10,10.5,9.9,10.4,1000000
+TGI,5,10.8,12.0,10.6,11.8,1000000
+TGI,6,11.8,12.0,11.5,11.9,1000000
+TGG,1,9,9.2,8.8,9,1000000
+TGG,2,9,9.2,8.8,9,1000000
+TGG,3,9.2,10.1,9.1,10,1000000
+TGG,4,10,10.5,9.9,10.4,1000000
+TGG,5,12.0,12.5,11.9,12.2,1000000
+TGG,6,12.2,12.4,12.0,12.1,1000000
+TGS,1,9,9.2,8.8,9,1000000
+TGS,2,9,9.2,8.8,9,1000000
+TGS,3,9.2,10.1,9.1,10,1000000
+TGS,4,10,10.5,9.9,10.4,1000000
+TGS,5,10.5,12.0,9.0,10.0,1000000
+TGS,6,10.0,10.2,9.8,10.0,1000000

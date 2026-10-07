@@ -1,0 +1,42 @@
+# B-9 MAE and MFE. Rule: close > 9.5. Config: stop_pct 8, target 15, time 3.
+# Every ticker signals at close(3) and enters at bar 4: F = 10.01, L = 9.2092, T = 11.5115.
+# R = F - L = 10.01 x 0.08 = 0.8008. MAE = min low, MFE = max high, from the entry bar through
+# the exit bar, with the exit bar limited to what was knowable before the fill (doc 02 section 7.2).
+# MG (gap stop): bar 5 opens 9.0 <= L, exit at the open 9.0 x 0.999. Exit bar contributes only
+#   its open: MAE = min(9.8, 9.0) = 9.0, MFE = max(10.4, 9.0) = 10.4 (bar 5 low 8.7 ignored).
+# MS (intraday stop): bar 5 opens 9.7 > L, low 9.0 <= L, exit at L x 0.999. Exit bar: MAE at L,
+#   MFE at the open: MAE = min(9.9, 9.2092) = 9.2092, MFE = max(10.3, 9.7) = 10.3 (bar 5 high 10.6 ignored).
+# MT (intraday target): bar 5 opens 10.8 < T, high 12.0 >= T, low 9.5 > L, exit at T x 0.999.
+#   Exit bar: MFE at T, MAE at the open: MAE = min(9.95, 10.8) = 9.95, MFE = max(10.5, 11.5115) = 11.5115
+#   (bar 5 low 9.5 ignored).
+# MM (time): no stop or target, exit at close(6) x 0.999 = 10.3 x 0.999. Full bars 4 to 6:
+#   MAE = min(9.7, 9.6, 9.4) = 9.4, MFE = max(10.2, 10.9, 10.6) = 10.9.
+ticker,bar,open,high,low,close,volume
+MG,1,9,9.2,8.8,9,1000000
+MG,2,9,9.2,8.8,9,1000000
+MG,3,9.2,10.1,9.1,10,1000000
+MG,4,10,10.4,9.8,10.2,1000000
+MG,5,9.0,9.3,8.7,9.1,1000000
+MG,6,9.1,9.2,9.0,9.1,1000000
+MG,7,9.1,9.2,9.0,9.1,1000000
+MS,1,9,9.2,8.8,9,1000000
+MS,2,9,9.2,8.8,9,1000000
+MS,3,9.2,10.1,9.1,10,1000000
+MS,4,10,10.3,9.9,10.1,1000000
+MS,5,9.7,10.6,9.0,9.2,1000000
+MS,6,9.2,9.3,9.1,9.2,1000000
+MS,7,9.2,9.3,9.1,9.2,1000000
+MT,1,9,9.2,8.8,9,1000000
+MT,2,9,9.2,8.8,9,1000000
+MT,3,9.2,10.1,9.1,10,1000000
+MT,4,10,10.5,9.95,10.4,1000000
+MT,5,10.8,12.0,9.5,11.9,1000000
+MT,6,11.9,12.0,11.8,11.9,1000000
+MT,7,11.9,12.0,11.8,11.9,1000000
+MM,1,9,9.2,8.8,9,1000000
+MM,2,9,9.2,8.8,9,1000000
+MM,3,9.2,10.1,9.1,10,1000000
+MM,4,10,10.2,9.7,10.0,1000000
+MM,5,10,10.9,9.6,10.5,1000000
+MM,6,10.5,10.6,9.4,10.3,1000000
+MM,7,10.3,10.4,10.2,10.3,1000000

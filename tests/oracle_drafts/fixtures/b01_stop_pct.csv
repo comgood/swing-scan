@@ -1,0 +1,16 @@
+# B-1 percent stop. Rule: close > 9.5. Config: stop_pct 8. Slippage 10 bps per side.
+# Bar 3 close 10 > 9.5 after 9 on bar 2: rising edge, signal at close(3).
+# Bar 4 (entry bar, b = 1): fill F = open(4) x 1.001 = 10 x 1.001 = 10.01.
+#   Stop L = F x (1 - 0.08) = 10.01 x 0.92 = 9.2092. Low 9.9 > L, no exit.
+# Bar 5 (b = 2): open 9.8 > L (no gap), low 9.0 <= L, so exit at L.
+#   Exit fill = min(open(5), L) x 0.999 = 9.2092 x 0.999 = 9.1999908. Reason stop_pct.
+# Bars 6 to 8 close below 9.5, so no new edge (and the cooldown would block one anyway).
+ticker,bar,open,high,low,close,volume
+STP,1,9,9.2,8.8,9,1000000
+STP,2,9,9.2,8.8,9,1000000
+STP,3,9.2,10.1,9.1,10,1000000
+STP,4,10,10.3,9.9,10.2,1000000
+STP,5,9.8,9.9,9.0,9.3,1000000
+STP,6,9.3,9.4,9.2,9.3,1000000
+STP,7,9.3,9.4,9.2,9.3,1000000
+STP,8,9.3,9.4,9.2,9.3,1000000
