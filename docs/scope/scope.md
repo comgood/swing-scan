@@ -17,7 +17,7 @@ _Source of truth: acceptance criteria IDs (D, R, S, B, X, U) and settled default
 | 2 | Coding standards & tooling | Foundation | done |
 | 3 | Contracts & data model | Foundation | done |
 | 4 | Design system & UI foundation | Foundation | done |
-| 5 | Acceptance test harness & traceability | Foundation | in-progress |
+| 5 | Acceptance test harness & traceability | Foundation | done |
 | 6 | Backtest correctness oracles | Foundation | planned |
 | 7 | Synthetic market | Slice 1 | planned |
 | 8 | Template scan | Slice 1 | planned |
@@ -29,6 +29,53 @@ _Source of truth: acceptance criteria IDs (D, R, S, B, X, U) and settled default
 | 14 | Live research mode (local) | Slice 4 | planned |
 | 15 | Deploy hardening & demo readiness | Slice 5 | planned |
 | 16 | README, research note & GIF | Slice 5 | planned |
+
+## Parallel work
+
+From here on, features run in parallel across the four agent lanes of doc 02 §15. Each lane runs one feature at a time, in its own worktree and branch, and writes only to its own folders (`CODEOWNERS`). A feature can start as soon as its gate below is open. Gates replace the old Day 1 to 7 dates.
+
+### Gates
+
+| Gate | What opens it | Status | What it unlocks |
+|---|---|---|---|
+| **G0 Contracts frozen** | `contracts-v1` tagged (feature 3) | **open** (tag on `9fd3879`) | Lane fan out: every feature marked "now" below |
+| **G1 Oracles approved** | You recompute and merge QA's oracle drafts with the `oracle-approved` label (feature 6) | closed | Engine simulator and exit work in features 9 and 11 |
+| **G2 Simulator merged** | Feature 9's simulator and its single exit interface (`step()`) on `main` | closed | Engine work in features 11 and 12 |
+| **G3 Real scan API** | Feature 8's `/scan` on `main` (and on a preview deploy) | closed | FE switches from mocks to the real API, screen by screen |
+| **G4 Feature freeze** | Every MUST criterion `required` and green in `docs/qa/traceability.md` | closed | Feature 16, then the `v1.0` tag |
+
+### Who can work on what, and when
+
+| Feature | Lanes | Can start | Runs alongside | Writes to |
+|---|---|---|---|---|
+| 1. Stack & architecture (finish) | DI, you run the first deploy | now | everything | `infra/`, `.github/`, root config |
+| 6. Backtest correctness oracles | QA drafts, you approve | now | 1, 7, 8, 10, 13, 14 | drafts in an `oracle-draft` PR; only you merge into `tests/oracle/` |
+| 7. Synthetic market | DI | now | 6, 8, 10, 13 | `engine/src/engine/synthetic/`, `engine/src/engine/data/`, `scripts/` |
+| 8. Template scan | BE + FE | now (`/architect` first) | 6, 7, 13 | BE: `engine/` indicators and rules, `services/api/`; FE: `apps/web/src/features/` |
+| 10. Rule builder | FE now against mocks; BE after 8's rule evaluator merges | now (`/architect` first) | 6, 7, 9 | FE: `apps/web/src/features/`; BE: `engine/` rules |
+| 13. Research honesty guards | FE (trial keys are already frozen in the contract) | now, against mocks | 8 to 12 | `apps/web/src/features/` |
+| 14. Live research mode | DI, you run `make load-live` | now (D-5's host rule is decided in its spec) | everything | `engine/src/engine/data/`, `scripts/` |
+| 9. Portfolio backtest core | BE + FE | spec now; engine after **G1** and 8's entry signals | 10, 13, 14 | BE: `engine/` sim and metrics, `services/api/`; FE: `apps/web/src/features/` |
+| 11. Exit types | BE | after **G1** and **G2** | 12 (FE), 13 | `engine/` exits |
+| 12. Exit lab | BE + FE | spec now; FE against mocks now; engine after **G2** | 11, 13 | BE: `engine/` baseline and sim; FE: `apps/web/src/features/` |
+| 15. Deploy hardening | DI | after 1's first deploy; cold start number after 9 | everything | `infra/`, `.github/workflows/`, `services/api/Dockerfile` |
+| 16. README, research note & GIF | Orchestrator + you | after **G4** (the research note needs 12) | none | `README.md`, `docs/` |
+
+### Lane queues (one feature at a time per lane)
+
+- **DI:** 1 → 7 → 14 → 15.
+- **BE (the critical path):** 8 → 9 → 11 → 12. Keep this lane busy first; it decides the finish date.
+- **FE:** 8 → 10 → 13 → 9 (report) → 12. FE works against the frozen mocks until G3, so it never waits on BE.
+- **QA:** 6 (oracle drafts) → for each feature as it lands: its UI acceptance tests in `apps/web/tests/acceptance/`, then flip its IDs to `required` once green on `main`, then `/check verify`. A feature closes `done` only after this QA gate (doc 02 §15.4).
+- **You:** approve the oracles (G1) as early as you can, since it is the one gate that can stall the BE lane. Run the first deploy (feature 1) and `make load-live` (feature 14). Batch your reviews twice a day.
+- **Orchestrator:** `/architect` for 8, 9, 10 and 12 ahead of their lanes, then `/sync` after each merge batch.
+
+### Rules that keep parallel work safe
+
+- Rebase on `origin/main` at session start and before every PR. Branches are `<lane>/<feature>-<slug>`, at most 2 open PRs per lane, about 400 changed lines per PR.
+- Shared root files (`Makefile`, `pyproject.toml`, root `package.json`, CI) change only through DI; other lanes ask in their PR.
+- Contract changes go through a `contract-change` PR you approve. Additive optional fields can land any time; breaking changes bump the tag to `contracts-v2`.
+- When QA and a builder read a criterion differently, log it in `docs/qa/ac-questions.md`; the test stays `pending` until you rule. Nobody edits the other lane's files.
 
 ## Foundations
 
@@ -80,7 +127,7 @@ Lane FE. A small, calm visual language and base components: page layout, data ta
 - [x] Test it: `/test design system & UI foundation`
 Spec [0003](../specs/0003-design-system-ui-foundation/index.md) · design in `apps/web/design.md` · code in `apps/web/src/components/`, `apps/web/src/lib/`, `apps/web/src/app/ui/`
 
-### 5. Acceptance test harness & traceability · in-progress
+### 5. Acceptance test harness & traceability · done
 Lane QA. The independent test suite, written from doc 01 criteria and the contracts only, never from builder code: `tests/acceptance/`, `tests/golden/`, a pending or required status gate in CI, and an AC to test matrix in `docs/qa/`.
 **Done when:** every MUST criterion in doc 01 has a row in the matrix and a test marked pending or required, and CI fails only on required tests.
 - [x] Build it: `/develop acceptance test harness`
