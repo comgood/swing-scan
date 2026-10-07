@@ -1,9 +1,11 @@
 """UI and honesty criteria U-1 to U-8 (doc 01 section 6.6).
 
 The rendering half of each criterion belongs in `apps/web/tests/acceptance/` (Vitest against
-the mocks, doc 02 section 15.4). Those tests are not written yet, so each ID carries a pending
-placeholder here. Where a criterion also depends on the contract (the data the page renders),
-that half is checked here through the API and the OpenAPI document.
+the mocks, doc 02 section 15.4). The shell parts are written there (U-1 banner, U-2, U-5, U-6
+structure, U-7 helpers; see docs/qa/ac-questions.md#ui-tests); the rest waits for the pages.
+Each ID keeps a pending placeholder here until every part of it is covered. Where a criterion
+also depends on the contract (the data the page renders), that half is checked here through the
+API and the OpenAPI document.
 """
 
 from __future__ import annotations
