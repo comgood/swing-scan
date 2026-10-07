@@ -10,9 +10,11 @@ from __future__ import annotations
 
 import math
 import random
+import re
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import date, timedelta
+from pathlib import Path
 from typing import Any, NoReturn
 
 import pytest
@@ -236,6 +238,27 @@ def owed(anchor: str, what: str) -> NoReturn:
     open question in `docs/qa/ac-questions.md`.
     """
     pytest.fail(f"owed: {what} (see {QA_QUESTIONS}#{anchor})")
+
+
+WEB_ACCEPTANCE = Path(__file__).resolve().parents[2] / "apps" / "web" / "tests" / "acceptance"
+
+
+def ui_covered_by(crit: str, *files: str) -> None:
+    """Point the gate at the Vitest files that cover a criterion's UI half.
+
+    Vitest runs those files in `pnpm --filter web test` (always blocking). This check keeps the
+    pointer honest: each file exists, names the ID in a test title, and owes nothing for it.
+    """
+    for name in files:
+        path = WEB_ACCEPTANCE / name
+        assert path.is_file(), f"{crit}: {path} is missing"
+        text = path.read_text(encoding="utf-8")
+        assert re.search(rf"""\bit\(\s*["'`]{re.escape(crit)}:""", text), (
+            f"{crit}: {name} has no it('{crit}: ...') test"
+        )
+        assert not re.search(rf"""\bit\.todo\(\s*["'`]{re.escape(crit)}:""", text), (
+            f"{crit}: {name} still owes an it.todo for it"
+        )
 
 
 def ui_owed(crit: str) -> NoReturn:

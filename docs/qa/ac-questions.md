@@ -74,15 +74,19 @@ Doc 02 section 15.4 puts these in `apps/web/tests/acceptance/` as Vitest tests a
 - U-2: `data-mode-banner.test.tsx`. A `live` health answer swaps in the live text on every page. The "badge" is the shell's data mode banner, with the words spec 0003 AC-4 fixes; doc 01 names only the meaning.
 - U-5: `warmup.test.tsx`. A health ping delayed 2.5 s shows "Warming up the engine…" after 1.5 s (not at 1.2 s) and clears when the answer lands; a fast answer never shows it; the 1,499 and 1,500 ms edges and the restart are checked on `WarmupNotice` with fake timers.
 - U-6, structure only: `layout-375.test.tsx`. No page carries a fixed width over 375 px, every table sits in its own labelled scroll box, and `FormRow` is one column unless the `sm` breakpoint applies.
+- U-4, components: `honesty.test.tsx`. `RunTrialCounter` on the mock `trial` blocks and seeded storage: the counter line, a numbers only tweak adding to the same `N`, re runs and re renders adding nothing, `M` across structure keys, k pairs per exit lab run, the spec 0004 storage keys, `N` surviving a new session, no warning at 9 and the warning word for word at 10 and above, unparsable values treated as empty, and either store throwing hiding the counter behind the static warning. The `/ui` gallery shows every state.
+- U-8, words: `honesty.test.tsx`. `ProcedureNote` renders the doc 01 text word for word, as body text, and the `/ui` gallery shows it.
 - U-7, shared helpers: `errors-422.test.tsx`. The 422 mocks come back through the `api` client and `fieldErrorsFrom422`, land on the named field (`aria-invalid`, the message as its description) and on no other row; a body level error shows in `FormErrorSummary`.
 
 **Still owed** (the UI does not exist yet, so the IDs stay `pending`):
 - U-1: the builder opens with Breakout and its scan results (features 8 and 10).
 - U-6: real builder rows stacking (feature 10), and anything that needs layout: `scrollWidth` at 375 px and the actual column stacking. jsdom has no CSS, so these stay a browser check in `/check verify` until Playwright is added (spec 0003 follow up).
 - U-7: the real builder row and exit config editor showing the error (features 10 and 12).
-- U-3 (report header), U-4 (trial counter), U-8 (procedure note), R-1 and R-8 (builder), X-3, X-4 and X-9 (exit lab report): no UI yet.
+- U-4: the counter inside the portfolio report (feature 9) and the exit lab report (feature 12), and no count for a failed run. `it.todo` in `honesty.test.tsx`.
+- U-8: the note directly under the exit lab table (feature 12). `it.todo` in `honesty.test.tsx`.
+- U-3 (report header), R-1 and R-8 (builder), X-3, X-4 and X-9 (exit lab report): no UI yet.
 
-Each ID keeps its pending placeholder in `tests/acceptance/`, plus a contract level test where one applies (U-3 fields, U-7 error paths, U-4 trial keys, X-3 `best_is`, X-4 null R). U-2 and U-5 are fully covered once this lands on `main`; the flip PR swaps their placeholders for a pointer to the Vitest files.
+Each ID keeps its pending placeholder in `tests/acceptance/`, plus a contract level test where one applies (U-3 fields, U-7 error paths, U-4 trial keys, X-3 `best_is`, X-4 null R). U-2 is `required` since 2026-10-08: its placeholder is now a pointer (`ui_covered_by`) that checks the Vitest file exists and owes nothing for the ID. U-5 is fully covered too and flips the same way in its own PR.
 
 <a id="perf"></a>
 ## S-4, B-13 and X-7: where the time budgets are measured
@@ -91,3 +95,16 @@ Each ID keeps its pending placeholder in `tests/acceptance/`, plus a contract le
 The criteria name the deployed API (S-4, X-7) or a warm run (B-13). CI never calls the deployed API, so the acceptance tests time the use case in process on a seeded 500 ticker, 1,260 bar random walk.
 **Tests assume:** an in process pass is the CI gate, and the deployed numbers are a `/check verify` step (`make smoke`).
 **Ruling:** the split stands. The in process timing is the CI gate; the deployed numbers for S-4 and X-7 are a `/check verify` step after a deploy (`make smoke`). Once feature 7 lands, the tests switch to the real synthetic market.
+
+<a id="U-4"></a>
+## U-4: what the session total `M` counts, and which storage failure hides the counter
+
+**Status:** open (spec 0004 is "Assumed", not ratified by `/architect`).
+Doc 01 U-4 says "a global session total across all rules is kept in sessionStorage" but not whether it counts runs or distinct pairs, and "storage unavailable" does not say which store. Spec 0004 assumes `M` is the number of distinct pair keys run this session (a re run adds nothing; a pair first seen in an earlier session counts once toward `M` but not again toward `N`), and that either store throwing hides both counters.
+**Tests assume:** spec 0004 as written, including its storage keys (`swing-scan:trials:v1:<structure_key>`, `swing-scan:session-trials:v1`). `honesty.test.tsx` checks the keys directly, so a ratification that changes the layout changes those tests. U-4 stays `pending` anyway until the counter is in the reports (features 9 and 12).
+
+<a id="U-8"></a>
+## U-8: "one line" in a DOM test
+
+**Status:** owed (feature 12, plus a browser check).
+jsdom applies no CSS, so it cannot see whether the note wraps to a second line at a given width. **Tests assume:** "one line" means one sentence pair of body text with no line break, not fine print (spec 0004, assumption 5). Whether it wraps at 375 px is a `/check verify` browser check. The placement under the exit lab table waits for feature 12.
