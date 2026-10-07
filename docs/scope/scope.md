@@ -16,7 +16,7 @@ _Source of truth: acceptance criteria IDs (D, R, S, B, X, U) and settled default
 | 1 | Stack & architecture | Foundation | in-progress |
 | 2 | Coding standards & tooling | Foundation | done |
 | 3 | Contracts & data model | Foundation | in-progress |
-| 4 | Design system & UI foundation | Foundation | planned |
+| 4 | Design system & UI foundation | Foundation | in-progress |
 | 5 | Acceptance test harness & traceability | Foundation | planned |
 | 6 | Backtest correctness oracles | Foundation | planned |
 | 7 | Synthetic market | Slice 1 | planned |
@@ -67,10 +67,18 @@ Lane orchestrator with your sign off. Freeze the shared shapes every lane builds
 - [x] Test it: `/test contracts & data model`
 Spec [0002](../specs/0002-contracts-data-model/index.md) · code in `engine/src/engine/contracts/`, `engine/src/engine/data/fixtures.py`, `services/api/src/api/routes/`, `contracts/`, `packages/api-client/`, `apps/web/src/mocks/`
 
-### 4. Design system & UI foundation · planned · needs a decision
+### 4. Design system & UI foundation · in-progress
 Lane FE. A small, calm visual language and base components: page layout, data table, form controls, number inputs, banners, and loading and error states.
 **Done when:** base components exist, are keyboard usable with visible focus and readable contrast, inputs are labelled, and layouts hold at 375 px (U-6).
-- [ ] Design it (spec): `/architect design system & UI foundation`
+- [x] Design it (spec): `/architect design system & UI foundation`
+- [ ] Build it: `/develop design system & UI foundation` (starts after feature 3's thin thread merges)
+  - [ ] Thin thread: tokens, shadcn `base-nova`, app shell with the data mode banner, `/ui` gallery, first Vitest and axe test (AC-1 to AC-4, AC-15, AC-16)
+  - [ ] Forms: fields, number input, 422 to field mapping (AC-5 to AC-7)
+  - [ ] Data display: data table, formatters, badges and cards (AC-8, AC-11, AC-12)
+  - [ ] Feedback and hardening: banners, warm up notice, error states, keyboard, 375 px, axe on every section (AC-9 to AC-11, AC-13, AC-14, AC-16)
+- [ ] Verify it: `/check verify design system & UI foundation`
+- [ ] Test it: `/test design system & UI foundation`
+Spec [0003](../specs/0003-design-system-ui-foundation/index.md) · design in `apps/web/design.md`
 
 ### 5. Acceptance test harness & traceability · planned
 Lane QA. The independent test suite, written from doc 01 criteria and the contracts only, never from builder code: `tests/acceptance/`, `tests/golden/`, a pending or required status gate in CI, and an AC to test matrix in `docs/qa/`.
