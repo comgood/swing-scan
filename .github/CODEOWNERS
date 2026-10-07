@@ -1,39 +1,38 @@
-# Lane ownership from doc 02 section 15.2. Replace @OWNER with your GitHub username once
-# the repo exists. All lanes run under one account, so every path resolves to the owner;
+# Lane ownership from doc 02 section 15.2. All lanes run under one account, so every path resolves to the owner;
 # the lane comments say which agent writes there.
 
 # Default: the owner reviews everything.
-*                         @OWNER
+*                         @comgood
 
 # Owner only, never edited by agents (also guarded by pre-commit and the CI label check).
-/tests/oracle/            @OWNER
+/tests/oracle/            @comgood
 
 # DI lane: root config, CI, infra, data generation.
-/Makefile                 @OWNER
-/pyproject.toml           @OWNER
-/package.json             @OWNER
-/.pre-commit-config.yaml  @OWNER
-/.github/                 @OWNER
-/infra/                   @OWNER
-/scripts/                 @OWNER
+/Makefile                 @comgood
+/pyproject.toml           @comgood
+/package.json             @comgood
+/.pre-commit-config.yaml  @comgood
+/.github/                 @comgood
+/infra/                   @comgood
+/scripts/                 @comgood
 
 # BE lane: engine domain modules and the API.
-/engine/                  @OWNER
-/services/api/            @OWNER
+/engine/                  @comgood
+/services/api/            @comgood
 # DI owns these (listed after /engine/ and /services/api/ because the last match wins).
-/services/api/Dockerfile  @OWNER
-/engine/src/engine/synthetic/  @OWNER
-/engine/src/engine/data/  @OWNER
+/services/api/Dockerfile  @comgood
+/engine/src/engine/synthetic/  @comgood
+/engine/src/engine/data/  @comgood
 
 # FE lane: the web app.
-/apps/web/                @OWNER
+/apps/web/                @comgood
 
 # QA lane: acceptance tests, golden references, test plan.
-/tests/acceptance/        @OWNER
-/tests/golden/            @OWNER
-/apps/web/tests/acceptance/  @OWNER
-/docs/qa/                 @OWNER
+/tests/acceptance/        @comgood
+/tests/golden/            @comgood
+/apps/web/tests/acceptance/  @comgood
+/docs/qa/                 @comgood
 
 # Contracts: owner approves every change (contract-change PRs).
-/contracts/               @OWNER
-/packages/api-client/     @OWNER
+/contracts/               @comgood
+/packages/api-client/     @comgood
