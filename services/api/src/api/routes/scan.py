@@ -1,4 +1,4 @@
-"""`POST /scan`: validates the full request now; 501 until scope feature 8."""
+"""`POST /scan`: runs `engine.api.scan` on the loaded market; 501 while none is loaded."""
 
 from __future__ import annotations
 
@@ -21,5 +21,5 @@ router = APIRouter()
 def scan(request: ScanRequest) -> ScanResponse:
     """Tickers whose rule is true on `as_of` (S-1)."""
     if state.market is None:
-        raise NotYetImplemented(8, "scan")
+        raise NotYetImplemented(7, "Loading the market")
     return use_cases.scan(request, state.market)

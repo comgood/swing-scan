@@ -19,10 +19,11 @@ def configs(count: int) -> list[dict[str, Any]]:
     return [{"name": f"C{i}", "exits": [{"type": "stop_pct", "pct": 8}]} for i in range(count)]
 
 
-def test_valid_scan_is_501_naming_feature_8() -> None:
+def test_scan_without_a_market_is_501(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(state, "market", None)
     res = client.post("/api/v1/scan", json={"rule": RULE})
     assert res.status_code == 501
-    assert "feature 8" in res.json()["detail"]
+    assert "feature 7" in res.json()["detail"]
 
 
 @pytest.mark.parametrize("count", [1, 2, 6])
@@ -82,7 +83,8 @@ def test_templates_are_served() -> None:
     assert [t["id"] for t in body] == ["breakout_52w", "pullback_ema21"]
 
 
-def test_meta_has_the_contract_version_and_no_data_yet() -> None:
+def test_meta_has_the_contract_version_and_no_data_yet(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(state, "market", None)
     body = client.get("/api/v1/meta").json()
     assert body == {"contract_version": CONTRACT_VERSION, "data": None, "oos_start": None}
 
@@ -99,8 +101,15 @@ def test_a_stray_not_implemented_error_stays_a_500(monkeypatch: pytest.MonkeyPat
     assert client.post("/api/v1/scan", json={"rule": RULE}).status_code == 500
 
 
-def test_with_a_market_loaded_the_stub_still_answers_501(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_with_a_market_loaded_scan_answers_200(monkeypatch: pytest.MonkeyPatch) -> None:
     from engine.data.fixtures import FrameSpec, make_market
 
-    monkeypatch.setattr(state, "market", make_market({"AAA": FrameSpec(1, [1.0, 2.0])}))
-    assert client.post("/api/v1/scan", json={"rule": RULE}).status_code == 501
+    market = make_market({"AAA": FrameSpec(1, [4.0, 6.0]), "BBB": FrameSpec(1, [4.0, 4.0])})
+    monkeypatch.setattr(state, "market", market)
+    rule = {"name": "price", "conditions": [{**RULE["conditions"][2]}]}  # close > 5
+    res = client.post("/api/v1/scan", json={"rule": rule})
+    assert res.status_code == 200
+    body = res.json()
+    assert body["as_of"] == "2020-01-03"
+    assert [row["ticker"] for row in body["rows"]] == ["AAA"]
+    assert body["rows"][0]["new_today"] is True
