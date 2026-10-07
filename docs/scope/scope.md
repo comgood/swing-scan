@@ -149,7 +149,8 @@ Generated data, one template scan, one simple backtest, shown on the deployed pa
 ### 7. Synthetic market · in-progress
 Lane DI. A seeded generated market of 500 invented tickers over 5 years with regimes, planted delistings, and a demo index, built into the API image.
 **Done when:** the same seed gives identical data, every bar passes sanity checks, and at least one bear segment and 20 delisted tickers exist (D-1 to D-3).
-- [x] Build it: `/develop synthetic market` · spec [0006](../specs/0006-synthetic-market/index.md) (assumed decision, owes `/architect synthetic market` to ratify) · code in `engine/src/engine/synthetic/`, `engine/src/engine/data/`
+- [x] Design it (spec): `/architect synthetic market` (ratified, proposed, pending owner sign-off)
+- [x] Build it: `/develop synthetic market` · spec [0006](../specs/0006-synthetic-market/index.md) (ratified, proposed, pending owner sign-off) · code in `engine/src/engine/synthetic/`, `engine/src/engine/data/`
 
 ### 8. Template scan · in-progress
 Lanes BE and FE. Indicators, rule evaluation with the valid rising edge and the signal based cooldown, the two templates, the `/scan` endpoint, and a sortable results table on the landing page.
