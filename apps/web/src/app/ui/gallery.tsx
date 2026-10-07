@@ -13,6 +13,7 @@ import { FormRow } from "@/components/form-row";
 import { NumberInput } from "@/components/number-input";
 import { SignedValue } from "@/components/signed-value";
 import { WarmupNotice } from "@/components/warmup-notice";
+import { LIVE_TEXT, SYNTHETIC_TEXT } from "@/components/shell/data-mode-banner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,10 +28,15 @@ import { errorAt, fieldErrorsFrom422 } from "@/lib/field-errors";
 import { formatDate, formatInt, formatNumber, formatPct, formatPrice, formatR } from "@/lib/format";
 import { Plus } from "lucide-react";
 
+import { ProcedureNote, TrialCounter } from "@/features/honesty";
+
+import { HonestyDemo } from "./honesty-demo";
+
 import {
   MANY_ROWS,
   SAMPLE_422,
   SAMPLE_ROWS,
+  SAMPLE_TRIAL_STATES,
   WIDE_COLUMNS,
   WIDE_ROWS,
   type SampleRow,
@@ -110,7 +116,8 @@ export function Gallery() {
       <header className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold">UI gallery</h1>
         <p className="text-sm text-muted-foreground">
-          Every foundation component in every state, with invented data (spec 0003).
+          Every foundation component in every state, with invented data (spec 0003), plus the
+          research honesty guards (spec 0004).
         </p>
       </header>
 
@@ -288,6 +295,47 @@ export function Gallery() {
           Prices are generated, not real. A long message wraps instead of widening the page:
           supercalifragilisticexpialidocious_long_identifier_without_spaces_0123456789.
         </Banner>
+      </GallerySection>
+
+      <GallerySection id="honesty" title="Research honesty guards">
+        <p className="text-sm text-muted-foreground">
+          Trial counter (U-4) in each state, then a live demo, the exit lab procedure note (U-8),
+          and the data mode banners (U-1, U-2) that the page shell shows.
+        </p>
+        <div className="grid min-w-0 gap-4 md:grid-cols-2">
+          {SAMPLE_TRIAL_STATES.map(({ label, state }, i) => (
+            <div
+              key={label}
+              role="group"
+              aria-labelledby={`trial-state-${i}`}
+              className="flex min-w-0 flex-col gap-2 rounded-lg border p-4"
+            >
+              <h3 id={`trial-state-${i}`} className="text-sm font-medium">
+                {label}
+              </h3>
+              <TrialCounter state={state} />
+            </div>
+          ))}
+        </div>
+        <div
+          role="group"
+          aria-labelledby="trial-demo"
+          className="flex min-w-0 flex-col gap-2 rounded-lg border p-4"
+        >
+          <h3 id="trial-demo" className="text-sm font-medium">
+            Live demo
+          </h3>
+          <HonestyDemo />
+        </div>
+        <div className="flex min-w-0 flex-col gap-2 rounded-lg border p-4">
+          <h3 className="text-sm font-medium">Procedure note under the exit lab table</h3>
+          <ProcedureNote />
+        </div>
+        <div className="flex min-w-0 flex-col gap-2">
+          <h3 className="text-sm font-medium">Data mode banners</h3>
+          <Banner variant="warning">{SYNTHETIC_TEXT}</Banner>
+          <Banner variant="warning">{LIVE_TEXT}</Banner>
+        </div>
       </GallerySection>
 
       <GallerySection id="loading" title="Loading">
