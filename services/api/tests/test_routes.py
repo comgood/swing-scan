@@ -97,7 +97,7 @@ def test_a_stray_not_implemented_error_stays_a_500(monkeypatch: pytest.MonkeyPat
         raise NotImplementedError("a real bug")
 
     monkeypatch.setattr(state, "market", make_market({"AAA": FrameSpec(1, [1.0, 2.0])}))
-    monkeypatch.setattr(use_cases, "scan", broken)
+    monkeypatch.setattr(use_cases, "scan_timed", broken)
     assert client.post("/api/v1/scan", json={"rule": RULE}).status_code == 500
 
 

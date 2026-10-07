@@ -40,6 +40,7 @@ class IndicatorCache:
             .alias("is_last")
         )
         self.sessions: list[date] = bars["date"].unique().sort().to_list()
+        self.session_set: frozenset[date] = frozenset(self.sessions)
         self.capacity = capacity
         self._lock = threading.RLock()
         self._columns: OrderedDict[IndicatorKey, pl.Series] = OrderedDict()
