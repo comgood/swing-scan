@@ -8,7 +8,7 @@ API_IMAGE ?= swing-scan-api
 API_PLATFORM ?= linux/amd64
 
 .PHONY: setup dev dev-api dev-web lint format typecheck test test-acceptance hooks guards build-web \
-        build-api smoke test-oracle openapi gen-client mocks contracts contracts-check data load-live ci
+        build-api smoke test-oracle openapi gen-client mocks contracts contracts-check data data-check load-live ci
 
 setup: ## Install all JS and Python dependencies from the lockfiles
 	pnpm install --frozen-lockfile
@@ -81,7 +81,15 @@ guards: ## Data leak guard on every tracked file, plus gitleaks over the files
 smoke: ## Smoke test a deployed API: make smoke API_URL=https://...
 	scripts/smoke.sh "$(API_URL)"
 
-ci: lint typecheck test build-web contracts-check guards ## Every check CI runs, in one command
+ci: lint typecheck test build-web contracts-check data-check guards ## Every check CI runs, in one command
 
-test-oracle data load-live:
-	@echo "make $@ is not implemented yet (see docs/scope/scope.md, features 6, 7 and 14)"; exit 1
+SEED ?= 42
+
+data: ## Generate the synthetic market into data/synthetic (gitignored): make data SEED=42
+	uv run python -m engine.synthetic --seed $(SEED) --out data/synthetic
+
+data-check: ## CI: build the seed 42 market twice in a temp folder, same hashes, D-1 to D-3 hold
+	uv run python scripts/check_synthetic.py
+
+test-oracle load-live:
+	@echo "make $@ is not implemented yet (see docs/scope/scope.md, features 6 and 14)"; exit 1

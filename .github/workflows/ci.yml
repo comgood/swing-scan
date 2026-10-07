@@ -35,6 +35,7 @@ jobs:
       - run: make typecheck
       - run: make test
       - run: make contracts-check
+      - run: make data-check
       - run: make build-web
 
   guards:
