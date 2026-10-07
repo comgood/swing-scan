@@ -20,8 +20,11 @@ Tracer Bullet (one thin, real path through every layer first, then thicken it on
 make setup      # install from lockfiles (pnpm --frozen-lockfile, uv sync --frozen)
 make dev        # API on 127.0.0.1:8000 + web on :3000
 make build-web  # static export into apps/web/out
+make hooks      # once per clone: install the pre-commit hooks
 make lint && make typecheck
+make format     # apply Prettier and Ruff fixes
 make test       # pytest (oracle tests first once they exist)
+make ci         # every check CI runs, in one command
 ```
 
 Run every check through `make`; CI calls only `make` targets. Targets that print "not implemented yet" arrive with later scope features.
@@ -44,7 +47,7 @@ Stored in `docs/specs/`. Format: `docs/specs/NNNN-title/index.md`. Criteria IDs 
 
 ## Tooling
 
-To be installed by `/develop tooling` (scope feature 2): ESLint + Prettier (web), Ruff lint + format, mypy strict. Pre-commit runs lint, format, gitleaks, the data leak guard (D-6) and the `tests/oracle/` guard; typecheck runs in `make typecheck` and CI. CI (GitHub Actions) on every PR: lint, typecheck, oracle first pytest, Vitest, guards, OpenAPI to TS diff.
+ESLint + Prettier (web), Ruff lint + format and mypy strict (config in root `pyproject.toml`). Pre-commit (`.pre-commit-config.yaml`) runs lint, format, gitleaks, the data leak guard (D-6) and the `tests/oracle/` guard (`scripts/guards/`); typecheck runs in `make typecheck` and CI. CI (`.github/workflows/ci.yml`) on every PR: lint, typecheck, test, web build, guards, and an `oracle-approved` label check for `tests/oracle/`. Vitest, oracle first ordering and the OpenAPI to TS diff join CI with features 3, 5 and 6.
 
 ## Git
 
@@ -64,6 +67,7 @@ To be installed by `/develop tooling` (scope feature 2): ESLint + Prettier (web)
 - [shadcn](.agents/skills/shadcn/): `shadcn-ui/ui`, adding and styling shadcn/ui components in `apps/web`
 - [multi-stage-dockerfile](.agents/skills/multi-stage-dockerfile/): `github/awesome-copilot`, multi stage image patterns for `services/api/Dockerfile`
 - [pnpm](.agents/skills/pnpm/): `antfu/skills`, pnpm workspaces, lockfile and dependency config
+- [ruff](.agents/skills/ruff/): `astral-sh/claude-code-plugins`, Ruff lint and format usage
 
 MCP servers: shadcn/ui (recommended), TanStack docs (recommended)
 

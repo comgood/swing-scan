@@ -21,7 +21,7 @@ uv run pytest tests/acceptance
 
 ## Conventions
 
-- `oracle/` is protected: agents never edit it. QA drafts fixtures in an `oracle-draft` PR; only the owner's `oracle-approved` label lets CI accept changes.
+- `oracle/` is protected: agents never edit it. QA drafts fixtures in an `oracle-draft` PR; only the owner's `oracle-approved` label lets CI accept changes. Locally the pre-commit oracle guard blocks the commit; the owner commits with `ORACLE_EDIT_OK=1 git commit ...`.
 - QA writes from `docs/01*`, `docs/specs/` and `contracts/` only, and never opens builder implementation folders.
 - Acceptance tests call `engine.api.scan`, `engine.api.backtest` and FastAPI's `TestClient`, never engine internals.
 - CI blocks only on `required` IDs. QA flips an ID to `required` once it passes on `main`; builders never edit QA files.
