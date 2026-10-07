@@ -15,8 +15,8 @@ _Source of truth: acceptance criteria IDs (D, R, S, B, X, U) and settled default
 |---|---------|-------|--------|
 | 1 | Stack & architecture | Foundation | in-progress |
 | 2 | Coding standards & tooling | Foundation | done |
-| 3 | Contracts & data model | Foundation | in-progress |
-| 4 | Design system & UI foundation | Foundation | in-progress |
+| 3 | Contracts & data model | Foundation | done |
+| 4 | Design system & UI foundation | Foundation | done |
 | 5 | Acceptance test harness & traceability | Foundation | planned |
 | 6 | Backtest correctness oracles | Foundation | planned |
 | 7 | Synthetic market | Slice 1 | planned |
@@ -54,20 +54,20 @@ Lane DI. Capture conventions from the real scaffold into root `AGENTS.md` (inclu
   - [x] CI (checks + guards, oracle label check), `CODEOWNERS`, `make ci`
 Spec [0001](../specs/0001-stack-architecture/index.md) · code in `.pre-commit-config.yaml`, `.github/`, `scripts/guards/`, `Makefile`
 
-### 3. Contracts & data model · in-progress
+### 3. Contracts & data model · done
 Lane orchestrator with your sign off. Freeze the shared shapes every lane builds against: rule JSON schema with Pydantic and generated TypeScript types, the bars schema, the exit config schema, the OpenAPI contract with mock responses, and the test fixture format.
 **Done when:** contracts are tagged `contracts-v1`, mocks validate against the schema in CI, the generated client compiles, and you have signed off SO-1 to SO-3.
 - [x] Design it (spec): `/architect contracts & data model`
-- [ ] Build it: `/develop contracts & data model`
+- [x] Build it: `/develop contracts & data model`
   - [x] Thin thread: rule models, `/scan` (422 then 501), OpenAPI and generated client, one mock through MSW in Vitest (AC-1, AC-2, AC-5, AC-6, AC-13, AC-15)
   - [x] Full shapes: exits, sim, backtest responses, static GET routes, trial keys (AC-3, AC-4, AC-6 to AC-9, AC-14)
   - [x] Data and fixtures: market schema, `validate_market`, fixture loader and builder (AC-10, AC-11)
-  - [ ] Mocks and freeze: `make mocks`, every MSW handler, CI drift checks, SO-2 and SO-3, tag `contracts-v1` (AC-1, AC-12, AC-13, AC-16) (built; your SO-2 and SO-3 sign offs and the `contracts-v1` tag at merge are still open)
-- [ ] Verify it: `/check verify contracts & data model`
+  - [x] Mocks and freeze: `make mocks`, every MSW handler, CI drift checks, SO-2 and SO-3, tag `contracts-v1` (AC-1, AC-12, AC-13, AC-16)
+- [x] Verify it: `/check verify contracts & data model`
 - [x] Test it: `/test contracts & data model`
 Spec [0002](../specs/0002-contracts-data-model/index.md) · code in `engine/src/engine/contracts/`, `engine/src/engine/data/fixtures.py`, `services/api/src/api/routes/`, `contracts/`, `packages/api-client/`, `apps/web/src/mocks/`
 
-### 4. Design system & UI foundation · in-progress
+### 4. Design system & UI foundation · done
 Lane FE. A small, calm visual language and base components: page layout, data table, form controls, number inputs, banners, and loading and error states.
 **Done when:** base components exist, are keyboard usable with visible focus and readable contrast, inputs are labelled, and layouts hold at 375 px (U-6).
 - [x] Design it (spec): `/architect design system & UI foundation`
@@ -76,7 +76,7 @@ Lane FE. A small, calm visual language and base components: page layout, data ta
   - [x] Forms: fields, number input, 422 to field mapping (AC-5 to AC-7)
   - [x] Data display: data table, formatters, badges and cards (AC-8, AC-11, AC-12)
   - [x] Feedback and hardening: banners, warm up notice, error states, keyboard, 375 px, axe on every section (AC-9 to AC-11, AC-13, AC-14, AC-16)
-- [ ] Verify it: `/check verify design system & UI foundation` (reopened: in mock mode, `dev:mock`, the page stays blank because the MSW worker starts twice, so the AC-4 mock clause fails)
+- [x] Verify it: `/check verify design system & UI foundation`
 - [x] Test it: `/test design system & UI foundation`
 Spec [0003](../specs/0003-design-system-ui-foundation/index.md) · design in `apps/web/design.md` · code in `apps/web/src/components/`, `apps/web/src/lib/`, `apps/web/src/app/ui/`
 

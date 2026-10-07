@@ -1,7 +1,7 @@
 # 0002. Freeze the shared contracts as Pydantic models in the engine
 
 **Date**: 2026-10-07
-**Status**: In Progress
+**Status**: Accepted
 
 ## Summary
 
