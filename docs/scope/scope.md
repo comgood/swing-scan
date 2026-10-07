@@ -71,14 +71,14 @@ Spec [0002](../specs/0002-contracts-data-model/index.md) · code in `engine/src/
 Lane FE. A small, calm visual language and base components: page layout, data table, form controls, number inputs, banners, and loading and error states.
 **Done when:** base components exist, are keyboard usable with visible focus and readable contrast, inputs are labelled, and layouts hold at 375 px (U-6).
 - [x] Design it (spec): `/architect design system & UI foundation`
-- [ ] Build it: `/develop design system & UI foundation` (starts after feature 3's thin thread merges)
-  - [ ] Thin thread: tokens, shadcn `base-nova`, app shell with the data mode banner, `/ui` gallery, first Vitest and axe test (AC-1 to AC-4, AC-15, AC-16)
-  - [ ] Forms: fields, number input, 422 to field mapping (AC-5 to AC-7)
-  - [ ] Data display: data table, formatters, badges and cards (AC-8, AC-11, AC-12)
-  - [ ] Feedback and hardening: banners, warm up notice, error states, keyboard, 375 px, axe on every section (AC-9 to AC-11, AC-13, AC-14, AC-16)
+- [ ] Build it: `/develop design system & UI foundation` (code built and `make ci` green; the browser walk in the last milestone is still owed)
+  - [x] Thin thread: tokens, shadcn `base-nova`, app shell with the data mode banner, `/ui` gallery, first Vitest and axe test (AC-1 to AC-4, AC-15, AC-16)
+  - [x] Forms: fields, number input, 422 to field mapping (AC-5 to AC-7)
+  - [x] Data display: data table, formatters, badges and cards (AC-8, AC-11, AC-12)
+  - [ ] Feedback and hardening: banners, warm up notice, error states, keyboard, 375 px, axe on every section (AC-9 to AC-11, AC-13, AC-14, AC-16) (all built and axe green; the keyboard and 375 px / 320 px walk in a real browser is still to do)
 - [ ] Verify it: `/check verify design system & UI foundation`
 - [ ] Test it: `/test design system & UI foundation`
-Spec [0003](../specs/0003-design-system-ui-foundation/index.md) · design in `apps/web/design.md`
+Spec [0003](../specs/0003-design-system-ui-foundation/index.md) · design in `apps/web/design.md` · code in `apps/web/src/components/`, `apps/web/src/lib/`, `apps/web/src/app/ui/`
 
 ### 5. Acceptance test harness & traceability · planned
 Lane QA. The independent test suite, written from doc 01 criteria and the contracts only, never from builder code: `tests/acceptance/`, `tests/golden/`, a pending or required status gate in CI, and an AC to test matrix in `docs/qa/`.
