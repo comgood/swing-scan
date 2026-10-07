@@ -17,7 +17,7 @@ _Source of truth: acceptance criteria IDs (D, R, S, B, X, U) and settled default
 | 2 | Coding standards & tooling | Foundation | done |
 | 3 | Contracts & data model | Foundation | done |
 | 4 | Design system & UI foundation | Foundation | done |
-| 5 | Acceptance test harness & traceability | Foundation | planned |
+| 5 | Acceptance test harness & traceability | Foundation | in-progress |
 | 6 | Backtest correctness oracles | Foundation | planned |
 | 7 | Synthetic market | Slice 1 | planned |
 | 8 | Template scan | Slice 1 | planned |
@@ -80,10 +80,15 @@ Lane FE. A small, calm visual language and base components: page layout, data ta
 - [x] Test it: `/test design system & UI foundation`
 Spec [0003](../specs/0003-design-system-ui-foundation/index.md) · design in `apps/web/design.md` · code in `apps/web/src/components/`, `apps/web/src/lib/`, `apps/web/src/app/ui/`
 
-### 5. Acceptance test harness & traceability · planned
+### 5. Acceptance test harness & traceability · in-progress
 Lane QA. The independent test suite, written from doc 01 criteria and the contracts only, never from builder code: `tests/acceptance/`, `tests/golden/`, a pending or required status gate in CI, and an AC to test matrix in `docs/qa/`.
 **Done when:** every MUST criterion in doc 01 has a row in the matrix and a test marked pending or required, and CI fails only on required tests.
-- [ ] Build it: `/develop acceptance test harness`
+- [x] Build it: `/develop acceptance test harness`
+  - [x] Gate: `status.yaml`, the `ac` marker, pending as non strict xfail, gate summary, `make test-acceptance`
+  - [x] Golden reference for rule evaluation and entry signals, with self tests
+  - [x] Acceptance tests for all 52 MUST IDs (3 required, 49 pending)
+  - [x] Matrix and criteria questions in `docs/qa/`, kept in step by a harness test
+No spec (built from doc 02 section 15.4) · code in `tests/acceptance/`, `tests/golden/`, `docs/qa/`
 
 ### 6. Backtest correctness oracles · planned · GA
 Lane QA drafts, you approve. Hand computed fixtures for each fill and exit rule plus the poisoned future look ahead test, kept in the protected `tests/oracle/` folder.
