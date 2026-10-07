@@ -20,7 +20,7 @@ _Source of truth: acceptance criteria IDs (D, R, S, B, X, U) and settled default
 | 5 | Acceptance test harness & traceability | Foundation | done |
 | 6 | Backtest correctness oracles | Foundation | planned |
 | 7 | Synthetic market | Slice 1 | in-progress |
-| 8 | Template scan | Slice 1 | planned |
+| 8 | Template scan | Slice 1 | in-progress |
 | 9 | Portfolio backtest core | Slice 1 | planned |
 | 10 | Rule builder | Slice 2 | planned |
 | 11 | Exit types | Slice 3 | planned |
@@ -151,10 +151,18 @@ Lane DI. A seeded generated market of 500 invented tickers over 5 years with reg
 **Done when:** the same seed gives identical data, every bar passes sanity checks, and at least one bear segment and 20 delisted tickers exist (D-1 to D-3).
 - [x] Build it: `/develop synthetic market` · spec [0006](../specs/0006-synthetic-market/index.md) (assumed decision, owes `/architect synthetic market` to ratify) · code in `engine/src/engine/synthetic/`, `engine/src/engine/data/`
 
-### 8. Template scan · planned · needs a decision
+### 8. Template scan · in-progress
 Lanes BE and FE. Indicators, rule evaluation with the valid rising edge and the signal based cooldown, the two templates, the `/scan` endpoint, and a sortable results table on the landing page.
 **Done when:** a first visit opens the Breakout template with today's hits and the synthetic banner, delisted tickers never appear, scan and backtest signals match, and a warm scan answers in under a second (S-1 to S-4, R-10, U-1, U-5).
-- [ ] Design it (spec): `/architect template scan`
+- [x] Design it (spec): `/architect template scan`
+- [ ] Build it: `/develop template scan`
+  - [ ] Thread: BE engine slice with the shared entry signal function and `/scan` on fixtures; FE workspace with the template dropdown, conditions and results from the mocks (AC-1, AC-4, AC-5, AC-8, AC-9, AC-11, AC-13)
+  - [ ] Engine breadth (BE): all 14 indicators, crosses, the locked and pinned cache (AC-2, AC-3, AC-7)
+  - [ ] Scan contract (BE): `chg_pct`, `vol_ratio`, golden parity, `as_of` 422, warm start, the scan log, the S-4 timing test, and `read_market()` once feature 7 merges (AC-4 to AC-8, AC-13)
+  - [ ] Workspace finish (FE): `?template` URL, number formats, New badge, paging, states, 375 px; switch to the real API at G3 (AC-10 to AC-12, AC-14)
+- [ ] Verify it: `/check verify template scan`
+- [ ] Test it: `/test template scan`
+Spec [0005](../specs/0005-template-scan/index.md)
 
 ### 9. Portfolio backtest core · planned · needs a decision · GA
 Lanes BE and FE. The portfolio simulator with next open fills, % stop and time exit, equal weight, max positions, slippage, delisting exits, IS and OOS split, an equity curve against the benchmark, a trade list with MAE and MFE, and the report page with its assumptions header.
