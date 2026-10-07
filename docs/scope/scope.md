@@ -194,8 +194,8 @@ Lanes FE and BE. The things that stop you fooling yourself: the structure keyed 
 - [x] Build it: `/develop research honesty guards`
   - [x] Trial store, counter and procedure note in `features/honesty/` (U-4, U-8; spec 0004 AC-1 to AC-7)
   - [x] `/ui` gallery with every state, U-2 shell banner confirmed (spec 0004 AC-8, AC-9)
-- [ ] Verify it: `/check verify research honesty guards`
-- [ ] Test it: `/test research honesty guards`
+- [x] Verify it: `/check verify research honesty guards`
+- [x] Test it: `/test research honesty guards`
 Spec [0004](../specs/0004-research-honesty-guards/index.md) (assumed decision, spec 0004: `/architect` to ratify) · code in `apps/web/src/features/honesty/` · placed by features 9 and 12
 
 ## Slice 4: Live research mode
