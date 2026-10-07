@@ -1,4 +1,5 @@
 // Invented sample data for the /ui gallery. Never the API mocks, never real prices.
+import type { TrialCountState } from "@/features/honesty";
 
 export interface SampleRow {
   id: string;
@@ -173,3 +174,20 @@ export const SAMPLE_422 = {
     },
   ],
 };
+
+/** Trial counter states for the honesty section (U-4, spec 0004). Invented counts. */
+export const SAMPLE_TRIAL_STATES: { label: string; state: TrialCountState }[] = [
+  {
+    label: "First trial",
+    state: { status: "counted", count: { trialNumber: 1, sessionTotal: 1 } },
+  },
+  { label: "Counting", state: { status: "counted", count: { trialNumber: 6, sessionTotal: 14 } } },
+  {
+    label: "Warning at 10",
+    state: { status: "counted", count: { trialNumber: 10, sessionTotal: 23 } },
+  },
+  { label: "Storage unavailable", state: { status: "unavailable" } },
+];
+
+/** An invented structure key for the live demo; real keys come from the backtest response. */
+export const SAMPLE_STRUCTURE_KEY = "0".repeat(64);

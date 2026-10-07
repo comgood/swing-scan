@@ -25,7 +25,7 @@ _Source of truth: acceptance criteria IDs (D, R, S, B, X, U) and settled default
 | 10 | Rule builder | Slice 2 | planned |
 | 11 | Exit types | Slice 3 | planned |
 | 12 | Exit lab | Slice 3 | planned |
-| 13 | Research honesty guards | Slice 3 | planned |
+| 13 | Research honesty guards | Slice 3 | in-progress |
 | 14 | Live research mode (local) | Slice 4 | planned |
 | 15 | Deploy hardening & demo readiness | Slice 5 | planned |
 | 16 | README, research note & GIF | Slice 5 | planned |
@@ -188,10 +188,15 @@ Lanes BE and FE. Hold one entry rule fixed and compare 2 to 6 exit setups on ide
 **Done when:** entries are identical across configs, metrics are per trade only with IS and OOS columns, the best IS config is highlighted, MAE and MFE guides use IS trades only, expectancy per bar, distinct entry weeks and horizon exits show, edge versus random is reported, and six configs finish within the time budget (X-1 to X-5, X-7 to X-10).
 - [ ] Design it (spec): `/architect exit lab`
 
-### 13. Research honesty guards · planned
+### 13. Research honesty guards · in-progress
 Lanes FE and BE. The things that stop you fooling yourself: the structure keyed trial counter with a session total and a warning at 10, the procedure note under the exit lab table, and the data banners.
 **Done when:** tweaking only numbers still counts toward the same rule's trials, the warning shows at 10, the procedure note renders, and the synthetic and survivors only banners appear in the right modes (U-2, U-4, U-8).
-- [ ] Build it: `/develop research honesty guards`
+- [x] Build it: `/develop research honesty guards`
+  - [x] Trial store, counter and procedure note in `features/honesty/` (U-4, U-8; spec 0004 AC-1 to AC-7)
+  - [x] `/ui` gallery with every state, U-2 shell banner confirmed (spec 0004 AC-8, AC-9)
+- [ ] Verify it: `/check verify research honesty guards`
+- [ ] Test it: `/test research honesty guards`
+Spec [0004](../specs/0004-research-honesty-guards/index.md) (assumed decision, spec 0004: `/architect` to ratify) · code in `apps/web/src/features/honesty/` · placed by features 9 and 12
 
 ## Slice 4: Live research mode
 
