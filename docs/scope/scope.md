@@ -21,7 +21,7 @@ _Source of truth: acceptance criteria IDs (D, R, S, B, X, U) and settled default
 | 6 | Backtest correctness oracles | Foundation | done |
 | 7 | Synthetic market | Slice 1 | in-progress |
 | 8 | Template scan | Slice 1 | in-progress |
-| 9 | Portfolio backtest core | Slice 1 | planned |
+| 9 | Portfolio backtest core | Slice 1 | in-progress |
 | 10 | Rule builder | Slice 2 | planned |
 | 11 | Exit types | Slice 3 | planned |
 | 12 | Exit lab | Slice 3 | planned |
@@ -164,10 +164,19 @@ Lanes BE and FE. Indicators, rule evaluation with the valid rising edge and the 
 - [ ] Test it: `/test template scan`
 Spec [0005](../specs/0005-template-scan/index.md)
 
-### 9. Portfolio backtest core · planned · needs a decision · GA
+### 9. Portfolio backtest core · in-progress · GA
 Lanes BE and FE. The portfolio simulator with next open fills, % stop and time exit, equal weight, max positions, slippage, delisting exits, IS and OOS split, an equity curve against the benchmark, a trade list with MAE and MFE, and the report page with its assumptions header.
 **Done when:** all approved oracles pass, results are deterministic, the top ranked signals fill free slots, and the report shows IS and OOS side by side with the assumptions header (B-1, B-2, B-7 to B-11, B-13 to B-16, U-3).
-- [ ] Design it (spec): `/architect portfolio backtest core`
+- [x] Design it (spec): `/architect portfolio backtest core` (proposed, pending owner sign-off)
+- [ ] Build it: `/develop portfolio backtest core`
+  - [ ] BE thread: `Exit` protocol, one `step()`, `stop_pct`, `time`, delisting, `end_of_test`, `walk_trade()`, the day loop and a minimal `PortfolioResult` behind `/backtest` (AC-1 to AC-3, AC-8, AC-11)
+  - [ ] BE portfolio rules and metrics: ranking, slots, sizing, window cut, IS and OOS, metrics, curves, truncation, `trial`, `assumptions`, the 3 s and 6 MB budget (AC-4 to AC-7, AC-9, AC-10); B-9 and B-10 portfolio turn green with feature 11's exits
+  - [ ] FE report page: `/backtest` with the exit form, assumptions header, IS and OOS metrics, equity chart, trade list, trial counter and every state, on mocks first (AC-12 to AC-17)
+- [ ] Verify it: `/check verify portfolio backtest core`
+- [ ] Test it: `/test portfolio backtest core`
+- [ ] Review it (fresh model): `/check review portfolio backtest core`
+- [ ] Document it: `/document portfolio backtest core`
+Spec [0007](../specs/0007-portfolio-backtest-core/index.md)
 
 ## Slice 2: Rule builder
 
