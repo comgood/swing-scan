@@ -76,7 +76,7 @@ Lane FE. A small, calm visual language and base components: page layout, data ta
   - [x] Forms: fields, number input, 422 to field mapping (AC-5 to AC-7)
   - [x] Data display: data table, formatters, badges and cards (AC-8, AC-11, AC-12)
   - [x] Feedback and hardening: banners, warm up notice, error states, keyboard, 375 px, axe on every section (AC-9 to AC-11, AC-13, AC-14, AC-16)
-- [x] Verify it: `/check verify design system & UI foundation`
+- [ ] Verify it: `/check verify design system & UI foundation` (reopened: in mock mode, `dev:mock`, the page stays blank because the MSW worker starts twice, so the AC-4 mock clause fails)
 - [x] Test it: `/test design system & UI foundation`
 Spec [0003](../specs/0003-design-system-ui-foundation/index.md) · design in `apps/web/design.md` · code in `apps/web/src/components/`, `apps/web/src/lib/`, `apps/web/src/app/ui/`
 
