@@ -9,44 +9,47 @@ import { server } from "@/mocks/node";
 
 import { LIVE_BANNER, PAGES, renderPage, SYNTHETIC_BANNER } from "./pages";
 
+// The data mode banner is main's first child (spec 0003 AC-3). Assertions target that element,
+// not the whole page: the /ui gallery shows both banner texts as static samples.
+function shellBanner(): HTMLElement {
+  return screen.getByRole("main").firstElementChild as HTMLElement;
+}
+
 describe.each(PAGES)("page $path", ({ Page }) => {
   it("U-1: shows the synthetic banner at the top of main before the health ping answers", async () => {
     server.use(healthHandler("synthetic", { delayMs: "infinite" }));
     renderPage(Page);
-    const main = screen.getByRole("main");
-    expect(main.firstElementChild).toHaveTextContent(SYNTHETIC_BANNER);
-    expect(screen.queryByText(LIVE_BANNER)).not.toBeInTheDocument();
+    expect(shellBanner()).toHaveTextContent(SYNTHETIC_BANNER);
+    expect(shellBanner()).not.toHaveTextContent(LIVE_BANNER);
   });
 
   it("U-1: keeps the synthetic banner after a synthetic health ping", async () => {
     renderPage(Page);
     await screen.findByText(/API ready/);
-    const main = screen.getByRole("main");
-    expect(within(main).getByText(SYNTHETIC_BANNER)).toBeVisible();
-    expect(main.firstElementChild).toHaveTextContent(SYNTHETIC_BANNER);
+    expect(within(shellBanner()).getByText(SYNTHETIC_BANNER)).toBeVisible();
+    expect(shellBanner()).not.toHaveTextContent(LIVE_BANNER);
   });
 
   it("U-1: keeps the synthetic banner when the API cannot be reached", async () => {
     server.use(healthHandler("network_error"));
     renderPage(Page);
     await screen.findByText("API not reachable", {}, { timeout: 5000 });
-    expect(screen.getByText(SYNTHETIC_BANNER)).toBeVisible();
-    expect(screen.queryByText(LIVE_BANNER)).not.toBeInTheDocument();
+    expect(within(shellBanner()).getByText(SYNTHETIC_BANNER)).toBeVisible();
+    expect(shellBanner()).not.toHaveTextContent(LIVE_BANNER);
   });
 
   it("U-1: the banner cannot be dismissed", async () => {
     renderPage(Page);
     await screen.findByText(/API ready/);
-    const banner = screen.getByRole("main").firstElementChild as HTMLElement;
-    expect(within(banner).queryByRole("button")).not.toBeInTheDocument();
+    expect(within(shellBanner()).queryByRole("button")).not.toBeInTheDocument();
   });
 
   it("U-2: live mode shows the survivors-only, current S&P warning instead", async () => {
     server.use(healthHandler("live"));
     renderPage(Page);
-    const live = await screen.findByText(LIVE_BANNER);
-    expect(live).toBeVisible();
-    expect(screen.getByRole("main").firstElementChild).toHaveTextContent(LIVE_BANNER);
-    expect(screen.queryByText(SYNTHETIC_BANNER)).not.toBeInTheDocument();
+    // Wait for the health ping to say live, so a static sample of the text can't satisfy it.
+    await screen.findByText(/API ready \(data: live/);
+    expect(within(shellBanner()).getByText(LIVE_BANNER)).toBeVisible();
+    expect(shellBanner()).not.toHaveTextContent(SYNTHETIC_BANNER);
   });
 });
