@@ -1,0 +1,17 @@
+# Three tickers over 5 bars (Thu 2020-01-02 to Wed 2020-01-08).
+# AAA: bars 1 to 5, alive at the end of data, so not delisted.
+# BBB: lists at bar 3 (Mon 2020-01-06).
+# CCC: last bar is 4 (Tue 2020-01-07) before the data ends at 5, so delisted.
+ticker,bar,open,high,low,close,volume
+AAA,1,10,10.5,9.8,10.2,1000
+AAA,2,10.2,10.6,10.1,10.4,1100
+AAA,3,10.4,10.9,10.3,10.8,1200
+AAA,4,10.8,11.0,10.5,10.6,900
+AAA,5,10.6,10.7,10.0,10.1,1500
+BBB,3,20,20.5,19.5,20.2,500
+BBB,4,20.2,21,20,20.9,600
+BBB,5,20.9,21.5,20.8,21.3,700
+CCC,1,5,5.1,4.9,5,3000
+CCC,2,5,5.2,4.8,5.1,3000
+CCC,3,5.1,5.1,4.5,4.6,3000
+CCC,4,4.6,4.7,4.2,4.3,3000

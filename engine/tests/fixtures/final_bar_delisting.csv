@@ -1,0 +1,5 @@
+# Inference can't express a delisting on the final bar, so the sidecar says it.
+ticker,bar,open,high,low,close,volume
+AAA,1,10,10,10,10,1000
+AAA,2,11,11,11,11,1000
+AAA,3,12,12,12,12,1000
