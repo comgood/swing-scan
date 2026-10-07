@@ -22,7 +22,7 @@ _Source of truth: acceptance criteria IDs (D, R, S, B, X, U) and settled default
 | 7 | Synthetic market | Slice 1 | in-progress |
 | 8 | Template scan | Slice 1 | in-progress |
 | 9 | Portfolio backtest core | Slice 1 | planned |
-| 10 | Rule builder | Slice 2 | planned |
+| 10 | Rule builder | Slice 2 | in-progress |
 | 11 | Exit types | Slice 3 | planned |
 | 12 | Exit lab | Slice 3 | planned |
 | 13 | Research honesty guards | Slice 3 | in-progress |
@@ -171,10 +171,18 @@ Lanes BE and FE. The portfolio simulator with next open fills, % stop and time e
 
 ## Slice 2: Rule builder
 
-### 10. Rule builder · planned · needs a decision
+### 10. Rule builder · in-progress
 Lanes BE and FE. Build your own entry rules: a flat AND list of up to 8 conditions over 12 indicators, with numbers or indicators on the right side, crosses, offsets, and clear validation. The templates load into it as editable starting points.
 **Done when:** rules round trip as JSON, crosses and offsets behave as specified, warm up bars evaluate as not computable, invalid rules return a clear 422 shown on the right row, and the structure key ignores numbers (R-1 to R-9, U-7).
-- [ ] Design it (spec): `/architect rule builder`
+- [x] Design it (spec): `/architect rule builder` (proposed, pending owner sign-off)
+- [ ] Build it: `/develop rule builder`
+  - [ ] FE thread: reducer over the contract `Rule`, one editable row, "Run scan" on the mocks, UI to JSON parity (AC-4, AC-8)
+  - [ ] FE rows and links: every field, add and remove limits, catalog hints, 422 on the right field, `?template` to `?r=` links, bad link fallback, JSON panel (AC-1 to AC-3, AC-5 to AC-7, AC-9)
+  - [ ] FE finish: 375 px and 320 px, keyboard, axe, `/ui` gallery, mounted in feature 8's workspace, real API at G3 (AC-10)
+  - [ ] BE tests after feature 8's evaluator merges: R-3, R-4, R-5, R-7 on custom rules, every R-6 case through `/scan` (AC-11, AC-12; AC-13 is already met by spec 0002)
+- [ ] Verify it: `/check verify rule builder`
+- [ ] Test it: `/test rule builder`
+Spec [0008](../specs/0008-rule-builder/index.md)
 
 ## Slice 3: Exit research
 
