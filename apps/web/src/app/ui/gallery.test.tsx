@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import { LIVE_TEXT, SYNTHETIC_TEXT } from "@/components/shell/data-mode-banner";
 import { OVERFIT_WARNING, PROCEDURE_NOTE } from "@/features/honesty";
+import { BAD_LINK_NOTICE, STALE_TEXT } from "@/features/rule-builder";
 import { expectNoAxeViolations } from "@/test/axe";
 
 import { Gallery } from "./gallery";
@@ -17,6 +18,7 @@ const SECTIONS = [
   "Data table",
   "Banners",
   "Research honesty guards",
+  "Rule builder",
   "Loading",
   "Error states",
   "Empty state, card, separator",
@@ -60,6 +62,26 @@ describe("/ui gallery (AC-15, AC-16)", () => {
     expect(section.getByText(PROCEDURE_NOTE)).toBeVisible();
     expect(section.getByText(SYNTHETIC_TEXT)).toBeVisible();
     expect(section.getByText(LIVE_TEXT)).toBeVisible();
+  });
+
+  it("shows every rule builder state (spec 0008 AC-10)", () => {
+    render(<Gallery />);
+    const state = (name: string) => within(screen.getByRole("group", { name }));
+    expect(
+      state("One default row (remove disabled)").getByRole("button", {
+        name: "Remove condition 1",
+      }),
+    ).toBeDisabled();
+    expect(
+      state("Number and indicator right sides").getAllByRole("combobox", { name: "Compare with" }),
+    ).toHaveLength(2);
+    expect(
+      state("Eight rows (add disabled)").getByRole("button", { name: "Add condition" }),
+    ).toBeDisabled();
+    expect(state("422 on a right side n").getByText("Must be between 2 and 252")).toBeVisible();
+    expect(state("Stale results").getByText(STALE_TEXT)).toBeVisible();
+    expect(state("Bad link notice").getByText(BAD_LINK_NOTICE)).toBeVisible();
+    expect(state("JSON panel with Not a rule").getByText("Not a rule")).toBeVisible();
   });
 
   it("lets you drive the live demo to the warning at 10 by keyboard, then reset it", async () => {
