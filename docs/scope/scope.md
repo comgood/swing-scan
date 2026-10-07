@@ -191,12 +191,13 @@ Lanes BE and FE. Hold one entry rule fixed and compare 2 to 6 exit setups on ide
 ### 13. Research honesty guards · in-progress
 Lanes FE and BE. The things that stop you fooling yourself: the structure keyed trial counter with a session total and a warning at 10, the procedure note under the exit lab table, and the data banners.
 **Done when:** tweaking only numbers still counts toward the same rule's trials, the warning shows at 10, the procedure note renders, and the synthetic and survivors only banners appear in the right modes (U-2, U-4, U-8).
+- [x] Design it (spec): `/architect research honesty guards` (ratified, proposed, pending owner sign-off)
 - [x] Build it: `/develop research honesty guards`
   - [x] Trial store, counter and procedure note in `features/honesty/` (U-4, U-8; spec 0004 AC-1 to AC-7)
   - [x] `/ui` gallery with every state, U-2 shell banner confirmed (spec 0004 AC-8, AC-9)
 - [ ] Verify it: `/check verify research honesty guards`
 - [ ] Test it: `/test research honesty guards`
-Spec [0004](../specs/0004-research-honesty-guards/index.md) (assumed decision, spec 0004: `/architect` to ratify) · code in `apps/web/src/features/honesty/` · placed by features 9 and 12
+Spec [0004](../specs/0004-research-honesty-guards/index.md) (ratified by `/architect`, proposed, pending owner sign-off) · code in `apps/web/src/features/honesty/` · placed by features 9 and 12
 
 ## Slice 4: Live research mode
 
