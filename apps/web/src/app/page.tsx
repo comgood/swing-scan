@@ -1,17 +1,12 @@
-import { ApiStatus } from "./api-status";
-
+// Scaffold intro until feature 8 (template scan) replaces this page (spec 0003 AC-3).
 export default function Home() {
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-4 py-16">
-      <h1 className="text-3xl font-semibold">Swing Scan</h1>
-      <p className="text-base">
+    <section className="flex max-w-3xl flex-col gap-4">
+      <h1 className="text-2xl font-semibold">Swing Scan</h1>
+      <p className="text-sm">
         Build swing trading entry rules, backtest them honestly, and compare exits on identical
         entries.
       </p>
-      <ApiStatus />
-      <p className="text-sm opacity-80">
-        Portfolio project running on a generated market. Not investment advice.
-      </p>
-    </main>
+    </section>
   );
 }

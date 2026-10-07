@@ -69,6 +69,20 @@ function errorOrBody(variant: string, body: JsonBodyType, options: MockOptions) 
     : respond(body, 200, options);
 }
 
+/**
+ * `/health` returns `dict[str, str]` in the contract, so it has no mock file; this body mirrors
+ * the API's `{status, data_mode, version}`. `network_error` fails the request outright.
+ */
+export type HealthVariant = "synthetic" | "live" | "network_error";
+
+export function healthHandler(variant: HealthVariant = "synthetic", options: MockOptions = {}) {
+  return http.get(`${API}/health`, () =>
+    variant === "network_error"
+      ? HttpResponse.error()
+      : respond({ status: "ok", data_mode: variant, version: "0.1.0" }, 200, options),
+  );
+}
+
 export function metaHandler(options: MockOptions = {}) {
   return http.get(`${API}/meta`, () => respond(mocks.meta, 200, options));
 }
@@ -105,6 +119,7 @@ export function backtestHandler(variant: BacktestVariant = "auto", options: Mock
 }
 
 export const handlers = [
+  healthHandler(),
   metaHandler(),
   indicatorsHandler(),
   templatesHandler(),
