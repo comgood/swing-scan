@@ -1,0 +1,63 @@
+# Checks on every PR and on main. Steps call only `make` targets so agents and CI behave
+# the same (spec 0001). Deploy, OpenAPI diff, oracle first ordering and Vitest arrive with
+# later scope features.
+name: CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: lint, typecheck, test, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - run: make setup
+      - run: make lint
+      - run: make typecheck
+      - run: make test
+      - run: make build-web
+
+  guards:
+    name: guards (gitleaks, D-6, oracle)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - run: uv sync --frozen
+      - run: make guards
+      - name: Oracle changes need the oracle-approved label
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          APPROVED: ${{ contains(github.event.pull_request.labels.*.name, 'oracle-approved') }}
+        run: |
+          changed=$(git diff --name-only "$BASE_SHA"...HEAD -- tests/oracle/)
+          if [ -n "$changed" ] && [ "$APPROVED" != "true" ]; then
+            echo "This PR changes owner only oracle files:"
+            echo "$changed"
+            echo "The owner must add the oracle-approved label."
+            exit 1
+          fi
