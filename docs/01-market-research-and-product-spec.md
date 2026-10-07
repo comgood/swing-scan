@@ -209,7 +209,6 @@ Hours are the Architect's "v3-fit" figures (`02` §11.1), less the v3.2 deferral
   "conditions": [
     {"left": {"kind": "ind", "name": "close"}, "op": ">", "right": {"kind": "ind", "name": "highest", "params": {"n": 252}, "offset": 1}},
     {"left": {"kind": "ind", "name": "volume"}, "op": ">", "right": {"kind": "ind", "name": "avg_volume", "params": {"n": 50}, "mult": 1.5}},
-    {"left": {"kind": "ind", "name": "close"}, "op": ">", "right": {"kind": "ind", "name": "sma", "params": {"n": 50}}},
     {"left": {"kind": "ind", "name": "close"}, "op": ">", "right": {"kind": "num", "value": 5}}
   ]
 }
@@ -226,7 +225,7 @@ Hours are the Architect's "v3-fit" figures (`02` §11.1), less the v3.2 deferral
 - **No hidden filters.** There is no implicit `min_price`. Templates include a **visible** `close > 5` condition the user can edit or delete.
 - **Validity and warm-up:** each condition is **valid** at t only when all its inputs have enough history (including `offset` and the t−1 value for crosses). The rule is valid at t when all conditions are valid. An invalid rule is never a hit.
 - **Templates (MUST):**
-  - **52-week-high breakout on volume** (above): `close > highest(252)[1]`, `volume > 1.5 × avg_volume(50)`, `close > sma(50)`, `close > 5`.
+  - **52-week-high breakout on volume** (above): `close > highest(252)[1]`, `volume > 1.5 × avg_volume(50)`, `close > 5`.
   - **Pullback to rising 21 EMA:** `ema(21) > ema(21)[5]`, `close > sma(50)`, `low <= 1.01 × ema(21)`, `close > ema(21)`, `close > 5`.
   - RSI(2) and the trend template are optional extra templates (Stretch).
 - **Structure key** (for the trial counter, §6.6): the rule with numbers stripped, i.e. indicator names, operators and condition count. `close > highest(252)[1]` and `close > highest(100)[1]` share a key.
@@ -252,7 +251,7 @@ The scan evaluates the rule on the **last bar t**, over tickers alive on t. Colu
 |---|---|
 | S-1 | **Given** a rule, **when** scanning as of t, **then** exactly the alive tickers whose rule is valid and true on t are returned. |
 | S-2 | **Given** a ticker delisted before t, **then** it never appears. |
-| S-3 *(parity)* | **Given** any rule, **when** scanning as of D and backtesting a range containing D, **then** the scan's "new today" hits on D equal the backtest's **raw** entry signals on D (before cooldown and last-bar filtering). |
+| S-3 *(parity)* | **Given** any rule, **when** scanning as of D and backtesting a range containing D, **then** the scan's "new today" hits on D equal the backtest's entry signals on D, after the 10-bar cooldown and ignoring only the last-bar rule (spec 0002). |
 | S-4 | **Given** a rule with ≤ 8 conditions, **when** the scan runs warm on the deployed API, **then** it responds in < 1 s for 500 tickers (synthetic). |
 | S-5 *(Stretch #1)* | **Given** results, **when** the user clicks a row, **then** the chart opens with hit markers on every bar where the rule was true. |
 

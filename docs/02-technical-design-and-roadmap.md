@@ -132,6 +132,8 @@ meta.json           data_mode, seed?, data_version, start, end, n_tickers, survi
 
 ### 5.2 Rule model (this registry is the source of truth; TS types are generated)
 
+**Indicator conventions (owner ruling, 2026-10-07, `docs/qa/ac-questions.md`):** `sma(n)`, `avg_volume(n)`, `highest(n)` and `lowest(n)` cover the n bars ending today, first value on bar n. `ema(n)` starts on bar n at the simple mean of the first n closes, then `alpha = 2 / (n + 1)`. `ret(n)` is `close[t] / close[t-n] - 1`, first value on bar n + 1.
+
 ```python
 IndName = Literal["open","high","low","close","volume","sma","ema","rsi","atr",
                   "highest","lowest","avg_volume","ret","rs"]
