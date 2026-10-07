@@ -66,8 +66,23 @@ D-5 says the API exits with a clear error when `DATA_MODE=live` runs on a non lo
 <a id="ui-tests"></a>
 ## UI halves of R-1, R-8, X-3, X-4, X-9 and U-1 to U-8
 
-**Status:** owed (QA follow up).
-Doc 02 section 15.4 puts these in `apps/web/tests/acceptance/` as Vitest tests against the mocks. They were not written in this change because the FE lane is building the design system in `apps/web/` in parallel. Until then each ID has a pending placeholder in `tests/acceptance/`, plus a contract level test where one applies (U-3 fields, U-7 error paths, U-4 trial keys, X-3 `best_is`, X-4 null R).
+**Status:** owed (QA follow up), partly written.
+Doc 02 section 15.4 puts these in `apps/web/tests/acceptance/` as Vitest tests against the mocks. Vitest runs that folder (one line added to `apps/web/vitest.config.mts`), and those tests always block CI through `pnpm --filter web test`.
+
+**Written** (against the shipped app shell, spec 0003):
+- U-1, banner part: `data-mode-banner.test.tsx`. The synthetic banner is the first thing in `main` on every page, while the health ping is pending, after a synthetic answer and after a failure, and it has no close button.
+- U-2: `data-mode-banner.test.tsx`. A `live` health answer swaps in the live text on every page. The "badge" is the shell's data mode banner, with the words spec 0003 AC-4 fixes; doc 01 names only the meaning.
+- U-5: `warmup.test.tsx`. A health ping delayed 2.5 s shows "Warming up the engine…" after 1.5 s (not at 1.2 s) and clears when the answer lands; a fast answer never shows it; the 1,499 and 1,500 ms edges and the restart are checked on `WarmupNotice` with fake timers.
+- U-6, structure only: `layout-375.test.tsx`. No page carries a fixed width over 375 px, every table sits in its own labelled scroll box, and `FormRow` is one column unless the `sm` breakpoint applies.
+- U-7, shared helpers: `errors-422.test.tsx`. The 422 mocks come back through the `api` client and `fieldErrorsFrom422`, land on the named field (`aria-invalid`, the message as its description) and on no other row; a body level error shows in `FormErrorSummary`.
+
+**Still owed** (the UI does not exist yet, so the IDs stay `pending`):
+- U-1: the builder opens with Breakout and its scan results (features 8 and 10).
+- U-6: real builder rows stacking (feature 10), and anything that needs layout: `scrollWidth` at 375 px and the actual column stacking. jsdom has no CSS, so these stay a browser check in `/check verify` until Playwright is added (spec 0003 follow up).
+- U-7: the real builder row and exit config editor showing the error (features 10 and 12).
+- U-3 (report header), U-4 (trial counter), U-8 (procedure note), R-1 and R-8 (builder), X-3, X-4 and X-9 (exit lab report): no UI yet.
+
+Each ID keeps its pending placeholder in `tests/acceptance/`, plus a contract level test where one applies (U-3 fields, U-7 error paths, U-4 trial keys, X-3 `best_is`, X-4 null R). U-2 and U-5 are fully covered once this lands on `main`; the flip PR swaps their placeholders for a pointer to the Vitest files.
 
 <a id="perf"></a>
 ## S-4, B-13 and X-7: where the time budgets are measured
