@@ -1,0 +1,13 @@
+# B-7 time exit. Rule: close > 9.5. Config: time 3 (entry bar = bar 1 of the 3).
+# Signal at close(3). Entry bar 4 (b = 1): F = 10 x 1.001 = 10.01.
+# No other exit. b = 3 is bar 6, so exit = close(6) x 0.999 = 10.7 x 0.999 = 10.6893.
+# Reason time. Bars held 3.
+ticker,bar,open,high,low,close,volume
+TIM,1,9,9.2,8.8,9,1000000
+TIM,2,9,9.2,8.8,9,1000000
+TIM,3,9.2,10.1,9.1,10,1000000
+TIM,4,10,10.4,9.9,10.3,1000000
+TIM,5,10.3,10.6,10.1,10.5,1000000
+TIM,6,10.5,10.8,10.4,10.7,1000000
+TIM,7,10.7,10.9,10.6,10.8,1000000
+TIM,8,10.8,11.0,10.7,10.9,1000000

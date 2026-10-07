@@ -1,0 +1,26 @@
+# B-8 delisting. Rule: close > 9.5. Config: time 20 (never reached).
+# DLS signals at close(3) and enters at bar 4: F = 10 x 1.001 = 10.01.
+# DLS's last bar is 8 while the data runs to bar 12, so DLS is delisted on bar 8.
+# Exit = last close x 0.999 = close(8) x 0.999 = 10.6 x 0.999 = 10.5894. Reason delisted. Bars held 5.
+# KEEP is above 9.5 from its first bar, so its rule never has a rising edge and it never trades.
+ticker,bar,open,high,low,close,volume
+DLS,1,9,9.2,8.8,9,1000000
+DLS,2,9,9.2,8.8,9,1000000
+DLS,3,9.2,10.1,9.1,10,1000000
+DLS,4,10,10.4,9.9,10.3,1000000
+DLS,5,10.3,10.6,10.1,10.5,1000000
+DLS,6,10.5,10.8,10.4,10.7,1000000
+DLS,7,10.7,10.9,10.5,10.6,1000000
+DLS,8,10.6,10.8,10.4,10.6,1000000
+KEEP,1,50,50.5,49.5,50,1000000
+KEEP,2,50,50.5,49.5,50,1000000
+KEEP,3,50,50.5,49.5,50,1000000
+KEEP,4,50,50.5,49.5,50,1000000
+KEEP,5,50,50.5,49.5,50,1000000
+KEEP,6,50,50.5,49.5,50,1000000
+KEEP,7,50,50.5,49.5,50,1000000
+KEEP,8,50,50.5,49.5,50,1000000
+KEEP,9,50,50.5,49.5,50,1000000
+KEEP,10,50,50.5,49.5,50,1000000
+KEEP,11,50,50.5,49.5,50,1000000
+KEEP,12,50,50.5,49.5,50,1000000

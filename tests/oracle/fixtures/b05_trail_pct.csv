@@ -1,0 +1,18 @@
+# B-5 trailing stop. Rule: close > 9.5. Config: trail_pct 10.
+# Level on bar b = (highest high from the entry bar through b - 1, or F on b = 1) x 0.9,
+# and it only rises (doc 02 section 7.2). Highs after entry: 10, 12, 11.
+# Bar 4 (b = 1): F = 10 x 1.001 = 10.01, level = F x 0.9 = 9.009. Low 9.95 > 9.009.
+# Bar 5 (b = 2): candidate = 10 x 0.9 = 9.0, but the level only rises, so it stays 9.009.
+#   Low 9.05 > 9.009, no exit.
+# Bar 6 (b = 3): level = max(10, 12) x 0.9 = 10.8. Low 10.9 > 10.8, no exit.
+# Bar 7 (b = 4): level = max(10, 12, 11) x 0.9 = 10.8. Open 11 > 10.8, low 10.7 <= 10.8.
+#   Exit = 10.8 x 0.999 = 10.7892. Reason trail_pct. Bars held 4.
+ticker,bar,open,high,low,close,volume
+TRL,1,9,9.2,8.8,9,1000000
+TRL,2,9,9.2,8.8,9,1000000
+TRL,3,9.2,10.1,9.1,10,1000000
+TRL,4,10,10,9.95,10,1000000
+TRL,5,10,12,9.05,11.5,1000000
+TRL,6,11,11,10.9,11,1000000
+TRL,7,11,11,10.7,10.75,1000000
+TRL,8,10.75,10.9,10.6,10.8,1000000

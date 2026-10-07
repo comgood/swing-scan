@@ -1,0 +1,11 @@
+# B-2 gap through the stop. Same as B-1 up to bar 4: F = 10.01, L = 9.2092.
+# Bar 5 opens at 9.0, below L, so the exit fills at the open, not at the stop:
+#   exit = open(5) x 0.999 = 9.0 x 0.999 = 8.991. Reason stop_pct.
+ticker,bar,open,high,low,close,volume
+GAP,1,9,9.2,8.8,9,1000000
+GAP,2,9,9.2,8.8,9,1000000
+GAP,3,9.2,10.1,9.1,10,1000000
+GAP,4,10,10.3,9.9,10.2,1000000
+GAP,5,9.0,9.1,8.9,9.0,1000000
+GAP,6,9.0,9.1,8.9,9.0,1000000
+GAP,7,9.0,9.1,8.9,9.0,1000000
