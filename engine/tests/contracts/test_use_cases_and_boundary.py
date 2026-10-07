@@ -38,16 +38,19 @@ def test_scan_is_implemented(market: object) -> None:
     assert result.rows == []  # two bars: highest(252)[1] is still warming up
 
 
-def test_backtest_stub_names_feature_9(market: object) -> None:
+def test_backtest_trade_mode_names_feature_12(market: object) -> None:
     request = BacktestRequest.model_validate(
         {
             "rule": TEMPLATES[0].rule.model_dump(),
-            "configs": [{"name": "A", "exits": [{"type": "time"}]}],
+            "configs": [
+                {"name": "A", "exits": [{"type": "time"}]},
+                {"name": "B", "exits": [{"type": "time"}]},
+            ],
         }
     )
     with pytest.raises(api.NotYetImplemented) as caught:
         api.backtest(request, market)  # type: ignore[arg-type]
-    assert caught.value.feature == 9
+    assert caught.value.feature == 12
 
 
 def test_not_yet_implemented_is_not_a_not_implemented_error() -> None:
