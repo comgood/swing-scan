@@ -1,6 +1,6 @@
 # Checks on every PR and on main. Steps call only `make` targets so agents and CI behave
-# the same (spec 0001). Deploy, OpenAPI diff, oracle first ordering and Vitest arrive with
-# later scope features.
+# the same (spec 0001). `contracts-check` reruns OpenAPI, client and mock generation and
+# fails on any diff (spec 0002). Deploy and oracle first ordering arrive with later features.
 name: CI
 
 on:
@@ -34,6 +34,7 @@ jobs:
       - run: make lint
       - run: make typecheck
       - run: make test
+      - run: make contracts-check
       - run: make build-web
 
   guards:

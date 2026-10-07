@@ -1,0 +1,10 @@
+{
+  "as_of": "2025-12-31",
+  "columns": [
+    "close",
+    "highest(252)[1]",
+    "volume",
+    "1.5×avg_volume(50)"
+  ],
+  "rows": []
+}

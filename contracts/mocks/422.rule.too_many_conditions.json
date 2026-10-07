@@ -1,0 +1,118 @@
+{
+  "detail": [
+    {
+      "type": "out_of_range",
+      "loc": [
+        "body",
+        "rule",
+        "conditions"
+      ],
+      "msg": "must be between 1 and 8",
+      "input": [
+        {
+          "left": {
+            "kind": "ind",
+            "ind": "close"
+          },
+          "op": ">",
+          "right": {
+            "kind": "value",
+            "value": 5
+          }
+        },
+        {
+          "left": {
+            "kind": "ind",
+            "ind": "close"
+          },
+          "op": ">",
+          "right": {
+            "kind": "value",
+            "value": 5
+          }
+        },
+        {
+          "left": {
+            "kind": "ind",
+            "ind": "close"
+          },
+          "op": ">",
+          "right": {
+            "kind": "value",
+            "value": 5
+          }
+        },
+        {
+          "left": {
+            "kind": "ind",
+            "ind": "close"
+          },
+          "op": ">",
+          "right": {
+            "kind": "value",
+            "value": 5
+          }
+        },
+        {
+          "left": {
+            "kind": "ind",
+            "ind": "close"
+          },
+          "op": ">",
+          "right": {
+            "kind": "value",
+            "value": 5
+          }
+        },
+        {
+          "left": {
+            "kind": "ind",
+            "ind": "close"
+          },
+          "op": ">",
+          "right": {
+            "kind": "value",
+            "value": 5
+          }
+        },
+        {
+          "left": {
+            "kind": "ind",
+            "ind": "close"
+          },
+          "op": ">",
+          "right": {
+            "kind": "value",
+            "value": 5
+          }
+        },
+        {
+          "left": {
+            "kind": "ind",
+            "ind": "close"
+          },
+          "op": ">",
+          "right": {
+            "kind": "value",
+            "value": 5
+          }
+        },
+        {
+          "left": {
+            "kind": "ind",
+            "ind": "close"
+          },
+          "op": ">",
+          "right": {
+            "kind": "value",
+            "value": 5
+          }
+        }
+      ],
+      "ctx": {
+        "min": 1,
+        "max": 8
+      }
+    }
+  ]
+}

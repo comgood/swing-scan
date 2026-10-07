@@ -1,0 +1,152 @@
+[
+  {
+    "id": "breakout_52w",
+    "name": "52 week high breakout on volume",
+    "description": "Close breaks above the highest high of the prior 252 bars, on volume at least 1.5 times its 50 bar average, with a visible price filter.",
+    "rule": {
+      "name": "52w breakout on volume",
+      "conditions": [
+        {
+          "left": {
+            "kind": "ind",
+            "ind": "close",
+            "n": null,
+            "offset": 0,
+            "mult": 1.0
+          },
+          "op": ">",
+          "right": {
+            "kind": "ind",
+            "ind": "highest",
+            "n": 252,
+            "offset": 1,
+            "mult": 1.0
+          }
+        },
+        {
+          "left": {
+            "kind": "ind",
+            "ind": "volume",
+            "n": null,
+            "offset": 0,
+            "mult": 1.0
+          },
+          "op": ">",
+          "right": {
+            "kind": "ind",
+            "ind": "avg_volume",
+            "n": 50,
+            "offset": 0,
+            "mult": 1.5
+          }
+        },
+        {
+          "left": {
+            "kind": "ind",
+            "ind": "close",
+            "n": null,
+            "offset": 0,
+            "mult": 1.0
+          },
+          "op": ">",
+          "right": {
+            "kind": "value",
+            "value": 5.0
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "pullback_ema21",
+    "name": "Pullback to a rising 21 EMA",
+    "description": "The 21 EMA is rising, price is above the 50 SMA, and the low dips to within 1% of the 21 EMA while the close holds above it, with a visible price filter.",
+    "rule": {
+      "name": "Pullback to rising 21 EMA",
+      "conditions": [
+        {
+          "left": {
+            "kind": "ind",
+            "ind": "ema",
+            "n": 21,
+            "offset": 0,
+            "mult": 1.0
+          },
+          "op": ">",
+          "right": {
+            "kind": "ind",
+            "ind": "ema",
+            "n": 21,
+            "offset": 5,
+            "mult": 1.0
+          }
+        },
+        {
+          "left": {
+            "kind": "ind",
+            "ind": "close",
+            "n": null,
+            "offset": 0,
+            "mult": 1.0
+          },
+          "op": ">",
+          "right": {
+            "kind": "ind",
+            "ind": "sma",
+            "n": 50,
+            "offset": 0,
+            "mult": 1.0
+          }
+        },
+        {
+          "left": {
+            "kind": "ind",
+            "ind": "low",
+            "n": null,
+            "offset": 0,
+            "mult": 1.0
+          },
+          "op": "<=",
+          "right": {
+            "kind": "ind",
+            "ind": "ema",
+            "n": 21,
+            "offset": 0,
+            "mult": 1.01
+          }
+        },
+        {
+          "left": {
+            "kind": "ind",
+            "ind": "close",
+            "n": null,
+            "offset": 0,
+            "mult": 1.0
+          },
+          "op": ">",
+          "right": {
+            "kind": "ind",
+            "ind": "ema",
+            "n": 21,
+            "offset": 0,
+            "mult": 1.0
+          }
+        },
+        {
+          "left": {
+            "kind": "ind",
+            "ind": "close",
+            "n": null,
+            "offset": 0,
+            "mult": 1.0
+          },
+          "op": ">",
+          "right": {
+            "kind": "value",
+            "value": 5.0
+          }
+        }
+      ]
+    }
+  }
+]

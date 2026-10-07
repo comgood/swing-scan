@@ -1,0 +1,20 @@
+{
+  "detail": [
+    {
+      "type": "duplicate_exit_type",
+      "loc": [
+        "body",
+        "configs",
+        0,
+        "exits",
+        1,
+        "type"
+      ],
+      "msg": "exit type stop_pct is already used in this config",
+      "input": "stop_pct",
+      "ctx": {
+        "type": "stop_pct"
+      }
+    }
+  ]
+}
