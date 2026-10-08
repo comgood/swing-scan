@@ -19,6 +19,8 @@ The `swing-api` package (import name `api`): a thin FastAPI layer over `engine`,
 make dev-api                   # uvicorn on 127.0.0.1:8000 with reload
 uv run pytest services/api/tests
 make build-api                 # Lambda image, linux/amd64
+make build-api-local           # arm64 copy for local smoke tests (not the deploy image)
+make smoke-image               # run the built image, check health and one template scan
 ```
 
 ## Conventions
@@ -35,7 +37,7 @@ make build-api                 # Lambda image, linux/amd64
 - Function URLs do not compress responses, so `GZipMiddleware` stays on.
 - After any schema change run `make openapi` and `make gen-client` and commit both outputs; CI fails on a diff.
 - The image generates the market into `/data` and sets `SYNTHETIC_DATA_DIR=/data`; routes load it with `engine.data.read_market()` (wired with feature 8, spec 0005).
-- On Apple Silicon `make build-api` (linux/amd64) segfaults at the data step: Polars crashes under x86 emulation. Check locally with an arm64 copy of the Dockerfile; the real x86 build runs on CI or at deploy.
+- On Apple Silicon `make build-api` (linux/amd64) segfaults at the data step: Polars crashes under x86 emulation. Locally run `make build-api-local` then `make smoke-image API_IMAGE=swing-scan-api:local-arm64` (arm64 copy, not the deploy image); the real x86 build and smoke run in the CI `api-image` job on every PR.
 
 ## Related specs
 
