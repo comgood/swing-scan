@@ -1,4 +1,6 @@
 // Invented sample data for the /ui gallery. Never the API mocks, never real prices.
+import type { Schemas } from "@swing-scan/api-client";
+
 import type { TrialCountState } from "@/features/honesty";
 
 export interface SampleRow {
@@ -191,3 +193,92 @@ export const SAMPLE_TRIAL_STATES: { label: string; state: TrialCountState }[] = 
 
 /** An invented structure key for the live demo; real keys come from the backtest response. */
 export const SAMPLE_STRUCTURE_KEY = "0".repeat(64);
+
+// An invented single config backtest for the report parts (spec 0007). Trades are generated so
+// the list pages, sorts and shows both segments; a null R shows "n/a".
+type Trade = Schemas["Trade"];
+const REASONS: Trade["exit_reason"][] = ["stop_pct", "time", "time", "end_of_test"];
+
+export const SAMPLE_TRADES: Trade[] = Array.from({ length: 60 }, (_, i) => {
+  const ret = Math.round(Math.sin(i * 1.7) * 900) / 100;
+  const month = String((i % 12) + 1).padStart(2, "0");
+  const year = 2021 + Math.floor(i / 12);
+  return {
+    ticker: `DEMO${String((i * 7) % 40).padStart(2, "0")}`,
+    entry_date: `${year}-${month}-05`,
+    entry_price: 40 + i * 1.25,
+    exit_date: `${year}-${month}-26`,
+    exit_price: Math.round((40 + i * 1.25) * (1 + ret / 100) * 100) / 100,
+    return_pct: ret,
+    bars_held: 5 + (i % 16),
+    exit_reason: REASONS[i % REASONS.length]!,
+    r_multiple: i === 3 ? null : ret / 8,
+    mae_pct: -Math.abs(ret) / 2 - 1,
+    mfe_pct: Math.abs(ret) + 0.5,
+    mae_r: i === 3 ? null : (-Math.abs(ret) / 2 - 1) / 8,
+    mfe_r: i === 3 ? null : (Math.abs(ret) + 0.5) / 8,
+    segment: year >= 2024 ? "oos" : "is",
+  };
+});
+
+const sampleSegment = (n: number, cagr: number) => ({
+  n_trades: n,
+  cagr_pct: cagr,
+  max_dd_pct: -14.2,
+  sharpe: cagr / 10,
+  win_rate_pct: 52.1,
+  avg_win_pct: 5.3,
+  avg_loss_pct: -4.1,
+  expectancy_pct: 0.8,
+  expectancy_r: 0.1,
+  profit_factor: n > 20 ? 1.24 : null,
+  avg_bars_held: 12.4,
+  exposure_pct: 81.5,
+});
+
+export const SAMPLE_BACKTEST: Schemas["PortfolioResult"] = {
+  mode: "portfolio",
+  assumptions: {
+    fill_model: "signal_close_entry_next_open",
+    slippage_bps: 10,
+    commission_bps: 0,
+    sizing: "equal_weight",
+    max_positions: 10,
+    entry_rising_edge: true,
+    cooldown_bars: 10,
+    cooldown_basis: "signal",
+    no_last_bar_entry: true,
+    same_ticker_overlap: false,
+    horizon_bars: null,
+    seed: null,
+    configs: [
+      {
+        name: "Demo",
+        exits: [
+          { type: "stop_pct", pct: 8 },
+          { type: "time", bars: 20 },
+        ],
+      },
+    ],
+    baseline_config_index: 0,
+    delisting_rule: "exit_last_close",
+    oos_start: "2024-01-02",
+    oos_fraction: 0.3,
+    data_mode: "synthetic",
+    data_version: "synthetic:v1:demo",
+    data_seed: 7,
+  },
+  oos_start: "2024-01-02",
+  trial: { structure_key: "1".repeat(64), pair_keys: ["gallery-backtest"] },
+  warnings: [],
+  metrics: { is: sampleSegment(36, 6.4), oos: sampleSegment(12, -2.5) },
+  benchmark_metrics: {
+    is: { cagr_pct: 9.1, max_dd_pct: -18.3 },
+    oos: { cagr_pct: 4.2, max_dd_pct: -7.7 },
+  },
+  equity: [],
+  benchmark: [],
+  trades: SAMPLE_TRADES,
+  trades_total: SAMPLE_TRADES.length,
+  trades_truncated: false,
+};

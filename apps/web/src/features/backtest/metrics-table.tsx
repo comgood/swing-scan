@@ -57,7 +57,13 @@ export function MetricsTable({ result }: { result: PortfolioResult }) {
   const benchmarkCell = (row: MetricRow, segment: "is" | "oos") =>
     row.benchmark ? signedPct(bench[segment][row.benchmark]) : NOT_AVAILABLE;
   return (
-    <div className="min-w-0 overflow-x-auto rounded-lg border">
+    // A focusable scroll region, like DataTable's, so the five columns scroll by keyboard at 375 px.
+    <div
+      role="region"
+      aria-label="Metrics, in sample beside out of sample"
+      tabIndex={0}
+      className="min-w-0 overflow-auto rounded-lg border"
+    >
       <Table className="tabular-nums">
         <TableHeader>
           <TableRow>
