@@ -17,6 +17,7 @@ from acceptance.support import (
     random_walk_frames,
     rule_json,
     run_scan,
+    set_bar,
     ui_owed,
     val,
 )
@@ -317,3 +318,21 @@ def test_no_hidden_price_filter() -> None:
     market = build_market({"PENNY": penny})
     rule = make_rule((ind("volume"), ">", val(0)))
     assert [r.ticker for r in run_scan(rule, market, bar_date(30)).rows] == ["PENNY"]
+
+
+@pytest.mark.ac("R-10")
+def test_the_visible_close_above_5_is_the_only_price_filter() -> None:
+    """Spec 0005 AC-13: a penny breakout is a hit for the Breakout template without its
+    `close > 5` row, and drops out only when that visible row is present."""
+    penny = flat(1, 300, price=2.0, spread=0.1)
+    set_bar(penny, 300, 2.9, 3.1, 2.8, 3.0)
+    penny.volume[penny.bar(300)] = 5_000_000.0
+    market = build_market({"PENNY": penny})
+    template = TEMPLATES[0].rule.model_dump(mode="json")
+    without = {
+        **template,
+        "conditions": [c for c in template["conditions"] if c["right"] != val(5.0)],
+    }
+    assert len(without["conditions"]) == len(template["conditions"]) - 1
+    assert [r.ticker for r in run_scan(without, market, bar_date(300)).rows] == ["PENNY"]
+    assert run_scan(template, market, bar_date(300)).rows == []

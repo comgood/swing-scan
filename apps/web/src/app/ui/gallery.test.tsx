@@ -32,10 +32,16 @@ describe("/ui gallery (AC-15, AC-16)", () => {
     }
   });
 
-  it.each(SECTIONS)("section %s passes axe", async (name) => {
-    render(<Gallery />);
-    await expectNoAxeViolations(screen.getByRole("region", { name }));
-  });
+  // Axe on a dense section (the rule builder's states) takes about 5 s on the CI runner,
+  // right at Vitest's default timeout; a timed out run also leaves axe busy for the next test.
+  it.each(SECTIONS)(
+    "section %s passes axe",
+    async (name) => {
+      render(<Gallery />);
+      await expectNoAxeViolations(screen.getByRole("region", { name }));
+    },
+    20_000,
+  );
 
   it("maps the sample 422 to the field and the form summary", () => {
     render(<Gallery />);

@@ -6,9 +6,10 @@ export PATH := $(HOME)/.local/bin:$(PATH)
 
 API_IMAGE ?= swing-scan-api
 API_PLATFORM ?= linux/amd64
+API_BUILD_FLAGS ?=
 
 .PHONY: setup dev dev-api dev-web lint format typecheck test test-acceptance hooks guards build-web \
-        build-api smoke test-oracle openapi gen-client mocks contracts contracts-check data data-check load-live ci
+        build-api build-api-local smoke smoke-image test-oracle openapi gen-client mocks contracts contracts-check data data-check load-live ci
 
 setup: ## Install all JS and Python dependencies from the lockfiles
 	pnpm install --frozen-lockfile
@@ -68,8 +69,14 @@ contracts-check: contracts ## CI: fail if a generated contract file is stale (AC
 build-web: ## Static export of the web app into apps/web/out
 	pnpm --filter web build
 
-build-api: ## Build the Lambda container image (x86_64)
-	docker build --platform $(API_PLATFORM) -f services/api/Dockerfile -t $(API_IMAGE) .
+build-api: ## Build the Lambda container image (x86_64); CI runs it on every PR
+	docker build --platform $(API_PLATFORM) $(API_BUILD_FLAGS) -f services/api/Dockerfile -t $(API_IMAGE) .
+
+# Not the deploy image: an arm64 copy of the Dockerfile so Apple Silicon can smoke test locally.
+build-api-local: ## Build an arm64 copy of the API image as $(API_IMAGE):local-arm64
+	@tmp="$$(mktemp)"; trap 'rm -f "$$tmp"' EXIT; \
+	sed 's#--platform=linux/amd64#--platform=linux/arm64#g' services/api/Dockerfile > "$$tmp"; \
+	docker build --platform linux/arm64 -f "$$tmp" -t $(API_IMAGE):local-arm64 .
 
 hooks: ## Install the pre-commit hooks into .git/hooks (run once per clone)
 	uv run pre-commit install
@@ -80,6 +87,9 @@ guards: ## Data leak guard on every tracked file, plus gitleaks over the files
 
 smoke: ## Smoke test a deployed API: make smoke API_URL=https://...
 	scripts/smoke.sh "$(API_URL)"
+
+smoke-image: ## Run a built API image and smoke test it: make smoke-image [API_IMAGE=swing-scan-api:local-arm64]
+	scripts/smoke_image.sh "$(API_IMAGE)"
 
 ci: lint typecheck test build-web contracts-check data-check guards ## Every check CI runs, in one command
 
