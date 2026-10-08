@@ -157,3 +157,65 @@ def test_config_rejects_impossible_values(kwargs: dict[str, object], message: st
 def test_sessions_skips_weekends() -> None:
     days = sessions(date(2021, 1, 1), 3)  # Friday
     assert days == [date(2021, 1, 1), date(2021, 1, 4), date(2021, 1, 5)]
+
+
+def closes(market: Market, ticker: str) -> np.ndarray:
+    return market.bars.filter(pl.col("ticker") == ticker).sort("date")["close"].to_numpy()
+
+
+def test_acquired_tickers_jump_on_announcement_then_stay_pinned(demo: Market) -> None:
+    # Spec 0006: +25% to +40% on the session 20 before the last bar, then near flat.
+    acquired = delisted(demo).filter(pl.col("delist_reason") == "acquired")["ticker"]
+    assert acquired.len() > 0
+    for ticker in acquired.to_list():
+        close = closes(demo, ticker)
+        jump = close[-21] / close[-22]
+        assert 1.25 - 1e-3 <= jump <= 1.40 + 1e-3, (ticker, jump)
+        assert abs(close[-1] / close[-21] - 1) < 0.05, ticker
+
+
+def test_bankrupt_tickers_slide_into_their_last_bar(demo: Market) -> None:
+    # Spec 0006: an extra -0.6% a day over the last 40 sessions (about -21% in total).
+    bankrupt = delisted(demo).filter(pl.col("delist_reason") == "bankruptcy")["ticker"]
+    assert bankrupt.len() > 0
+    slides = [closes(demo, t)[-1] / closes(demo, t)[-41] for t in bankrupt.to_list()]
+    assert float(np.median(slides)) < 0.85
+
+
+def test_demo_index_holds_the_planted_bear_window(demo: Market) -> None:
+    # Spec 0006: one bear of 120 to 180 sessions starting at session 300 to 700, whose
+    # total log return is in [-0.45, -0.30]. The index is the market factor itself.
+    log_close = np.log(closes(demo, BENCHMARK))
+    found = False
+    for length in range(120, 181):
+        starts = np.arange(300, 701)
+        move = log_close[starts + length - 1] - log_close[starts - 1]
+        if np.any((move >= -0.45 - 1e-4) & (move <= -0.30 + 1e-4)):
+            found = True
+            break
+    assert found
+
+
+def test_prices_keep_four_decimals_and_volumes_are_whole(demo: Market) -> None:
+    # Rounding is what keeps output identical across machines (spec 0006, randomness).
+    bars = demo.bars
+    for column in ("open", "high", "low", "close"):
+        off = (bars[column] * 10_000 - (bars[column] * 10_000).round()).abs().max()
+        assert off is not None and float(off) < 1e-6, column  # type: ignore[arg-type]
+    assert (bars["volume"] == bars["volume"].round()).all()
+    assert bars["volume"].min() >= 1  # type: ignore[operator]
+
+
+def test_delisting_count_has_a_floor_of_min_delisted() -> None:
+    # max(min_delisted, round(5% x n)): 40 tickers would give 2, the floor lifts it to 3.
+    market = generate(5, SMALL)
+    assert delisted(market).height == 3
+    assert SyntheticConfig().n_delisted == 25
+
+
+def test_generate_does_not_touch_global_numpy_random_state() -> None:
+    np.random.seed(123)
+    expected = np.random.random()
+    np.random.seed(123)
+    generate(4, SMALL)
+    assert np.random.random() == expected
