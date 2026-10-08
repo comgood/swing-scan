@@ -8,7 +8,7 @@ decides. A value without enough history is null. Nothing reads a bar after t.
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterable, Iterator
 from typing import NamedTuple
 
 import polars as pl
@@ -32,6 +32,14 @@ def key_of(operand: IndOperand) -> IndicatorKey:
     return IndicatorKey(operand.ind, operand.n)
 
 
+def dependencies(keys: Iterable[IndicatorKey]) -> Iterator[IndicatorKey]:
+    """Each key, followed by the columns it reads (`rs(n)` reads `ret(n)`)."""
+    for key in keys:
+        yield key
+        if key.ind == "rs":
+            yield IndicatorKey("ret", key.n)
+
+
 Lookup = Callable[[IndicatorKey], pl.Series]
 """Reads another cached column (`rs(n)` reads `ret(n)`)."""
 
@@ -52,19 +60,88 @@ def _window(bars: pl.DataFrame, column: str, how: str, n: int) -> pl.Series:
     return _gated(bars, rolled, n - 1)
 
 
-def compute(key: IndicatorKey, bars: pl.DataFrame, lookup: Lookup) -> pl.Series:
+def _previous_close() -> pl.Expr:
+    """Yesterday's close of the same ticker, null on the ticker's first bar."""
+    return pl.when(pl.col(POS) >= 1).then(pl.col("close").shift(1)).otherwise(None)
+
+
+def _seeded_ewm(bars: pl.DataFrame, source: pl.Expr, n: int, alpha: float, seed: int) -> pl.Series:
+    """A recursive average seeded with the simple mean of `n` values ending on row `seed`.
+
+    `ema` uses `alpha = 2 / (n + 1)`; Wilder's `atr` and `rsi` use `alpha = 1 / n`, which is
+    the same as `(prev × (n - 1) + x) / n`.
+    """
+    start = (
+        pl.when(pl.col(POS) < seed)
+        .then(None)
+        .when(pl.col(POS) == seed)
+        .then(source.rolling_mean(n))
+        .otherwise(source)
+    )
+    smoothed = start.ewm_mean(alpha=alpha, adjust=False).over("ticker")
+    return _gated(bars, smoothed, seed)
+
+
+def _true_range() -> pl.Expr:
+    prev = _previous_close()
+    high, low = pl.col("high"), pl.col("low")
+    full = pl.max_horizontal(high - low, (high - prev).abs(), (low - prev).abs())
+    return pl.when(prev.is_null()).then(high - low).otherwise(full)
+
+
+def _rsi(bars: pl.DataFrame, n: int) -> pl.Series:
+    change = pl.col("close") - _previous_close()
+    gain = _seeded_ewm(bars, pl.max_horizontal(change, pl.lit(0.0)), n, 1 / n, n)
+    loss = _seeded_ewm(bars, pl.max_horizontal(-change, pl.lit(0.0)), n, 1 / n, n)
+    rsi = pl.select(
+        pl.when(loss == 0).then(100.0).otherwise(100.0 - 100.0 / (1.0 + gain / loss))
+    ).to_series()
+    return rsi.alias("value")
+
+
+def _rs(bars: pl.DataFrame, ret: pl.Series, benchmark: str) -> pl.Series:
+    """Percentile rank of `ret(n)` among the non benchmark tickers with a valid one on t.
+
+    `floor(99 × (rank - 1) / (m - 1))`, ties take the highest rank, 99 when m = 1.
+    """
+    eligible = pl.when(pl.col("ticker") != benchmark).then(pl.col("ret"))
+    rank = eligible.rank("max").over("date")
+    m = eligible.count().over("date")
+    rs = (
+        pl.when(eligible.is_null())
+        .then(None)
+        .when(m == 1)
+        .then(99.0)
+        .otherwise(((rank - 1) * 99 / (m - 1)).floor())
+    )
+    frame = bars.select("ticker", "date").with_columns(ret.fill_nan(None).alias("ret"))
+    return frame.select(rs.cast(pl.Float64).alias("value")).to_series()
+
+
+def compute(key: IndicatorKey, bars: pl.DataFrame, lookup: Lookup, benchmark: str) -> pl.Series:
     """The raw column for `key` (no offset, no mult), with nulls during warm up."""
     ind, n = key
     if ind in PRICE_FIELDS:
         return bars[ind].cast(pl.Float64).alias("value")
     if n is None:
         raise ValueError(f"{ind} needs n")
-    if ind == "sma":
-        return _window(bars, "close", "mean", n)
-    if ind == "avg_volume":
-        return _window(bars, "volume", "mean", n)
-    if ind == "highest":
-        return _window(bars, "high", "max", n)
-    if ind == "lowest":
-        return _window(bars, "low", "min", n)
-    raise NotImplementedError(f"indicator {ind} arrives with the engine breadth milestone")
+    match ind:
+        case "sma":
+            return _window(bars, "close", "mean", n)
+        case "avg_volume":
+            return _window(bars, "volume", "mean", n)
+        case "highest":
+            return _window(bars, "high", "max", n)
+        case "lowest":
+            return _window(bars, "low", "min", n)
+        case "ema":
+            return _seeded_ewm(bars, pl.col("close"), n, 2 / (n + 1), n - 1)
+        case "atr":
+            return _seeded_ewm(bars, _true_range(), n, 1 / n, n - 1)
+        case "rsi":
+            return _rsi(bars, n)
+        case "ret":
+            return _gated(bars, pl.col("close") / pl.col("close").shift(n) - 1, n)
+        case "rs":
+            return _rs(bars, lookup(IndicatorKey("ret", n)), benchmark)
+    raise ValueError(f"unknown indicator {ind!r}")

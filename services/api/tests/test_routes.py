@@ -27,10 +27,45 @@ def test_scan_without_a_market_is_501(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.mark.parametrize("count", [1, 2, 6])
-def test_valid_backtest_is_501_naming_feature_9(count: int) -> None:
+def test_backtest_without_a_market_is_501(count: int, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(state, "market", None)
     res = client.post("/api/v1/backtest", json={"rule": RULE, "configs": configs(count)})
     assert res.status_code == 501
-    assert "feature 9" in res.json()["detail"]
+    assert "feature 7" in res.json()["detail"]
+
+
+def _fixture_market(monkeypatch: pytest.MonkeyPatch) -> None:
+    from engine.data.fixtures import FrameSpec, make_market
+
+    closes = [4.0, 4.0, 6.0, 6.5, 7.0, 7.5]
+    monkeypatch.setattr(state, "market", make_market({"AAA": FrameSpec(1, closes)}))
+
+
+@pytest.mark.parametrize("count", [2, 6])
+def test_trade_mode_is_501_naming_feature_12(count: int, monkeypatch: pytest.MonkeyPatch) -> None:
+    _fixture_market(monkeypatch)
+    res = client.post("/api/v1/backtest", json={"rule": RULE, "configs": configs(count)})
+    assert res.status_code == 501
+    assert "feature 12" in res.json()["detail"]
+
+
+def test_a_feature_11_exit_is_501_naming_feature_11(monkeypatch: pytest.MonkeyPatch) -> None:
+    _fixture_market(monkeypatch)
+    trail = [{"name": "T", "exits": [{"type": "trail_pct", "pct": 10}]}]
+    res = client.post("/api/v1/backtest", json={"rule": RULE, "configs": trail})
+    assert res.status_code == 501
+    assert "trail_pct" in res.json()["detail"]
+    assert "feature 11" in res.json()["detail"]
+
+
+def test_one_config_runs_the_portfolio_backtest(monkeypatch: pytest.MonkeyPatch) -> None:
+    _fixture_market(monkeypatch)
+    price = {"name": "price", "conditions": [RULE["conditions"][2]]}  # close > 5
+    res = client.post("/api/v1/backtest", json={"rule": price, "configs": configs(1)})
+    assert res.status_code == 200
+    body = res.json()
+    assert body["mode"] == "portfolio"
+    assert [t["exit_reason"] for t in body["trades"]] == ["end_of_test"]
 
 
 def test_seven_configs_is_422_not_501() -> None:
@@ -97,7 +132,7 @@ def test_a_stray_not_implemented_error_stays_a_500(monkeypatch: pytest.MonkeyPat
         raise NotImplementedError("a real bug")
 
     monkeypatch.setattr(state, "market", make_market({"AAA": FrameSpec(1, [1.0, 2.0])}))
-    monkeypatch.setattr(use_cases, "scan", broken)
+    monkeypatch.setattr(use_cases, "scan_timed", broken)
     assert client.post("/api/v1/scan", json={"rule": RULE}).status_code == 500
 
 
