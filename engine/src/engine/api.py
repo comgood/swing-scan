@@ -389,9 +389,8 @@ def _portfolio(request: BacktestRequest, market: Market) -> PortfolioResult:
 
 def backtest(request: BacktestRequest, market: Market) -> BacktestResponse:
     """1 config runs the portfolio day loop (feature 9); 2 to 6 configs are the exit lab,
-    which answers `NotYetImplemented` until feature 12. Exit types feature 11 builds answer
-    `NotYetImplemented` too. A `sim.start` or `sim.end` outside the data raises the
-    `range_outside_data` `ValidationError`."""
+    which answers `NotYetImplemented` until feature 12. A `sim.start` or `sim.end` outside
+    the data raises the `range_outside_data` `ValidationError`."""
     if len(request.configs) > 1:
         raise NotYetImplemented(12, "Trade mode (the exit lab)")
     return _portfolio(request, market)
