@@ -1,4 +1,7 @@
-"""Plain NumPy views of a market's bars for the simulator loops (spec 0007).
+"""A market's bars as plain Python lists for the simulator loops (spec 0007).
+
+The loops read one row at a time, millions of times per exit lab run, and indexing a Python
+list is several times cheaper than indexing a NumPy array and converting the scalar.
 
 Rows follow `market.bars` order: sorted by `(ticker, date)`, each ticker's bars contiguous,
 so a held position's next bar is always the next row.
@@ -19,20 +22,19 @@ from engine.indicators import IndicatorCache
 from ..exits import BarView
 
 Floats = npt.NDArray[np.float64]
-Bools = npt.NDArray[np.bool_]
 
 
 @dataclass(frozen=True)
 class BarArrays:
     ticker: list[str]
     date: list[date]
-    open: Floats
-    high: Floats
-    low: Floats
-    close: Floats
-    is_last: Bools
+    open: list[float]
+    high: list[float]
+    low: list[float]
+    close: list[float]
+    is_last: list[bool]
     """The ticker's last row in this market (a delisting or the end of the data)."""
-    is_delisting: Bools
+    is_delisting: list[bool]
     """The row's date is the ticker's `delisted_on`."""
 
     @classmethod
@@ -44,23 +46,23 @@ class BarArrays:
         return cls(
             ticker=bars["ticker"].to_list(),
             date=bars["date"].to_list(),
-            open=bars["open"].to_numpy(),
-            high=bars["high"].to_numpy(),
-            low=bars["low"].to_numpy(),
-            close=bars["close"].to_numpy(),
-            is_last=cache.is_last.to_numpy(),
-            is_delisting=bars.select(delisting).to_series().to_numpy(),
+            open=bars["open"].to_list(),
+            high=bars["high"].to_list(),
+            low=bars["low"].to_list(),
+            close=bars["close"].to_list(),
+            is_last=cache.is_last.to_list(),
+            is_delisting=bars.select(delisting).to_series().to_list(),
         )
 
     def view(self, row: int, b: int, *, is_final: bool, horizon: int | None = None) -> BarView:
         return BarView(
-            open=float(self.open[row]),
-            high=float(self.high[row]),
-            low=float(self.low[row]),
-            close=float(self.close[row]),
+            open=self.open[row],
+            high=self.high[row],
+            low=self.low[row],
+            close=self.close[row],
             b=b,
-            is_delisting=bool(self.is_delisting[row]),
-            is_final=is_final or bool(self.is_last[row]),
+            is_delisting=self.is_delisting[row],
+            is_final=is_final or self.is_last[row],
             horizon=horizon,
             row=row,
         )
