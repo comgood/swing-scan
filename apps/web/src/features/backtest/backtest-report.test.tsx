@@ -131,11 +131,23 @@ describe("BacktestReport", () => {
     expect(screen.queryByRole("button", { name: "Try again" })).not.toBeInTheDocument();
   });
 
-  it("disables the button while the run is in flight", async () => {
+  it("disables the button and holds the report's place while the run is in flight", async () => {
     server.use(backtestHandler("auto", { delayMs: "infinite" }));
     const { user } = renderReport();
     await runIt(user);
 
     expect(await screen.findByRole("button", { name: "Running…" })).toBeDisabled();
+    expect(screen.getByText("Running the backtest…")).toBeInTheDocument();
+  });
+
+  it("draws the equity chart between the results and the trades", async () => {
+    const { user, container } = renderReport();
+    await runIt(user);
+
+    const equity = await screen.findByRole("region", { name: "Equity" });
+    expect(within(equity).getByRole("img")).toHaveAccessibleName(/^Strategy equity from 100/);
+    const headings = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
+    expect(headings.slice(-3)).toEqual(["Results", "Equity", "Trades"]);
+    await expectNoAxeViolations(container);
   });
 });

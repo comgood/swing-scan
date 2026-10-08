@@ -4,7 +4,7 @@
 // trial counter uses in memory storage, so the gallery never touches your real counts.
 import { useState } from "react";
 
-import { AssumptionsHeader, MetricsTable, TradeList } from "@/features/backtest";
+import { AssumptionsHeader, EquityChart, MetricsTable, TradeList } from "@/features/backtest";
 import { memoryStores } from "@/features/honesty/memory-stores";
 
 import { SAMPLE_BACKTEST, SAMPLE_TRADES } from "./sample";
@@ -15,6 +15,16 @@ export function BacktestDemo() {
     <>
       <AssumptionsHeader result={SAMPLE_BACKTEST} stores={stores} />
       <MetricsTable result={SAMPLE_BACKTEST} />
+      <div role="group" aria-labelledby="demo-equity" className="flex min-w-0 flex-col gap-2">
+        <h3 id="demo-equity" className="text-sm font-medium">
+          Equity chart
+        </h3>
+        <EquityChart
+          equity={SAMPLE_BACKTEST.equity}
+          benchmark={SAMPLE_BACKTEST.benchmark}
+          oosStart={SAMPLE_BACKTEST.oos_start}
+        />
+      </div>
       <div role="group" aria-labelledby="demo-trades" className="flex min-w-0 flex-col gap-2">
         <h3 id="demo-trades" className="text-sm font-medium">
           Trade list
