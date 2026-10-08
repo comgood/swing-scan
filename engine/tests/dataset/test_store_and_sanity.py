@@ -128,3 +128,54 @@ def test_bars_after_delisting_or_before_listing_are_reported() -> None:
     problems = bar_problems(broken)
     assert any("after delisted_on" in p for p in problems), problems
     assert any("before listed_from" in p for p in problems), problems
+
+
+def test_read_market_rejects_a_corrupted_file_on_disk(small: Market, tmp_path: Path) -> None:
+    # D-2 at load time: a bad bar written by hand never reaches the scan or backtest.
+    write_market(small, tmp_path)
+    bars = pl.read_parquet(tmp_path / "bars.parquet")
+    broken = bars.with_columns(
+        pl.when(pl.int_range(pl.len()) == 5).then(0.0).otherwise(pl.col("volume")).alias("volume")
+    )
+    broken.write_parquet(tmp_path / "bars.parquet")
+    with pytest.raises(MarketError, match="volume not positive"):
+        read_market(tmp_path)
+
+
+def test_read_market_rejects_a_bar_after_delisting_on_disk(small: Market, tmp_path: Path) -> None:
+    write_market(small, tmp_path)
+    gone = small.securities.filter(pl.col("delisted_on").is_not_null()).row(0, named=True)
+    last = small.bars.filter(pl.col("ticker") == gone["ticker"]).sort("date").tail(1)
+    extra = last.with_columns((pl.col("date") + pl.duration(days=1)).alias("date"))
+    pl.concat([small.bars, extra]).sort("ticker", "date").write_parquet(tmp_path / "bars.parquet")
+    with pytest.raises(MarketError, match="after delisted_on"):
+        read_market(tmp_path)
+
+
+def test_write_market_refuses_an_insane_market_and_writes_nothing(tmp_path: Path) -> None:
+    market = tiny()
+    bars = market.bars.with_columns(pl.lit(-1.0).alias("close"))
+    out = tmp_path / "out"
+    with pytest.raises(MarketError):
+        write_market(with_bars(market, bars), out)
+    assert not out.exists()
+
+
+def test_cli_defaults_to_seed_42(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[int] = []
+
+    def fake_generate(seed: int) -> Market:
+        seen.append(seed)
+        return generate(seed, SMALL)
+
+    monkeypatch.setattr("engine.synthetic.__main__.generate", fake_generate)
+    assert main(["--out", str(tmp_path)]) == 0
+    assert seen == [42]
+    assert read_market(tmp_path).meta.seed == 42
+
+
+def test_cli_requires_an_output_folder(capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(SystemExit) as exit_info:
+        main(["--seed", "1"])
+    assert exit_info.value.code == 2
+    assert "--out" in capsys.readouterr().err
