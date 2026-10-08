@@ -47,8 +47,8 @@ The trade lab response carries the random counts and metrics, but no random entr
 <a id="D-1"></a>
 ## D-1 to D-3: the synthetic generator's entry point
 
-**Status:** owed (scope feature 7).
-The generator has no frozen public entry point yet. The tests are written against the frozen `Market` shape and call one hook, `load_synthetic_market(seed)` in `tests/acceptance/test_data.py`, which fails until feature 7 names the function.
+**Status:** ruled (feature 7 on `main` names the entry points, spec 0006).
+The hook `load_synthetic_market(seed)` in `tests/acceptance/test_data.py` now calls `engine.synthetic.generate(seed)`, and one test reads the `python -m engine.synthetic --seed 42 --out DIR` output back with `engine.data.read_market`. D-1 to D-3 pass on `main` and are `required` since 2026-10-08.
 D-3's "bear segment" is **ruled** (owner, 2026-10-07): the benchmark closes at least 20% below its running peak at some point. This is what the tests check; feature 7's spec should generate to it.
 
 <a id="D-4"></a>
@@ -74,15 +74,19 @@ Doc 02 section 15.4 puts these in `apps/web/tests/acceptance/` as Vitest tests a
 - U-2: `data-mode-banner.test.tsx`. A `live` health answer swaps in the live text on every page. The "badge" is the shell's data mode banner, with the words spec 0003 AC-4 fixes; doc 01 names only the meaning.
 - U-5: `warmup.test.tsx`. A health ping delayed 2.5 s shows "Warming up the engine…" after 1.5 s (not at 1.2 s) and clears when the answer lands; a fast answer never shows it; the 1,499 and 1,500 ms edges and the restart are checked on `WarmupNotice` with fake timers.
 - U-6, structure only: `layout-375.test.tsx`. No page carries a fixed width over 375 px, every table sits in its own labelled scroll box, and `FormRow` is one column unless the `sm` breakpoint applies.
+- U-4, components: `honesty.test.tsx`. `RunTrialCounter` on the mock `trial` blocks and seeded storage: the counter line, a numbers only tweak adding to the same `N`, re runs and re renders adding nothing, `M` across structure keys, k pairs per exit lab run, the spec 0004 storage keys, `N` surviving a new session, no warning at 9 and the warning word for word at 10 and above, unparsable values treated as empty, and either store throwing hiding the counter behind the static warning. The `/ui` gallery shows every state.
+- U-8, words: `honesty.test.tsx`. `ProcedureNote` renders the doc 01 text word for word, as body text, and the `/ui` gallery shows it.
 - U-7, shared helpers: `errors-422.test.tsx`. The 422 mocks come back through the `api` client and `fieldErrorsFrom422`, land on the named field (`aria-invalid`, the message as its description) and on no other row; a body level error shows in `FormErrorSummary`.
 
 **Still owed** (the UI does not exist yet, so the IDs stay `pending`):
 - U-1: the workspace on `/` opening with Breakout and its scan results (feature 8) is written in `template-scan.test.tsx` through the `acIt` gate, so it runs but cannot fail CI until U-1 is `required`; the editable builder (feature 10) is still owed.
 - U-6: real builder rows stacking (feature 10), and anything that needs layout: `scrollWidth` at 375 px and the actual column stacking. jsdom has no CSS, so these stay a browser check in `/check verify` until Playwright is added (spec 0003 follow up).
 - U-7: the real builder row and exit config editor showing the error (features 10 and 12).
-- U-3 (report header), U-4 (trial counter), U-8 (procedure note), R-1 and R-8 (builder), X-3, X-4 and X-9 (exit lab report): no UI yet.
+- U-4: the counter inside the portfolio report (feature 9) and the exit lab report (feature 12), and no count for a failed run. `it.todo` in `honesty.test.tsx`.
+- U-8: the note directly under the exit lab table (feature 12). `it.todo` in `honesty.test.tsx`.
+- U-3 (report header), R-1 and R-8 (builder), X-3, X-4 and X-9 (exit lab report): no UI yet.
 
-Each ID keeps its pending placeholder in `tests/acceptance/`, plus a contract level test where one applies (U-3 fields, U-7 error paths, U-4 trial keys, X-3 `best_is`, X-4 null R). U-2 and U-5 are fully covered once this lands on `main`; the flip PR swaps their placeholders for a pointer to the Vitest files.
+Each ID keeps its pending placeholder in `tests/acceptance/`, plus a contract level test where one applies (U-3 fields, U-7 error paths, U-4 trial keys, X-3 `best_is`, X-4 null R). U-2 is `required` since 2026-10-08: its placeholder is now a pointer (`ui_covered_by`) that checks the Vitest file exists and owes nothing for the ID. U-5 is fully covered too and flips the same way in its own PR.
 
 <a id="perf"></a>
 ## S-4, B-13 and X-7: where the time budgets are measured
@@ -102,3 +106,15 @@ The criteria name the deployed API (S-4, X-7) or a warm run (B-13). CI never cal
 - **`next/navigation` in jsdom.** The tests emulate `useRouter`, `useSearchParams` and `usePathname` with a small store (`replace` updates the params and re renders). **Tests assume:** the workspace reads the template from `useSearchParams` and changes it with `router.replace`, as AC-10 says.
 - **Conditions text.** Each condition is checked as one element whose whole text is `<left label> <op> <right>`, e.g. `volume > 1.5×avg_volume(50)` and `close > 5` (spec 0005 value sourcing).
 
+<a id="U-4"></a>
+## U-4: what the session total `M` counts, and which storage failure hides the counter
+
+**Status:** open (spec 0004 is "Assumed", not ratified by `/architect`).
+Doc 01 U-4 says "a global session total across all rules is kept in sessionStorage" but not whether it counts runs or distinct pairs, and "storage unavailable" does not say which store. Spec 0004 assumes `M` is the number of distinct pair keys run this session (a re run adds nothing; a pair first seen in an earlier session counts once toward `M` but not again toward `N`), and that either store throwing hides both counters.
+**Tests assume:** spec 0004 as written, including its storage keys (`swing-scan:trials:v1:<structure_key>`, `swing-scan:session-trials:v1`). `honesty.test.tsx` checks the keys directly, so a ratification that changes the layout changes those tests. U-4 stays `pending` anyway until the counter is in the reports (features 9 and 12).
+
+<a id="U-8"></a>
+## U-8: "one line" in a DOM test
+
+**Status:** owed (feature 12, plus a browser check).
+jsdom applies no CSS, so it cannot see whether the note wraps to a second line at a given width. **Tests assume:** "one line" means one sentence pair of body text with no line break, not fine print (spec 0004, assumption 5). Whether it wraps at 375 px is a `/check verify` browser check. The placement under the exit lab table waits for feature 12.

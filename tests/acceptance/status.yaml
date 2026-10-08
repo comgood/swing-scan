@@ -9,9 +9,9 @@
 # tests/acceptance/test_traceability.py fails when the two disagree.
 
 # Data
-D-1: pending
-D-2: pending
-D-3: pending
+D-1: required
+D-2: required
+D-3: required
 D-4: pending
 D-5: pending
 D-6: required
@@ -64,7 +64,7 @@ X-10: pending
 
 # UI and honesty
 U-1: pending
-U-2: pending
+U-2: required
 U-3: pending
 U-4: pending
 U-5: pending

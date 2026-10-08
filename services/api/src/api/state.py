@@ -1,8 +1,27 @@
-"""The one `Market` the routes serve. It is loaded at import once scope feature 7 exists."""
+"""The one `Market` the routes serve, loaded once at import (spec 0005, AC-8)."""
 
 from __future__ import annotations
 
-from engine.contracts import Market
+import logging
 
-market: Market | None = None
-"""Null until scope feature 7 adds the synthetic data loader."""
+from engine.contracts import Market
+from engine.data import market_dir, read_market
+
+logger = logging.getLogger("api.state")
+
+
+def load_market() -> Market | None:
+    """The dataset in `SYNTHETIC_DATA_DIR`, or None when none has been generated yet.
+
+    Only a missing dataset is tolerated (the routes then answer 501). A dataset that exists
+    but fails its checks raises, so a broken image never serves wrong numbers.
+    """
+    try:
+        return read_market()
+    except FileNotFoundError:
+        logger.warning("no market in %s; /scan answers 501 until one is generated", market_dir())
+        return None
+
+
+market: Market | None = load_market()
+"""Null while no dataset is present (run `make data` locally)."""
