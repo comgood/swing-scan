@@ -96,6 +96,13 @@ The criteria name the deployed API (S-4, X-7) or a warm run (B-13). CI never cal
 **Tests assume:** an in process pass is the CI gate, and the deployed numbers are a `/check verify` step (`make smoke`).
 **Ruling:** the split stands. The in process timing is the CI gate; the deployed numbers for S-4 and X-7 are a `/check verify` step after a deploy (`make smoke`). Once feature 7 lands, the tests switch to the real synthetic market.
 
+<a id="AC-10-url"></a>
+## U-1 (spec 0005 AC-10): how the workspace changes the URL
+
+**Status:** owed (a QA test fix, no ruling needed).
+AC-10 says switching templates uses `router.replace`. In the real browser (verify of #29 with #21, 2026-10-08), switching changes the URL with no new history entry, and an unknown `?template` is dropped from the URL. Both behaviors are correct. Two Vitest tests in `template-scan.test.tsx` (#23) emulate `next/navigation` and expect `useRouter().replace` to be called, and they never see the call, so the pending gate skips them.
+**Fix owed in #23:** assert on what the user sees, not on which API changed it: the URL's `template` parameter (from `window.location` or the emulated router, whichever moved) and `history.length` unchanged. Until then those two tests stay skipped and U-1 stays `pending`.
+
 <a id="feature-8"></a>
 ## Feature 8 (template scan): readings the tests take
 
