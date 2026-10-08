@@ -18,6 +18,7 @@ const SECTIONS = [
   "Data table",
   "Banners",
   "Research honesty guards",
+  "Backtest report",
   "Rule builder",
   "Loading",
   "Error states",
@@ -68,6 +69,16 @@ describe("/ui gallery (AC-15, AC-16)", () => {
     expect(section.getByText(PROCEDURE_NOTE)).toBeVisible();
     expect(section.getByText(SYNTHETIC_TEXT)).toBeVisible();
     expect(section.getByText(LIVE_TEXT)).toBeVisible();
+  });
+
+  it("shows the backtest parts, with the truncated trade count (spec 0007)", async () => {
+    render(<Gallery />);
+    const section = within(screen.getByRole("region", { name: "Backtest report" }));
+    expect(section.getByRole("heading", { name: "Assumptions" })).toBeVisible();
+    expect(await section.findByText(/^Trial #1 for this rule structure/)).toBeVisible();
+    expect(section.getByRole("columnheader", { name: "Benchmark OOS" })).toBeVisible();
+    expect(section.getByText(/^Showing 12 of 2,600 trades/)).toBeVisible();
+    expect(section.getAllByText("n/a").length).toBeGreaterThan(0);
   });
 
   it("shows every rule builder state (spec 0008 AC-10)", () => {
