@@ -76,6 +76,7 @@ Doc 02 section 15.4 puts these in `apps/web/tests/acceptance/` as Vitest tests a
 - U-6, structure only: `layout-375.test.tsx`. No page carries a fixed width over 375 px, every table sits in its own labelled scroll box, and `FormRow` is one column unless the `sm` breakpoint applies.
 - U-4, components: `honesty.test.tsx`. `RunTrialCounter` on the mock `trial` blocks and seeded storage: the counter line, a numbers only tweak adding to the same `N`, re runs and re renders adding nothing, `M` across structure keys, k pairs per exit lab run, the spec 0004 storage keys, `N` surviving a new session, no warning at 9 and the warning word for word at 10 and above, unparsable values treated as empty, and either store throwing hiding the counter behind the static warning. The `/ui` gallery shows every state.
 - U-8, words: `honesty.test.tsx`. `ProcedureNote` renders the doc 01 text word for word, as body text, and the `/ui` gallery shows it.
+- U-3, portfolio report: `backtest-report.test.tsx`, against `/backtest` on the mocks (plain `it`, so it blocks). After "Run backtest", an "Assumptions" region comes before the results, with one term per `Assumptions` field (spec 0007 AC-12), and each doc 01 item (fill model, slippage, sizing, max positions, rising edge, cooldown 10, no last bar entry, the config's exit rules, horizon and seed as "not used in portfolio mode", delisting, OOS date, data mode, version and seed) shows the response's value; a result with distinct values and a live result show those values, not the form's. `/backtest` is now in `pages.tsx`, so the "every page" banner and 375 px structure checks cover it.
 - R-1, R-8 and U-1 (builder part): `rule-builder.test.tsx`, against the builder on `/` (feature 10, spec 0008). R-8: edits, an added row (decision 8's `close > sma(50)`, then an indicator and a Number right side) and a removed row reach `POST /scan` exactly as the rows read back, and a rule pasted into the JSON panel becomes rows that read back as the same JSON. R-1: the first edit switches the link to `?r=` (it decodes, by spec 0008 decision 3, to the rows), and reopening that address gives the same rows and scans the same rule; a `?r=` built in that encoding (every operand shape, non ASCII name) opens that exact rule. U-1: the builder opens holding Breakout's rule and scans it.
 - U-7, pages: `rule-builder.test.tsx`. A 422 on row 2's left "Bars ago" lands on that field only, and a 422 on the stop's `pct` lands on "Stop loss (%)" on `/backtest`, not on the time exit. A 422 on a right side field does not reach the field (see [U-7-loc](#U-7-loc)).
 - U-7, shared helpers: `errors-422.test.tsx`. The 422 mocks come back through the `api` client and `fieldErrorsFrom422`, land on the named field (`aria-invalid`, the message as its description) and on no other row; a body level error shows in `FormErrorSummary`.
@@ -85,7 +86,7 @@ Doc 02 section 15.4 puts these in `apps/web/tests/acceptance/` as Vitest tests a
 - U-7: a right side error on its field, waiting on the [U-7-loc](#U-7-loc) ruling; the exit lab's config editor (feature 12).
 - U-4: the counter inside the portfolio report (feature 9) and the exit lab report (feature 12), and no count for a failed run. `it.todo` in `honesty.test.tsx`.
 - U-8: the note directly under the exit lab table (feature 12). `it.todo` in `honesty.test.tsx`.
-- U-3 (report header): the `/backtest` report exists (feature 9), Vitest still owed. X-3, X-4 and X-9 (exit lab report): no UI yet.
+- U-3 (report header): the portfolio report is covered (`backtest-report.test.tsx`, 2026-10-09); the exit lab report's header waits on feature 12. X-3, X-4 and X-9 (exit lab report): no UI yet.
 
 Each ID keeps its pending placeholder in `tests/acceptance/`, plus a contract level test where one applies (U-3 fields, U-7 error paths, U-4 trial keys, X-3 `best_is`, X-4 null R). U-2 is `required` since 2026-10-08: its placeholder is now a pointer (`ui_covered_by`) that checks the Vitest file exists and owes nothing for the ID. U-5 is fully covered too and flips the same way in its own PR.
 
@@ -96,6 +97,17 @@ Each ID keeps its pending placeholder in `tests/acceptance/`, plus a contract le
 The criteria name the deployed API (S-4, X-7) or a warm run (B-13). CI never calls the deployed API, so the acceptance tests time the use case in process on a seeded 500 ticker, 1,260 bar random walk.
 **Tests assume:** an in process pass is the CI gate, and the deployed numbers are a `/check verify` step (`make smoke`).
 **Ruling:** the split stands. The in process timing is the CI gate; the deployed numbers for S-4 and X-7 are a `/check verify` step after a deploy (`make smoke`). Once feature 7 lands, the tests switch to the real synthetic market.
+
+<a id="mode-split"></a>
+## S-3, B-13 to B-16: which half each criterion needs before it flips
+
+**Status:** QA reading (2026-10-09), no builder dispute; the owner can overrule it.
+Doc 01 S-3, B-13 to B-16 name no mode, and their old tests ran the exit lab (trade mode, feature 12), so they stayed `pending` behind `NotYetImplemented` after feature 9 merged. Spec 0007's test plan says which halves gate feature 9: "the portfolio tests in B-14, B-15 and B-16", AC-7 (B-13) in portfolio mode, and "the parity test ... the trade mode halves of B-15, B-16" with feature 12. Spec 0009 AC-1 maps the exit lab's entry list to X-1 (with B-14 to B-16), and its budget test owns "run twice equal" in trade mode.
+**Tests assume:**
+- S-3: `new_today` equals the golden reference and a portfolio run's entries (20 slots for 20 tickers, a 1 bar time exit, so every signal is entered). The same parity against the exit lab's entries is tagged X-1. S-3 is `required`.
+- B-13: portfolio determinism, plus the 3 s and 6 MB budget on the generated seed 42 market for both templates (the [perf](#perf) ruling's "once feature 7 lands" switch) and on the 500 ticker random walk. Trade mode determinism is tagged X-7. B-13 is `required`.
+- B-14: portfolio runs on both fixtures; the trade mode version is tagged X-1, since neither spec names a B-14 trade mode half. B-14 is `required`.
+- B-15 and B-16: the portfolio tests pass (B-16 with every exit type), but both specs name a trade mode half, and B-16 says "in every exit config". They stay `pending` until feature 12 merges.
 
 <a id="AC-10-url"></a>
 ## U-1 (spec 0005 AC-10): how the workspace changes the URL

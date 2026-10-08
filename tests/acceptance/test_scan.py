@@ -23,6 +23,7 @@ from acceptance.support import (
     flat,
     ind,
     make_rule,
+    portfolio,
     random_walk_frames,
     rule_json,
     run_scan,
@@ -30,7 +31,7 @@ from acceptance.support import (
     trade_lab,
     val,
 )
-from engine.contracts import TEMPLATES, Market, Rule
+from engine.contracts import TEMPLATES, Market, Rule, Trade
 from golden.reference import entry_signals
 
 
@@ -85,29 +86,30 @@ def test_the_benchmark_is_not_in_the_scan_universe() -> None:
     assert [r.ticker for r in run_scan(rule, market, bar_date(20)).rows] == ["AAA"]
 
 
-@pytest.mark.ac("S-3")
-def test_new_today_equals_the_backtest_entry_signals() -> None:
-    """Spec 0002 ruling (ac-questions S-3): `new_today` includes the cooldown and ignores only
-    the last bar term, so it matches the backtest signals on every bar but the last."""
-    frames = random_walk_frames(n_tickers=20, n_bars=120, seed=11)
-    market = build_market(frames)
-    rule = make_rule((ind("close"), "crosses_above", ind("sma", n=5)), (ind("close"), ">", val(5)))
-    rule_dict = rule.model_dump(mode="json")
-    golden_signals: dict[int, set[str]] = {}
-    for ticker, frame in frames.items():
-        for i in entry_signals(frame.golden(ticker), rule_dict, ignore_last_bar=True):
-            golden_signals.setdefault(frame.start_bar + i, set()).add(ticker)
+S3_FRAMES = random_walk_frames(n_tickers=20, n_bars=120, seed=11)
+S3_RULE = make_rule((ind("close"), "crosses_above", ind("sma", n=5)), (ind("close"), ">", val(5)))
 
-    configs = [config("a", {"type": "time", "bars": 3}), config("b", {"type": "time", "bars": 5})]
-    lab = trade_lab(rule, configs, market)
-    last_bar = {t: f.last_bar for t, f in frames.items()}
+
+def _golden_new_today() -> dict[int, set[str]]:
+    rule_dict = S3_RULE.model_dump(mode="json")
+    signals: dict[int, set[str]] = {}
+    for ticker, frame in S3_FRAMES.items():
+        for i in entry_signals(frame.golden(ticker), rule_dict, ignore_last_bar=True):
+            signals.setdefault(frame.start_bar + i, set()).add(ticker)
+    return signals
+
+
+def _assert_scan_matches(trades: list[Trade], market: Market) -> None:
+    """Spec 0002 ruling (ac-questions S-3): `new_today` includes the cooldown and ignores only
+    the last bar term, so it equals the backtest's signals on every bar but a ticker's last."""
+    golden_signals = _golden_new_today()
+    last_bar = {t: f.last_bar for t, f in S3_FRAMES.items()}
     trades_by_entry: dict[str, set[str]] = {}
-    for trade in lab.baseline_trades:
+    for trade in trades:
         trades_by_entry.setdefault(trade.entry_date.isoformat(), set()).add(trade.ticker)
-    assert not lab.baseline_trades_truncated
 
     for bar in range(10, 121):
-        scan = run_scan(rule, market, bar_date(bar))
+        scan = run_scan(S3_RULE, market, bar_date(bar))
         new_today = {r.ticker for r in scan.rows if r.new_today}
         assert new_today == golden_signals.get(bar, set()), f"scan vs golden, bar {bar}"
         if bar < 120:
@@ -116,6 +118,29 @@ def test_new_today_equals_the_backtest_entry_signals() -> None:
             fillable = {t for t in new_today if last_bar[t] != bar}
             from_backtest = trades_by_entry.get(bar_date(bar + 1).isoformat(), set())
             assert fillable == from_backtest, f"scan vs backtest, bar {bar}"
+
+
+@pytest.mark.ac("S-3")
+def test_new_today_equals_the_backtest_entry_signals() -> None:
+    """Portfolio mode enters every signal when nothing competes for a slot: 20 slots for 20
+    tickers, and a 1 bar time exit frees each one at the entry bar's close, long before the
+    ticker's 10 bar cooldown ends (spec 0007 AC-8: entries come only from the shared signals)."""
+    market = build_market(S3_FRAMES)
+    result = portfolio(S3_RULE, [{"type": "time", "bars": 1}], market, max_positions=20)
+    assert not result.trades_truncated
+    assert result.trades, "the parity check must see signals"
+    _assert_scan_matches(result.trades, market)
+
+
+@pytest.mark.ac("X-1")
+def test_new_today_equals_the_trade_lab_entries() -> None:
+    """S-3 against the exit lab's entry list (X-1, spec 0009 AC-1; the parity oracle of spec
+    0007's test plan turns green with feature 12)."""
+    market = build_market(S3_FRAMES)
+    configs = [config("a", {"type": "time", "bars": 3}), config("b", {"type": "time", "bars": 5})]
+    lab = trade_lab(S3_RULE, configs, market)
+    assert not lab.baseline_trades_truncated
+    _assert_scan_matches(lab.baseline_trades, market)
 
 
 def _big_market() -> Market:

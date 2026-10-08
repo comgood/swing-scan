@@ -107,7 +107,10 @@ def test_assumptions_carry_every_header_field() -> None:
 
 @pytest.mark.ac("U-3")
 def test_report_renders_the_assumptions_header() -> None:
-    ui_owed("U-3")
+    # The portfolio report (feature 9, spec 0007 AC-12) is covered in Vitest; "any backtest or
+    # exit-lab report" also needs the exit lab report's header (feature 12, spec 0009 AC-19).
+    ui_covered_by("U-3", "backtest-report.test.tsx")
+    ui_owed("U-3 (assumptions header on the exit lab report, feature 12)")
 
 
 # ---------------------------------------------------------------- U-4 trial counter

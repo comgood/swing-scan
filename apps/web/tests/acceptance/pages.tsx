@@ -3,6 +3,7 @@
 // so the "every page" criteria (U-1 banner, U-2) cover it automatically.
 import type { ReactElement } from "react";
 
+import BacktestPage from "@/app/backtest/page";
 import Home from "@/app/page";
 import UiGalleryPage from "@/app/ui/page";
 import { AppShell } from "@/components/shell/app-shell";
@@ -10,6 +11,7 @@ import { renderWithQuery } from "@/test/render";
 
 export const PAGES: { path: string; Page: () => ReactElement }[] = [
   { path: "/", Page: Home },
+  { path: "/backtest", Page: BacktestPage },
   { path: "/ui", Page: UiGalleryPage },
 ];
 
