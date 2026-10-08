@@ -1,38 +1,57 @@
 """Public use cases, the application layer. Acceptance tests call only these (spec 0002).
 
-`backtest` is a stub until its scope feature lands; it raises `NotYetImplemented`, which the
+Parts of `backtest` whose scope feature has not landed raise `NotYetImplemented`, which the
 API maps to 501. A stray `NotImplementedError` from a real bug stays a 500.
 """
 
 from __future__ import annotations
 
+import math
 import time
 from dataclasses import dataclass
 from datetime import date
 from typing import Literal
 
+import numpy as np
 import polars as pl
 from pydantic import ValidationError
 from pydantic_core import PydanticCustomError
 
 from .contracts import (
     TEMPLATES,
+    Assumptions,
     BacktestRequest,
     BacktestResponse,
+    BenchmarkMetrics,
+    BenchmarkSplit,
     IndOperand,
     Market,
+    Point,
+    PortfolioMetrics,
+    PortfolioResult,
+    PortfolioSplit,
     Rule,
     ScanRequest,
     ScanResponse,
     ScanRow,
+    Trial,
     scan_columns,
 )
 from .contracts._errors import error_at
+from .contracts.trial import pair_key, structure_key
+from .exits import ExitNotBuilt, build_exits
 from .indicators import IndicatorKey, cache_for, dependencies, key_of
 from .indicators.compute import POS
-from .rules import compile_rule, entry_signals, operand_values
+from .rules import COOLDOWN, compile_rule, entry_signals, operand_values
+from .sim import START_EQUITY, BarArrays, make_trade, run_portfolio, signal_sessions
 
-FEATURE_NAMES = {7: "Synthetic market", 8: "Template scan", 9: "Portfolio backtest core"}
+FEATURE_NAMES = {
+    7: "Synthetic market",
+    8: "Template scan",
+    9: "Portfolio backtest core",
+    11: "Exit types",
+    12: "Exit lab",
+}
 
 
 class NotYetImplemented(Exception):
@@ -168,6 +187,131 @@ def scan(request: ScanRequest, market: Market) -> ScanResponse:
     return scan_timed(request, market)[0]
 
 
+MAX_POINTS = 500
+MAX_TRADES = 2000
+OOS_FRACTION = 0.3
+
+
+def thin(n: int, limit: int = MAX_POINTS) -> list[int]:
+    """Indexes 0, k, 2k, … plus the last, k = ceil(n / limit), so at most `limit` points."""
+    if n == 0:
+        return []
+    k = math.ceil(n / limit)
+    picked = list(range(0, n, k))
+    if picked[-1] != n - 1:
+        picked.append(n - 1)
+    return picked[-limit:] if len(picked) > limit else picked
+
+
+def _empty_metrics(n_trades: int) -> PortfolioMetrics:
+    """Trade counts only; the metric formulas arrive with spec 0007 BE milestone 3."""
+    return PortfolioMetrics(
+        n_trades=n_trades,
+        cagr_pct=None,
+        max_dd_pct=None,
+        sharpe=None,
+        win_rate_pct=None,
+        avg_win_pct=None,
+        avg_loss_pct=None,
+        expectancy_pct=None,
+        expectancy_r=None,
+        profit_factor=None,
+        avg_bars_held=None,
+        exposure_pct=None,
+    )
+
+
+def _portfolio(request: BacktestRequest, market: Market) -> PortfolioResult:
+    config = request.configs[0]
+    try:
+        exits = build_exits(config)
+    except ExitNotBuilt as missing:
+        raise NotYetImplemented(missing.feature, f"The {missing.exit_type} exit") from missing
+    sim = request.sim
+    slip = sim.slippage_bps / 10_000
+    cache = cache_for(market)
+    bars = BarArrays.build(market, cache)
+
+    compiled = compile_rule(request.rule, cache)
+    signals = entry_signals(cache.pos, cache.is_last, compiled.valid, compiled.value)
+    universe = (cache.bars["ticker"] != cache.benchmark).to_numpy()
+    signal_rows = np.flatnonzero(signals.to_numpy() & universe)
+
+    benchmark = cache.bars.filter(pl.col("ticker") == cache.benchmark).sort("date")
+    sessions: list[date] = benchmark["date"].to_list()
+    session_index = {day: i for i, day in enumerate(sessions)}
+    rs126 = cache.get(IndicatorKey("rs", 126)).fill_null(float("nan")).to_numpy()
+    run = run_portfolio(
+        sessions,
+        signal_sessions(signal_rows, bars, session_index),
+        rs126,
+        bars,
+        exits,
+        sim.max_positions,
+        slip,
+    )
+
+    oos_start = sessions[math.floor((1 - OOS_FRACTION) * len(sessions))]
+    trades = sorted(
+        (
+            make_trade(
+                t.position, t.fill, bars.date[t.entry_row], bars.date[t.exit_row], slip, oos_start
+            )
+            for t in run.trades
+        ),
+        key=lambda t: (t.entry_date, t.ticker),
+    )
+    closes = benchmark["close"].to_list()
+    points = thin(len(sessions))
+    n_oos = sum(t.segment == "oos" for t in trades)
+    no_benchmark = BenchmarkMetrics(cagr_pct=None, max_dd_pct=None)
+    assumptions = Assumptions(
+        fill_model="signal_close_entry_next_open",
+        slippage_bps=sim.slippage_bps,
+        commission_bps=0,
+        sizing="equal_weight",
+        max_positions=sim.max_positions,
+        entry_rising_edge=True,
+        cooldown_bars=COOLDOWN,
+        cooldown_basis="signal",
+        no_last_bar_entry=True,
+        same_ticker_overlap=False,
+        horizon_bars=None,
+        seed=None,
+        configs=[config],
+        baseline_config_index=0,
+        delisting_rule="exit_last_close",
+        oos_start=oos_start,
+        oos_fraction=OOS_FRACTION,
+        data_mode=market.meta.data_mode,
+        data_version=market.meta.data_version,
+        data_seed=market.meta.seed,
+    )
+    return PortfolioResult(
+        mode="portfolio",
+        assumptions=assumptions,
+        oos_start=oos_start,
+        trial=Trial(
+            structure_key=structure_key(request.rule),
+            pair_keys=[pair_key(request.rule, config)],
+        ),
+        warnings=[],
+        metrics=PortfolioSplit(is_=_empty_metrics(len(trades) - n_oos), oos=_empty_metrics(n_oos)),
+        benchmark_metrics=BenchmarkSplit(is_=no_benchmark, oos=no_benchmark),
+        equity=[Point(date=sessions[i], value=run.equity[i]) for i in points],
+        benchmark=[
+            Point(date=sessions[i], value=closes[i] / closes[0] * START_EQUITY) for i in points
+        ],
+        trades=trades[-MAX_TRADES:],
+        trades_total=len(trades),
+        trades_truncated=len(trades) > MAX_TRADES,
+    )
+
+
 def backtest(request: BacktestRequest, market: Market) -> BacktestResponse:
-    """Backtest a rule with 1 config (portfolio) or 2 to 6 configs (exit lab) (feature 9)."""
-    raise NotYetImplemented(9, "backtest")
+    """1 config runs the portfolio day loop (feature 9); 2 to 6 configs are the exit lab,
+    which answers `NotYetImplemented` until feature 12. Exit types feature 11 builds answer
+    `NotYetImplemented` too."""
+    if len(request.configs) > 1:
+        raise NotYetImplemented(12, "Trade mode (the exit lab)")
+    return _portfolio(request, market)

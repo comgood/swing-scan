@@ -1,4 +1,4 @@
-"""`POST /backtest`: validates the full request now; 501 until scope feature 9."""
+"""`POST /backtest`: one config runs the portfolio backtest; 501 for what is not built yet."""
 
 from __future__ import annotations
 
@@ -21,5 +21,5 @@ router = APIRouter()
 def backtest(request: BacktestRequest) -> BacktestResponse:
     """1 config runs a portfolio backtest; 2 to 6 configs run the exit lab (trade mode)."""
     if state.market is None:
-        raise NotYetImplemented(9, "backtest")
+        raise NotYetImplemented(7, "Loading the market")
     return use_cases.backtest(request, state.market)
