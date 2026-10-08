@@ -34,14 +34,19 @@ from .contracts import (
     ScanRequest,
     ScanResponse,
     ScanRow,
+    Trade,
     Trial,
     scan_columns,
+)
+from .contracts import (
+    Warning as ResultWarning,
 )
 from .contracts._errors import error_at
 from .contracts.trial import pair_key, structure_key
 from .exits import build_exits
 from .indicators import IndicatorKey, cache_for, dependencies, key_of
 from .indicators.compute import POS
+from .metrics import CurveStats, curve_stats, exposure_pct, thin, trade_stats
 from .rules import COOLDOWN, compile_rule, entry_signals, operand_values
 from .sim import START_EQUITY, BarArrays, make_trade, run_portfolio, signal_sessions
 
@@ -187,44 +192,111 @@ def scan(request: ScanRequest, market: Market) -> ScanResponse:
     return scan_timed(request, market)[0]
 
 
-MAX_POINTS = 500
 MAX_TRADES = 2000
 OOS_FRACTION = 0.3
 
 
-def thin(n: int, limit: int = MAX_POINTS) -> list[int]:
-    """Indexes 0, k, 2k, … plus the last, k = ceil(n / limit), so at most `limit` points."""
-    if n == 0:
-        return []
-    k = math.ceil(n / limit)
-    picked = list(range(0, n, k))
-    if picked[-1] != n - 1:
-        picked.append(n - 1)
-    return picked[-limit:] if len(picked) > limit else picked
-
-
-def _empty_metrics(n_trades: int) -> PortfolioMetrics:
-    """Trade counts only; the metric formulas arrive with spec 0007 BE milestone 3."""
-    return PortfolioMetrics(
-        n_trades=n_trades,
-        cagr_pct=None,
-        max_dd_pct=None,
-        sharpe=None,
-        win_rate_pct=None,
-        avg_win_pct=None,
-        avg_loss_pct=None,
-        expectancy_pct=None,
-        expectancy_r=None,
-        profit_factor=None,
-        avg_bars_held=None,
-        exposure_pct=None,
+def range_outside_data(
+    field: Literal["start", "end"], value: date, first: date, last: date
+) -> ValidationError:
+    """The 422 for a `sim.start` or `sim.end` outside the data's sessions (spec 0002)."""
+    error = PydanticCustomError(
+        "range_outside_data",
+        f"{field} must be between {{min}} and {{max}}",
+        {"min": first.isoformat(), "max": last.isoformat()},
     )
+    return error_at(("sim", field), error, value.isoformat())
+
+
+def _cut(market: Market, end: date) -> Market:
+    """The market with every bar after `end` removed, so nothing later is read (B-10)."""
+    return Market(
+        bars=market.bars.filter(pl.col("date") <= end),
+        securities=market.securities,
+        meta=market.meta,
+    )
+
+
+def _window(market: Market, start: date | None, end: date | None) -> tuple[Market, list[date]]:
+    """The market cut at `end` and the window's sessions (benchmark dates in [start, end]).
+
+    Raises `range_outside_data` when `start` or `end` lies outside the data, or the window
+    holds no session. Indicators still warm up on the bars before `start`.
+    """
+    full = cache_for(market)
+    first, last = full.sessions[0], full.sessions[-1]
+    if start is not None and not first <= start <= last:
+        raise range_outside_data("start", start, first, last)
+    if end is not None and not first <= end <= last:
+        raise range_outside_data("end", end, first, last)
+    if end is not None and end < last:
+        market = _cut(market, end)
+    dates = cache_for(market).bars.filter(pl.col("ticker") == market.meta.benchmark)["date"]
+    sessions = [day for day in dates.sort().to_list() if start is None or day >= start]
+    if not sessions:
+        raise range_outside_data("start", start or first, first, last)
+    return market, sessions
+
+
+def _metrics(trades: list[Trade], curve: CurveStats, invested: list[float]) -> PortfolioMetrics:
+    stats = trade_stats(trades)
+    return PortfolioMetrics(
+        n_trades=stats.n_trades,
+        cagr_pct=curve.cagr_pct,
+        max_dd_pct=curve.max_dd_pct,
+        sharpe=curve.sharpe,
+        win_rate_pct=stats.win_rate_pct,
+        avg_win_pct=stats.avg_win_pct,
+        avg_loss_pct=stats.avg_loss_pct,
+        expectancy_pct=stats.expectancy_pct,
+        expectancy_r=stats.expectancy_r,
+        profit_factor=stats.profit_factor,
+        avg_bars_held=stats.avg_bars_held,
+        exposure_pct=exposure_pct(invested),
+    )
+
+
+def _split_curve(curve: list[float], at: int) -> tuple[CurveStats, CurveStats]:
+    """IS and OOS curve stats of one continuous curve that starts from `START_EQUITY`."""
+    head, tail = curve[:at], curve[at:]
+    before = head[-1] if head else START_EQUITY
+    return (
+        curve_stats(head, START_EQUITY, START_EQUITY),
+        curve_stats(tail, before, max([START_EQUITY, *head])),
+    )
+
+
+def _warnings(n_trades: int) -> list[ResultWarning]:
+    warnings: list[ResultWarning] = []
+    if n_trades == 0:
+        warnings.append(
+            ResultWarning(
+                code="no_entries",
+                config_index=0,
+                message=(
+                    "No entries: the rule never produced a signal that could be filled in "
+                    "this window."
+                ),
+            )
+        )
+    if n_trades > MAX_TRADES:
+        warnings.append(
+            ResultWarning(
+                code="trades_truncated",
+                config_index=None,
+                message=(
+                    f"Showing the latest 2,000 of {n_trades:,} trades; metrics use all of them."
+                ),
+            )
+        )
+    return warnings
 
 
 def _portfolio(request: BacktestRequest, market: Market) -> PortfolioResult:
     config = request.configs[0]
     sim = request.sim
     slip = sim.slippage_bps / 10_000
+    market, sessions = _window(market, sim.start, sim.end)
     cache = cache_for(market)
     bars = BarArrays.build(market, cache)
     exits = build_exits(config, cache.get)
@@ -234,8 +306,6 @@ def _portfolio(request: BacktestRequest, market: Market) -> PortfolioResult:
     universe = (cache.bars["ticker"] != cache.benchmark).to_numpy()
     signal_rows = np.flatnonzero(signals.to_numpy() & universe)
 
-    benchmark = cache.bars.filter(pl.col("ticker") == cache.benchmark).sort("date")
-    sessions: list[date] = benchmark["date"].to_list()
     session_index = {day: i for i, day in enumerate(sessions)}
     rs126 = cache.get(IndicatorKey("rs", 126)).fill_null(float("nan")).to_numpy()
     run = run_portfolio(
@@ -248,7 +318,8 @@ def _portfolio(request: BacktestRequest, market: Market) -> PortfolioResult:
         slip,
     )
 
-    oos_start = sessions[math.floor((1 - OOS_FRACTION) * len(sessions))]
+    split = math.floor((1 - OOS_FRACTION) * len(sessions))
+    oos_start = sessions[split]
     trades = sorted(
         (
             make_trade(
@@ -258,10 +329,17 @@ def _portfolio(request: BacktestRequest, market: Market) -> PortfolioResult:
         ),
         key=lambda t: (t.entry_date, t.ticker),
     )
-    closes = benchmark["close"].to_list()
+    benchmark = cache.bars.filter(
+        (pl.col("ticker") == cache.benchmark) & pl.col("date").is_in(sessions)
+    ).sort("date")
+    bench_closes = benchmark["close"].to_list()
+    bench_curve = [close / bench_closes[0] * START_EQUITY for close in bench_closes]
+
+    is_curve, oos_curve = _split_curve(run.equity, split)
+    is_bench, oos_bench = _split_curve(bench_curve, split)
+    is_trades = [t for t in trades if t.segment == "is"]
+    oos_trades = [t for t in trades if t.segment == "oos"]
     points = thin(len(sessions))
-    n_oos = sum(t.segment == "oos" for t in trades)
-    no_benchmark = BenchmarkMetrics(cagr_pct=None, max_dd_pct=None)
     assumptions = Assumptions(
         fill_model="signal_close_entry_next_open",
         slippage_bps=sim.slippage_bps,
@@ -292,13 +370,17 @@ def _portfolio(request: BacktestRequest, market: Market) -> PortfolioResult:
             structure_key=structure_key(request.rule),
             pair_keys=[pair_key(request.rule, config)],
         ),
-        warnings=[],
-        metrics=PortfolioSplit(is_=_empty_metrics(len(trades) - n_oos), oos=_empty_metrics(n_oos)),
-        benchmark_metrics=BenchmarkSplit(is_=no_benchmark, oos=no_benchmark),
+        warnings=_warnings(len(trades)),
+        metrics=PortfolioSplit(
+            is_=_metrics(is_trades, is_curve, run.invested[:split]),
+            oos=_metrics(oos_trades, oos_curve, run.invested[split:]),
+        ),
+        benchmark_metrics=BenchmarkSplit(
+            is_=BenchmarkMetrics(cagr_pct=is_bench.cagr_pct, max_dd_pct=is_bench.max_dd_pct),
+            oos=BenchmarkMetrics(cagr_pct=oos_bench.cagr_pct, max_dd_pct=oos_bench.max_dd_pct),
+        ),
         equity=[Point(date=sessions[i], value=run.equity[i]) for i in points],
-        benchmark=[
-            Point(date=sessions[i], value=closes[i] / closes[0] * START_EQUITY) for i in points
-        ],
+        benchmark=[Point(date=sessions[i], value=bench_curve[i]) for i in points],
         trades=trades[-MAX_TRADES:],
         trades_total=len(trades),
         trades_truncated=len(trades) > MAX_TRADES,
@@ -308,7 +390,8 @@ def _portfolio(request: BacktestRequest, market: Market) -> PortfolioResult:
 def backtest(request: BacktestRequest, market: Market) -> BacktestResponse:
     """1 config runs the portfolio day loop (feature 9); 2 to 6 configs are the exit lab,
     which answers `NotYetImplemented` until feature 12. Exit types feature 11 builds answer
-    `NotYetImplemented` too."""
+    `NotYetImplemented` too. A `sim.start` or `sim.end` outside the data raises the
+    `range_outside_data` `ValidationError`."""
     if len(request.configs) > 1:
         raise NotYetImplemented(12, "Trade mode (the exit lab)")
     return _portfolio(request, market)
