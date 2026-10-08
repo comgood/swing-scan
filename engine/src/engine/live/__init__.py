@@ -1,4 +1,4 @@
-"""Live research data, local only (DI lane, scope feature 14, spec 0009).
+"""Live research data, local only (DI lane, scope feature 14, spec 0010).
 
 `python -m engine.live --universe research/sp500.csv --out data/live` (what `make load-live`
 runs) fetches Alpaca free daily bars and writes the same files as the synthetic market.

@@ -1,4 +1,4 @@
-"""CLI behind `make load-live`: fetch, check and write the live dataset (D-4, spec 0009)."""
+"""CLI behind `make load-live`: fetch, check and write the live dataset (D-4, spec 0010)."""
 
 from __future__ import annotations
 

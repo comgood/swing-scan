@@ -1,4 +1,4 @@
-# 0009 · Live research mode (local)
+# 0010 · Live research mode (local)
 
 **Status**: Assumed
 **Date**: 2026-10-08

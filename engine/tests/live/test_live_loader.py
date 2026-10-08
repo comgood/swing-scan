@@ -1,4 +1,4 @@
-"""Live loader (D-4, spec 0009) against fake in memory Alpaca responses; no network, ever."""
+"""Live loader (D-4, spec 0010) against fake in memory Alpaca responses; no network, ever."""
 
 from __future__ import annotations
 

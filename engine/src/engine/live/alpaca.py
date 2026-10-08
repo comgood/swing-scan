@@ -1,4 +1,4 @@
-"""Alpaca free daily bars over HTTPS, keys from the environment only (doc 02 A3, spec 0009).
+"""Alpaca free daily bars over HTTPS, keys from the environment only (doc 02 A3, spec 0010).
 
 Never called in CI or tests: tests inject a fake `Transport`, so no request and no cassette.
 """
