@@ -189,8 +189,8 @@ Lanes BE and FE. Build your own entry rules: a flat AND list of up to 8 conditio
 - [x] Design it (spec): `/architect rule builder` (proposed, pending owner sign-off)
 - [ ] Build it: `/develop rule builder`
   - [x] FE thread: reducer over the contract `Rule`, one editable row, "Run scan" on the mocks, UI to JSON parity (AC-4, AC-8)
-  - [ ] FE rows and links: every field, add and remove limits, catalog hints, 422 on the right field, `?template` to `?r=` links, bad link fallback, JSON panel (AC-1 to AC-3, AC-5 to AC-7, AC-9)
-  - [ ] FE finish: 375 px and 320 px, keyboard, axe, `/ui` gallery, mounted in feature 8's workspace, real API at G3 (AC-10)
+  - [x] FE rows and links: every field, add and remove limits, catalog hints, 422 on the right field, `?template` to `?r=` links, bad link fallback, JSON panel (AC-1 to AC-3, AC-5 to AC-7, AC-9)
+  - [x] FE finish: 375 px and 320 px, keyboard, axe, `/ui` gallery, mounted in feature 8's workspace, real API at G3 (AC-10)
   - [ ] BE tests after feature 8's evaluator merges: R-3, R-4, R-5, R-7 on custom rules, every R-6 case through `/scan` (AC-11, AC-12; AC-13 is already met by spec 0002)
 - [ ] Verify it: `/check verify rule builder`
 - [ ] Test it: `/test rule builder`

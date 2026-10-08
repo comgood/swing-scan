@@ -201,7 +201,7 @@ function Editor({
           ))}
         </NativeSelect>
         <FieldDescription>
-          {template ? template.description : "Edited from a template. Pick one to start over."}
+          {template ? template.description : "Your own rule. Pick a template to start over."}
         </FieldDescription>
       </Field>
       <RuleBuilder
