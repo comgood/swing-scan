@@ -21,6 +21,7 @@ import { BacktestForm } from "./backtest-form";
 import { inputsFromParams, paramsFromInputs, placeErrors, requestFrom } from "./inputs";
 import { MetricsTable } from "./metrics-table";
 import { useBacktest, useTemplates, ValidationFailed, type PortfolioResult } from "./queries";
+import { TradeList } from "./trade-list";
 
 interface BacktestReportProps {
   /** The page's search params at load. */
@@ -103,6 +104,21 @@ function Report({ result, stores }: { result: PortfolioResult; stores?: TrialSto
             Results
           </h2>
           <MetricsTable result={result} />
+        </section>
+      )}
+      {/* The equity chart (AC-14) goes here, between the metrics and the trades, once the
+          owner decides on the chart dependency. */}
+      {!noEntries && (
+        <section aria-labelledby="trades-title" className="flex min-w-0 flex-col gap-3">
+          <h2 id="trades-title" className="text-lg font-semibold">
+            Trades
+          </h2>
+          <TradeList
+            trades={result.trades}
+            total={result.trades_total}
+            truncated={result.trades_truncated}
+            oosStart={result.oos_start}
+          />
         </section>
       )}
     </>
