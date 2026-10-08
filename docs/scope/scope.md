@@ -19,10 +19,10 @@ _Source of truth: acceptance criteria IDs (D, R, S, B, X, U) and settled default
 | 4 | Design system & UI foundation | Foundation | done |
 | 5 | Acceptance test harness & traceability | Foundation | done |
 | 6 | Backtest correctness oracles | Foundation | done |
-| 7 | Synthetic market | Slice 1 | in-progress |
+| 7 | Synthetic market | Slice 1 | done |
 | 8 | Template scan | Slice 1 | in-progress |
 | 9 | Portfolio backtest core | Slice 1 | in-progress |
-| 10 | Rule builder | Slice 2 | planned |
+| 10 | Rule builder | Slice 2 | in-progress |
 | 11 | Exit types | Slice 3 | planned |
 | 12 | Exit lab | Slice 3 | planned |
 | 13 | Research honesty guards | Slice 3 | in-progress |
@@ -39,9 +39,9 @@ From here on, features run in parallel across the four agent lanes of doc 02 §1
 | Gate | What opens it | Status | What it unlocks |
 |---|---|---|---|
 | **G0 Contracts frozen** | `contracts-v1` tagged (feature 3) | **open** (tag on `9fd3879`) | Lane fan out: every feature marked "now" below |
-| **G1 Oracles approved** | You recompute and merge QA's oracle drafts with the `oracle-approved` label (feature 6) | closed | Engine simulator and exit work in features 9 and 11 |
-| **G2 Simulator merged** | Feature 9's simulator and its single exit interface (`step()`) on `main` | closed | Engine work in features 11 and 12 |
-| **G3 Real scan API** | Feature 8's `/scan` on `main` (and on a preview deploy) | closed | FE switches from mocks to the real API, screen by screen |
+| **G1 Oracles approved** | You recompute and merge QA's oracle drafts with the `oracle-approved` label (feature 6) | **open** (oracles approved in PR #9) | Engine simulator and exit work in features 9 and 11 |
+| **G2 Simulator merged** | Feature 9's simulator and its single exit interface (`step()`) on `main` | **open** (`step()` and the day loop landed in #39) | Engine work in features 11 and 12 |
+| **G3 Real scan API** | Feature 8's `/scan` on `main` (and on a preview deploy) | **open on `main`** (#39); no preview deploy yet | FE switches from mocks to the real API, screen by screen |
 | **G4 Feature freeze** | Every MUST criterion `required` and green in `docs/qa/traceability.md` | closed | Feature 16, then the `v1.0` tag |
 
 ### Who can work on what, and when
@@ -146,7 +146,7 @@ Lane QA drafts, you approve. Hand computed fixtures for each fill and exit rule 
 
 Generated data, one template scan, one simple backtest, shown on the deployed page. Every layer real, just narrow.
 
-### 7. Synthetic market · in-progress
+### 7. Synthetic market · done
 Lane DI. A seeded generated market of 500 invented tickers over 5 years with regimes, planted delistings, and a demo index, built into the API image.
 **Done when:** the same seed gives identical data, every bar passes sanity checks, and at least one bear segment and 20 delisted tickers exist (D-1 to D-3).
 - [x] Design it (spec): `/architect synthetic market` (ratified, proposed, pending owner sign-off)
@@ -159,9 +159,9 @@ Lanes BE and FE. Indicators, rule evaluation with the valid rising edge and the 
 **Done when:** a first visit opens the Breakout template with today's hits and the synthetic banner, delisted tickers never appear, scan and backtest signals match, and a warm scan answers in under a second (S-1 to S-4, R-10, U-1, U-5).
 - [x] Design it (spec): `/architect template scan`
 - [ ] Build it: `/develop template scan`
-  - [ ] Thread: BE engine slice with the shared entry signal function and `/scan` on fixtures; FE workspace with the template dropdown, conditions and results from the mocks (AC-1, AC-4, AC-5, AC-8, AC-9, AC-11, AC-13)
-  - [ ] Engine breadth (BE): all 14 indicators, crosses, the locked and pinned cache (AC-2, AC-3, AC-7)
-  - [ ] Scan contract (BE): `chg_pct`, `vol_ratio`, golden parity, `as_of` 422, warm start, the scan log, the S-4 timing test, and `read_market()` once feature 7 merges (AC-4 to AC-8, AC-13)
+  - [x] Thread: BE engine slice with the shared entry signal function and `/scan` on fixtures; FE workspace with the template dropdown, conditions and results from the mocks (AC-1, AC-4, AC-5, AC-8, AC-9, AC-11, AC-13)
+  - [x] Engine breadth (BE): all 14 indicators, crosses, the locked and pinned cache (AC-2, AC-3, AC-7)
+  - [x] Scan contract (BE): `chg_pct`, `vol_ratio`, golden parity, `as_of` 422, warm start, the scan log, the S-4 timing test, and `read_market()` once feature 7 merges (AC-4 to AC-8, AC-13)
   - [ ] Workspace finish (FE): `?template` URL, number formats, New badge, paging, states, 375 px; switch to the real API at G3 (AC-10 to AC-12, AC-14)
 - [ ] Verify it: `/check verify template scan`
 - [ ] Test it: `/test template scan`
@@ -172,7 +172,7 @@ Lanes BE and FE. The portfolio simulator with next open fills, % stop and time e
 **Done when:** all approved oracles pass, results are deterministic, the top ranked signals fill free slots, and the report shows IS and OOS side by side with the assumptions header (B-1, B-2, B-7 to B-11, B-13 to B-16, U-3).
 - [x] Design it (spec): `/architect portfolio backtest core` (proposed, pending owner sign-off)
 - [ ] Build it: `/develop portfolio backtest core`
-  - [ ] BE thread: `Exit` protocol, one `step()`, `stop_pct`, `time`, delisting, `end_of_test`, `walk_trade()`, the day loop and a minimal `PortfolioResult` behind `/backtest` (AC-1 to AC-3, AC-8, AC-11)
+  - [x] BE thread: `Exit` protocol, one `step()`, `stop_pct`, `time`, delisting, `end_of_test`, `walk_trade()`, the day loop and a minimal `PortfolioResult` behind `/backtest` (AC-1 to AC-3, AC-8, AC-11)
   - [ ] BE portfolio rules and metrics: ranking, slots, sizing, window cut, IS and OOS, metrics, curves, truncation, `trial`, `assumptions`, the 3 s and 6 MB budget (AC-4 to AC-7, AC-9, AC-10); B-9 and B-10 portfolio turn green with feature 11's exits
   - [ ] FE report page: `/backtest` with the exit form, assumptions header, IS and OOS metrics, equity chart, trade list, trial counter and every state, on mocks first (AC-12 to AC-17)
 - [ ] Verify it: `/check verify portfolio backtest core`
@@ -183,10 +183,18 @@ Spec [0007](../specs/0007-portfolio-backtest-core/index.md)
 
 ## Slice 2: Rule builder
 
-### 10. Rule builder · planned · needs a decision
+### 10. Rule builder · in-progress
 Lanes BE and FE. Build your own entry rules: a flat AND list of up to 8 conditions over 12 indicators, with numbers or indicators on the right side, crosses, offsets, and clear validation. The templates load into it as editable starting points.
 **Done when:** rules round trip as JSON, crosses and offsets behave as specified, warm up bars evaluate as not computable, invalid rules return a clear 422 shown on the right row, and the structure key ignores numbers (R-1 to R-9, U-7).
-- [ ] Design it (spec): `/architect rule builder`
+- [x] Design it (spec): `/architect rule builder` (proposed, pending owner sign-off)
+- [ ] Build it: `/develop rule builder`
+  - [x] FE thread: reducer over the contract `Rule`, one editable row, "Run scan" on the mocks, UI to JSON parity (AC-4, AC-8)
+  - [ ] FE rows and links: every field, add and remove limits, catalog hints, 422 on the right field, `?template` to `?r=` links, bad link fallback, JSON panel (AC-1 to AC-3, AC-5 to AC-7, AC-9)
+  - [ ] FE finish: 375 px and 320 px, keyboard, axe, `/ui` gallery, mounted in feature 8's workspace, real API at G3 (AC-10)
+  - [ ] BE tests after feature 8's evaluator merges: R-3, R-4, R-5, R-7 on custom rules, every R-6 case through `/scan` (AC-11, AC-12; AC-13 is already met by spec 0002)
+- [ ] Verify it: `/check verify rule builder`
+- [ ] Test it: `/test rule builder`
+Spec [0008](../specs/0008-rule-builder/index.md)
 
 ## Slice 3: Exit research
 
@@ -207,8 +215,8 @@ Lanes FE and BE. The things that stop you fooling yourself: the structure keyed 
 - [x] Build it: `/develop research honesty guards`
   - [x] Trial store, counter and procedure note in `features/honesty/` (U-4, U-8; spec 0004 AC-1 to AC-7)
   - [x] `/ui` gallery with every state, U-2 shell banner confirmed (spec 0004 AC-8, AC-9)
-- [ ] Verify it: `/check verify research honesty guards`
-- [ ] Test it: `/test research honesty guards`
+- [x] Verify it: `/check verify research honesty guards`
+- [x] Test it: `/test research honesty guards`
 Spec [0004](../specs/0004-research-honesty-guards/index.md) (ratified by `/architect`, proposed, pending owner sign-off) · code in `apps/web/src/features/honesty/` · placed by features 9 and 12
 
 ## Slice 4: Live research mode

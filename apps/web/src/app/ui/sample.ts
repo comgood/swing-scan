@@ -1,5 +1,5 @@
 // Invented sample data for the /ui gallery. Never the API mocks, never real prices.
-import type { Schemas } from "@swing-scan/api-client";
+import type { IndicatorSpec, Rule, Schemas } from "@swing-scan/api-client";
 
 import type { TrialCountState } from "@/features/honesty";
 
@@ -281,4 +281,64 @@ export const SAMPLE_BACKTEST: Schemas["PortfolioResult"] = {
   trades: SAMPLE_TRADES,
   trades_total: SAMPLE_TRADES.length,
   trades_truncated: false,
+};
+
+/** A short indicator catalog for the rule builder states (spec 0008); the app reads the API's. */
+export const SAMPLE_CATALOG: IndicatorSpec[] = [
+  { name: "close", label: "Close", windowed: false, n_min: null, n_max: null, n_default: null },
+  { name: "volume", label: "Volume", windowed: false, n_min: null, n_max: null, n_default: null },
+  {
+    name: "sma",
+    label: "Simple moving average",
+    windowed: true,
+    n_min: 2,
+    n_max: 252,
+    n_default: null,
+  },
+  {
+    name: "ema",
+    label: "Exponential moving average",
+    windowed: true,
+    n_min: 2,
+    n_max: 252,
+    n_default: null,
+  },
+  {
+    name: "rsi",
+    label: "Relative strength index",
+    windowed: true,
+    n_min: 2,
+    n_max: 50,
+    n_default: null,
+  },
+];
+
+/** An invented two row rule: a number right side, then an indicator right side. */
+export const SAMPLE_RULE: Rule = {
+  name: "Sample cross",
+  conditions: [
+    {
+      left: { kind: "ind", ind: "close", n: null, offset: 0, mult: 1 },
+      op: ">",
+      right: { kind: "value", value: 5 },
+    },
+    {
+      left: { kind: "ind", ind: "ema", n: 21, offset: 0, mult: 1 },
+      op: "crosses_above",
+      right: { kind: "ind", ind: "sma", n: 300, offset: 0, mult: 1 },
+    },
+  ],
+};
+
+/** A 422 on the sample rule's second row, right side `n`. */
+export const SAMPLE_BUILDER_422 = {
+  detail: [
+    {
+      type: "out_of_range",
+      loc: ["body", "rule", "conditions", 1, "right", "n"],
+      msg: "must be between 2 and 252",
+      input: 300,
+      ctx: { min: 2, max: 252 },
+    },
+  ],
 };

@@ -32,6 +32,7 @@ import { ProcedureNote, TrialCounter } from "@/features/honesty";
 
 import { BacktestDemo } from "./backtest-demo";
 import { HonestyDemo } from "./honesty-demo";
+import { RuleBuilderStates } from "./rule-builder-states";
 
 import {
   MANY_ROWS,
@@ -345,6 +346,14 @@ export function Gallery() {
           in full and truncated (spec 0007). The equity chart arrives later.
         </p>
         <BacktestDemo />
+      </GallerySection>
+
+      <GallerySection id="rule-builder" title="Rule builder">
+        <p className="text-sm text-muted-foreground">
+          Condition rows in each state (spec 0008): one row, both right side kinds, the 8 row limit,
+          a 422 on its field, stale results, the bad link notice and the JSON panel.
+        </p>
+        <RuleBuilderStates />
       </GallerySection>
 
       <GallerySection id="loading" title="Loading">
