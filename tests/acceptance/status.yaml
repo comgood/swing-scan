@@ -18,34 +18,34 @@ D-6: required
 
 # Rule builder
 R-1: pending
-R-2: pending
-R-3: pending
-R-4: pending
-R-5: pending
+R-2: required
+R-3: required
+R-4: required
+R-5: required
 R-6: required
-R-7: pending
+R-7: required
 R-8: pending
 R-9: required
-R-10: pending
+R-10: required
 
 # Scan
-S-1: pending
-S-2: pending
+S-1: required
+S-2: required
 S-3: pending
-S-4: pending
+S-4: required
 
 # Backtest and exits
-B-1: pending
-B-2: pending
+B-1: required
+B-2: required
 B-3: pending
 B-4: pending
 B-5: pending
 B-6: pending
-B-7: pending
-B-8: pending
+B-7: required
+B-8: required
 B-9: pending
 B-10: pending
-B-11: pending
+B-11: required
 B-13: pending
 B-14: pending
 B-15: pending
@@ -53,7 +53,7 @@ B-16: pending
 
 # Exit lab
 X-1: pending
-X-2: pending
+X-2: required
 X-3: pending
 X-4: pending
 X-5: pending
@@ -67,7 +67,7 @@ U-1: pending
 U-2: required
 U-3: pending
 U-4: pending
-U-5: pending
+U-5: required
 U-6: pending
 U-7: pending
 U-8: pending

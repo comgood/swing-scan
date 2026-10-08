@@ -137,7 +137,9 @@ def test_counter_counts_new_pairs_and_warns_at_ten() -> None:
 
 @pytest.mark.ac("U-5")
 def test_slow_request_shows_warming_up_state() -> None:
-    ui_owed("U-5")
+    # Any request held past 1.5 s (the shell's first request and the WarmupNotice threshold on
+    # fake timers) in `warmup.test.tsx`; the slow scan on `/` in `template-scan.test.tsx`.
+    ui_covered_by("U-5", "warmup.test.tsx")
 
 
 @pytest.mark.ac("U-6")
