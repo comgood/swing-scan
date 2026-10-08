@@ -28,9 +28,10 @@ import { errorAt, fieldErrorsFrom422 } from "@/lib/field-errors";
 import { formatDate, formatInt, formatNumber, formatPct, formatPrice, formatR } from "@/lib/format";
 import { Plus } from "lucide-react";
 
-import { ProcedureNote, TrialCounter } from "@/features/honesty";
+import { TrialCounter } from "@/features/honesty";
 
 import { BacktestDemo } from "./backtest-demo";
+import { ExitLabDemo } from "./exit-lab-demo";
 import { HonestyDemo } from "./honesty-demo";
 import { RuleBuilderStates } from "./rule-builder-states";
 
@@ -119,7 +120,8 @@ export function Gallery() {
         <h1 className="text-2xl font-semibold">UI gallery</h1>
         <p className="text-sm text-muted-foreground">
           Every foundation component in every state, with invented data (spec 0003), plus the
-          research honesty guards (spec 0004) and the backtest report parts (spec 0007).
+          research honesty guards (spec 0004), the backtest report parts (spec 0007) and the exit
+          lab (spec 0009).
         </p>
       </header>
 
@@ -301,8 +303,9 @@ export function Gallery() {
 
       <GallerySection id="honesty" title="Research honesty guards">
         <p className="text-sm text-muted-foreground">
-          Trial counter (U-4) in each state, then a live demo, the exit lab procedure note (U-8),
-          and the data mode banners (U-1, U-2) that the page shell shows.
+          Trial counter (U-4) in each state, then a live demo and the data mode banners (U-1, U-2)
+          that the page shell shows. The procedure note (U-8) sits in place under the exit lab
+          table, in the Exit lab section below.
         </p>
         <div className="grid min-w-0 gap-4 md:grid-cols-2">
           {SAMPLE_TRIAL_STATES.map(({ label, state }, i) => (
@@ -329,10 +332,6 @@ export function Gallery() {
           </h3>
           <HonestyDemo />
         </div>
-        <div className="flex min-w-0 flex-col gap-2 rounded-lg border p-4">
-          <h3 className="text-sm font-medium">Procedure note under the exit lab table</h3>
-          <ProcedureNote />
-        </div>
         <div className="flex min-w-0 flex-col gap-2">
           <h3 className="text-sm font-medium">Data mode banners</h3>
           <Banner variant="warning">{SYNTHETIC_TEXT}</Banner>
@@ -346,6 +345,15 @@ export function Gallery() {
           in full and truncated (spec 0007). The equity chart arrives later.
         </p>
         <BacktestDemo />
+      </GallerySection>
+
+      <GallerySection id="exit-lab" title="Exit lab">
+        <p className="text-sm text-muted-foreground">
+          The exit lab table (spec 0009): IS beside OOS for every metric, the best IS marks, n/a R
+          for a config without a stop, the horizon badge, edge vs random and the random entries
+          rows, then the procedure note, the guide row and the footnotes.
+        </p>
+        <ExitLabDemo />
       </GallerySection>
 
       <GallerySection id="rule-builder" title="Rule builder">
