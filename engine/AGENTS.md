@@ -18,7 +18,7 @@ The `swing-engine` Python package (import name `engine`): all trading logic, mea
 | `src/engine/indicators/cache.py` | `IndicatorCache` via `cache_for(market)`: one locked LRU of 64 columns per market; pinned columns are never evicted (spec 0005) |
 | `src/engine/rules/compile.py` | `compile_rule()`: the four comparisons, `offset`, `mult`, crosses; any null operand makes the rule false |
 | `src/engine/rules/signals.py` | `entry_signals()`: the rising edge plus the chained 10 bar cooldown, shared by the scan and the backtest so their signals match (S-3) |
-| `src/engine/exits/` | `Exit` protocol, `Position`, `BarView`, `Fill`, and `step()`, which holds the whole exit precedence (doc 02 §7.2, spec 0007) |
+| `src/engine/exits/` | `Exit` protocol, `Position`, `BarView`, `Fill`, and `step()`, which holds the whole exit precedence (doc 02 §7.2, spec 0007). All six exits (`stop_pct`, `stop_atr`, `target`, `trail_pct`, `close_below_ma`, `time`) come from `build_exits(config, column)`; indicator columns arrive as NumPy arrays via `columns.py` and `BarView.row` |
 | `src/engine/sim/` | `run_portfolio()`, the portfolio day loop, and `walk_trade()` plus `make_trade()`, the per trade walker the exit lab reuses (spec 0007) |
 | `src/engine/metrics/` | Pure trade and curve metric functions (CAGR, max drawdown with the IS peak carried into OOS, Sharpe, exposure, thinning), with the spec's null cases |
 
