@@ -1,13 +1,26 @@
 // The report page's inputs (spec 0007 decision 11): they live in the URL so a link reproduces a
-// run. `?template=` names the rule until feature 10 adds `?r=`; `?x=` carries the one exit
-// config as JSON; the sim fields are plain keys. Bad or missing values fall back to defaults.
+// run. `?r=` carries a rule from the rule builder (spec 0008 decision 12), else `?template=`
+// names one, never both after a run; `?x=` carries the one exit config as JSON; the sim fields
+// are plain keys. Bad or missing values fall back to defaults.
 import type { BacktestRequest, ExitConfig, Rule } from "@swing-scan/api-client";
 
 import { errorAt, errorsUnder, type FieldErrors } from "@/lib/field-errors";
 
+export type MaKind = "sma" | "ema";
+
 export interface BacktestInputs {
   template: string;
+  /** An encoded rule (`?r=`); while set it is the rule, not `template`. */
+  r: string | null;
   stopPct: number | null;
+  /** ATR stop multiple; blank means no ATR stop. `atrN` is the ATR length. */
+  atrK: number | null;
+  atrN: number | null;
+  targetPct: number | null;
+  trailPct: number | null;
+  /** Close below MA length; blank means no MA exit. */
+  maN: number | null;
+  maKind: MaKind;
   timeBars: number | null;
   maxPositions: number | null;
   slippageBps: number | null;
@@ -15,10 +28,17 @@ export interface BacktestInputs {
   end: string;
 }
 
-/** Defaults match the contract's (`StopPct.pct`, `SimParams`) and the frozen mock's config. */
+/** Defaults match the contract's (`StopPct.pct`, `StopAtr.n`, `SimParams`) and the mock's config. */
 export const DEFAULT_INPUTS: BacktestInputs = {
   template: "breakout_52w",
+  r: null,
   stopPct: 8,
+  atrK: null,
+  atrN: 14,
+  targetPct: null,
+  trailPct: null,
+  maN: null,
+  maKind: "sma",
   timeBars: 20,
   maxPositions: 10,
   slippageBps: 10,
@@ -34,6 +54,19 @@ export const CONFIG_NAME = "Config 1";
 
 type Exit = ExitConfig["exits"][number];
 
+export type ExitField = "stopPct" | "atrK" | "atrN" | "targetPct" | "trailPct" | "maN" | "timeBars";
+
+/** Each numeric exit field and the contract key it fills, in the contract's exit order. */
+const EXIT_FIELDS: readonly { field: ExitField; type: Exit["type"]; key: string }[] = [
+  { field: "stopPct", type: "stop_pct", key: "pct" },
+  { field: "atrK", type: "stop_atr", key: "k" },
+  { field: "atrN", type: "stop_atr", key: "n" },
+  { field: "targetPct", type: "target", key: "pct" },
+  { field: "trailPct", type: "trail_pct", key: "pct" },
+  { field: "maN", type: "close_below_ma", key: "n" },
+  { field: "timeBars", type: "time", key: "bars" },
+];
+
 function numberOr(text: string | null, fallback: number | null): number | null {
   if (text === null || text.trim() === "") return fallback;
   const value = Number(text);
@@ -44,20 +77,31 @@ function dateOr(text: string | null): string {
   return text !== null && DATE.test(text) ? text : "";
 }
 
-function exitsFrom(text: string | null): Pick<BacktestInputs, "stopPct" | "timeBars"> {
-  const fallback = { stopPct: DEFAULT_INPUTS.stopPct, timeBars: DEFAULT_INPUTS.timeBars };
+type ExitInputs = Pick<BacktestInputs, ExitField | "maKind">;
+
+function exitsFrom(text: string | null): ExitInputs {
+  const { stopPct, atrK, atrN, targetPct, trailPct, maN, maKind, timeBars } = DEFAULT_INPUTS;
+  const fallback = { stopPct, atrK, atrN, targetPct, trailPct, maN, maKind, timeBars };
   if (text === null) return fallback;
   try {
     const parsed: unknown = JSON.parse(text);
-    const exits = (parsed as { exits?: unknown }).exits;
+    const exits = (parsed as { exits?: unknown } | null)?.exits;
     if (!Array.isArray(exits)) return fallback;
-    const find = (type: string, key: string): number | null => {
-      const exit = exits.find((e: unknown) => (e as { type?: unknown })?.type === type) as
+    const byType = (type: string) =>
+      exits.find((e: unknown) => (e as { type?: unknown } | null)?.type === type) as
         Record<string, unknown> | undefined;
-      const value = exit?.[key];
+    const read = (type: string, key: string): number | null => {
+      const value = byType(type)?.[key];
       return typeof value === "number" && Number.isFinite(value) ? value : null;
     };
-    return { stopPct: find("stop_pct", "pct"), timeBars: find("time", "bars") };
+    const found = Object.fromEntries(
+      EXIT_FIELDS.map(({ field, type, key }) => [field, read(type, key)]),
+    ) as Record<ExitField, number | null>;
+    return {
+      ...found,
+      atrN: found.atrN ?? atrN,
+      maKind: byType("close_below_ma")?.ma === "ema" ? "ema" : "sma",
+    };
   } catch {
     return fallback;
   }
@@ -66,6 +110,7 @@ function exitsFrom(text: string | null): Pick<BacktestInputs, "stopPct" | "timeB
 export function inputsFromParams(params: URLSearchParams): BacktestInputs {
   return {
     template: params.get("template") || DEFAULT_INPUTS.template,
+    r: params.get("r") || null,
     ...exitsFrom(params.get("x")),
     maxPositions: numberOr(params.get("max_positions"), DEFAULT_INPUTS.maxPositions),
     slippageBps: numberOr(params.get("slippage_bps"), DEFAULT_INPUTS.slippageBps),
@@ -74,16 +119,27 @@ export function inputsFromParams(params: URLSearchParams): BacktestInputs {
   };
 }
 
-/** The exits in request order; a blank field means that exit is not used. */
+/** The exits in the contract's order; a blank field means that exit is not used. */
 export function exitsOf(inputs: BacktestInputs): Exit[] {
   const exits: Exit[] = [];
   if (inputs.stopPct !== null) exits.push({ type: "stop_pct", pct: inputs.stopPct });
+  if (inputs.atrK !== null) {
+    const n = inputs.atrN ?? (DEFAULT_INPUTS.atrN as number);
+    exits.push({ type: "stop_atr", k: inputs.atrK, n });
+  }
+  if (inputs.targetPct !== null) exits.push({ type: "target", pct: inputs.targetPct });
+  if (inputs.trailPct !== null) exits.push({ type: "trail_pct", pct: inputs.trailPct });
+  if (inputs.maN !== null) {
+    exits.push({ type: "close_below_ma", n: inputs.maN, ma: inputs.maKind });
+  }
   if (inputs.timeBars !== null) exits.push({ type: "time", bars: inputs.timeBars });
   return exits;
 }
 
 export function paramsFromInputs(inputs: BacktestInputs): URLSearchParams {
-  const params = new URLSearchParams({ template: inputs.template });
+  const params = new URLSearchParams(
+    inputs.r !== null ? { r: inputs.r } : { template: inputs.template },
+  );
   params.set("x", JSON.stringify({ exits: exitsOf(inputs) }));
   if (inputs.maxPositions !== null) params.set("max_positions", String(inputs.maxPositions));
   if (inputs.slippageBps !== null) params.set("slippage_bps", String(inputs.slippageBps));
@@ -107,7 +163,7 @@ export function requestFrom(inputs: BacktestInputs, rule: Rule): BacktestRequest
   };
 }
 
-export type InputField = "stopPct" | "timeBars" | "maxPositions" | "slippageBps" | "start" | "end";
+export type InputField = ExitField | "maxPositions" | "slippageBps" | "start" | "end";
 
 const SIM_FIELDS: Record<string, InputField> = {
   "sim.max_positions": "maxPositions",
@@ -131,11 +187,16 @@ export function placeErrors(
     }
   }
   exitsOf(inputs).forEach((exit, index) => {
-    const under = errorsUnder(errors, `configs.0.exits.${String(index)}`);
-    const first = Object.entries(under)[0];
-    if (!first) return;
-    fields[exit.type === "stop_pct" ? "stopPct" : "timeBars"] = first[1];
-    Object.keys(under).forEach((path) => placed.add(path));
+    const prefix = `configs.0.exits.${String(index)}`;
+    const own = EXIT_FIELDS.filter((f) => f.type === exit.type);
+    for (const [path, message] of Object.entries(errorsUnder(errors, prefix))) {
+      // `…exits.1.n` lands on that key's field; `…exits.1` or `…exits.1.type` on the first one.
+      const key = path.slice(prefix.length + 1);
+      const field = (own.find((f) => f.key === key) ?? own[0])?.field;
+      if (!field) continue;
+      fields[field] ??= message;
+      placed.add(path);
+    }
   });
   const rest = Object.entries(errors.fields)
     .filter(([path]) => !placed.has(path))

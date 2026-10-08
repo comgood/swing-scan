@@ -1,9 +1,9 @@
 "use client";
 
-// The report's two requests: the template list (rule source until feature 10) and the backtest
-// itself, which runs only on submit. Errors reach the page as ApiRequestError; a 422 keeps its
-// body so the fields can show it (U-7).
-import type { BacktestRequest, Schemas, TemplateOut } from "@swing-scan/api-client";
+// The report's requests: the template list, the indicator catalog (to check a `?r=` rule) and
+// the backtest itself, which runs only on submit. Errors reach the page as ApiRequestError; a
+// 422 keeps its body so the fields can show it (U-7).
+import type { BacktestRequest, IndicatorSpec, Schemas, TemplateOut } from "@swing-scan/api-client";
 import { useMutation, useQuery } from "@tanstack/react-query";
 
 import { api } from "@/lib/api";
@@ -54,6 +54,28 @@ export function useTemplates() {
     queryFn: fetchTemplates,
     staleTime: Infinity,
     retry: false,
+  });
+}
+
+async function fetchIndicators({ signal }: { signal: AbortSignal }): Promise<IndicatorSpec[]> {
+  let result;
+  try {
+    result = await api.GET("/api/v1/indicators", { signal });
+  } catch (error) {
+    throw new ApiRequestError(toApiError(error));
+  }
+  if (!result.data) throw new ApiRequestError(toApiError(result));
+  return result.data;
+}
+
+/** The catalog a `?r=` rule is checked against (spec 0008); same key as the scan workspace. */
+export function useIndicators(enabled: boolean) {
+  return useQuery({
+    queryKey: ["indicators"],
+    queryFn: fetchIndicators,
+    staleTime: Infinity,
+    retry: false,
+    enabled,
   });
 }
 
