@@ -8,6 +8,7 @@ import { scanHandler } from "@/mocks/handlers";
 import { server } from "@/mocks/node";
 import { http, HttpResponse } from "msw";
 
+import scanNotImplemented from "../../../../contracts/mocks/501.scan.json";
 import { ErrorState } from "./error-state";
 
 const REQUEST = { rule: { conditions: [] }, as_of: null } as never;
@@ -19,7 +20,7 @@ describe("toApiError (AC-10)", () => {
     expect(toApiError(result)).toEqual({
       kind: "http",
       status: 501,
-      detail: "scan is not implemented yet; it arrives with scope feature 8 (Template scan).",
+      detail: scanNotImplemented.detail,
     });
   });
 

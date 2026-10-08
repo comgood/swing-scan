@@ -48,7 +48,7 @@ describe("error variants", () => {
     });
 
     expect(response.status).toBe(501);
-    expect(error?.detail).toMatch(/feature 8/);
+    expect(error?.detail).toMatch(/not implemented yet/);
   });
 
   it("can hold a request forever to show a loading state", async () => {
