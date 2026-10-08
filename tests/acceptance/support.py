@@ -8,9 +8,12 @@ values never come from engine code. The bar calendar below is reimplemented from
 
 from __future__ import annotations
 
+import json
 import math
 import random
 import re
+import subprocess
+import sys
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import date, timedelta
@@ -30,6 +33,7 @@ from engine.contracts import (
     ScanResponse,
     TradeLabResult,
 )
+from engine.data import read_market
 from engine.data.fixtures import FrameSpec, make_market
 from golden.reference import TickerBars
 
@@ -246,15 +250,21 @@ WEB_ACCEPTANCE = Path(__file__).resolve().parents[2] / "apps" / "web" / "tests" 
 def ui_covered_by(crit: str, *files: str) -> None:
     """Point the gate at the Vitest files that cover a criterion's UI half.
 
-    Vitest runs those files in `pnpm --filter web test` (always blocking). This check keeps the
-    pointer honest: each file exists, names the ID in a test title, and owes nothing for it.
+    Vitest runs those files in `pnpm --filter web test`. A plain `it` always blocks; an `acIt`
+    gated on the ID blocks once the ID is `required` (`apps/web/tests/acceptance/gate.ts`), which
+    is the only time a pointer counts. This check keeps the pointer honest: each file exists,
+    names the ID in a test title (`it("<ID>: ...")` or `acIt([..."<ID>"...], "<ID>: ...")`), and
+    owes nothing for it.
     """
+    title = rf"""["'`]{re.escape(crit)}:"""
+    plain = re.compile(rf"""\bit\(\s*{title}""")
+    gated = re.compile(rf"""\bacIt\(\s*\[[^\]]*["']{re.escape(crit)}["'][^\]]*\]\s*,\s*{title}""")
     for name in files:
         path = WEB_ACCEPTANCE / name
         assert path.is_file(), f"{crit}: {path} is missing"
         text = path.read_text(encoding="utf-8")
-        assert re.search(rf"""\bit\(\s*["'`]{re.escape(crit)}:""", text), (
-            f"{crit}: {name} has no it('{crit}: ...') test"
+        assert plain.search(text) or gated.search(text), (
+            f"{crit}: {name} has no it('{crit}: ...') or acIt test"
         )
         assert not re.search(rf"""\bit\.todo\(\s*["'`]{re.escape(crit)}:""", text), (
             f"{crit}: {name} still owes an it.todo for it"
@@ -268,3 +278,54 @@ def ui_owed(crit: str) -> NoReturn:
         f"{crit} UI test belongs in apps/web/tests/acceptance/ (Vitest against the mocks), "
         "not written yet",
     )
+
+
+# ---------------------------------------------------------------- the API on a generated market
+
+
+_API_RUNNER = """
+import json, sys
+from fastapi.testclient import TestClient
+from api.main import app
+
+calls, out = json.loads(sys.argv[1]), sys.argv[2]
+results = []
+with TestClient(app) as client:
+    for method, path, body in calls:
+        response = client.request(method, path, json=body)
+        results.append({"status": response.status_code, "body": response.json()})
+with open(out, "w", encoding="utf-8") as handle:
+    json.dump(results, handle)
+"""
+
+
+class GeneratedApi:
+    """The real API in a fresh process, loading a seed 42 market from SYNTHETIC_DATA_DIR.
+
+    The API loads its market at import (spec 0005 AC-8), so it cannot share the session
+    `client`, which CI starts without data.
+    """
+
+    def __init__(self, data_dir: Path, work: Path) -> None:
+        self.data_dir = data_dir
+        self.work = work
+        dates = read_market(data_dir).bars["date"]
+        self.sessions: set[date] = set(dates.unique().to_list())
+        self.first: date = min(self.sessions)
+        self.last: date = max(self.sessions)
+        self._runs = 0
+
+    def run(self, *calls: tuple[str, str, Any]) -> tuple[list[dict[str, Any]], str]:
+        self._runs += 1
+        out = self.work / f"results-{self._runs}.json"
+        done = subprocess.run(
+            [sys.executable, "-c", _API_RUNNER, json.dumps(list(calls)), str(out)],
+            capture_output=True,
+            text=True,
+            env={"SYNTHETIC_DATA_DIR": str(self.data_dir), "PATH": "/usr/bin:/bin"},
+            timeout=300,
+            check=False,
+        )
+        assert done.returncode == 0, done.stderr[-2000:]
+        results: list[dict[str, Any]] = json.loads(out.read_text(encoding="utf-8"))
+        return results, done.stdout

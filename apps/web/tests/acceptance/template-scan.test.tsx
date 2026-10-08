@@ -8,7 +8,6 @@ import type { Rule, ScanResponse } from "@swing-scan/api-client";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
-import { useSyncExternalStore } from "react";
 import { beforeEach, describe, expect, vi } from "vitest";
 
 import Home from "@/app/page";
@@ -17,66 +16,15 @@ import { mocks, scanHandler } from "@/mocks/handlers";
 import { server } from "@/mocks/node";
 
 import { acIt } from "./gate";
+import { nav } from "./navigation";
 import { renderPage, SYNTHETIC_BANNER, WARMUP_TEXT } from "./pages";
 
 // ------------------------------------------------------------------ next/navigation, emulated
 
-// The App Router keeps `useSearchParams` in step with `window.history.pushState` and
-// `replaceState` (spec 0005 AC-10 updates `?template` with `history.replaceState`). The emulation
-// does the same: the URL lives in jsdom's `window.location`, the history methods are wrapped to
-// re render subscribers, and `router.replace` / `push` go through them. Tests assert on the URL and
-// on `history.length`, never on which API the workspace called (ac-questions.md#AC-10-url).
-const nav = vi.hoisted(() => {
-  const listeners = new Set<() => void>();
-  let cached = { search: "\u0000", params: new URLSearchParams() };
-  const params = () => {
-    const search = window.location.search;
-    if (cached.search !== search) cached = { search, params: new URLSearchParams(search) };
-    return cached.params;
-  };
-  const notify = () => listeners.forEach((l) => l());
-  const original = {
-    push: window.history.pushState.bind(window.history),
-    replace: window.history.replaceState.bind(window.history),
-  };
-  window.history.pushState = (...args: Parameters<History["pushState"]>) => {
-    original.push(...args);
-    notify();
-  };
-  window.history.replaceState = (...args: Parameters<History["replaceState"]>) => {
-    original.replace(...args);
-    notify();
-  };
-  /** Open the page at `search` as a fresh visit (the setup itself adds no history entry). */
-  const set = (search: string) => {
-    const q = search.replace(/^\?/, "");
-    original.replace(null, "", q ? `/?${q}` : "/");
-    notify();
-  };
-  return { listeners, params, set };
-});
-
-vi.mock("next/navigation", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("next/navigation")>();
-  const subscribe = (l: () => void) => {
-    nav.listeners.add(l);
-    return () => nav.listeners.delete(l);
-  };
-  const router = {
-    replace: (href: string) => window.history.replaceState(null, "", href),
-    push: (href: string) => window.history.pushState(null, "", href),
-    prefetch: () => {},
-    back: () => {},
-    forward: () => {},
-    refresh: () => {},
-  };
-  return {
-    ...actual,
-    useRouter: () => router,
-    usePathname: () => "/",
-    useSearchParams: () => useSyncExternalStore(subscribe, nav.params, nav.params),
-  };
-});
+// Shared with the other page tests (`navigation.ts`); see ac-questions.md#AC-10-url.
+vi.mock("next/navigation", async (importOriginal) =>
+  (await import("./navigation")).emulatedNavigation(await importOriginal<object>()),
+);
 
 // ------------------------------------------------------------------ fixtures and helpers
 

@@ -17,14 +17,14 @@ D-5: pending
 D-6: required
 
 # Rule builder
-R-1: pending
+R-1: required
 R-2: required
 R-3: required
 R-4: required
 R-5: required
 R-6: required
 R-7: required
-R-8: pending
+R-8: required
 R-9: required
 R-10: required
 
@@ -37,13 +37,13 @@ S-4: required
 # Backtest and exits
 B-1: required
 B-2: required
-B-3: pending
-B-4: pending
-B-5: pending
-B-6: pending
+B-3: required
+B-4: required
+B-5: required
+B-6: required
 B-7: required
 B-8: required
-B-9: pending
+B-9: required
 B-10: pending
 B-11: required
 B-13: pending
@@ -63,7 +63,7 @@ X-9: pending
 X-10: pending
 
 # UI and honesty
-U-1: pending
+U-1: required
 U-2: required
 U-3: pending
 U-4: pending

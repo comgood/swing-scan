@@ -2,9 +2,9 @@
 // (validation errors) and spec 0003 AC-6, AC-7. "Given a 422 from the API, the offending
 // builder row or exit field shows the inline error."
 //
-// The real builder rows (feature 10) and exit config editor (feature 12) do not exist yet, so
-// these tests drive the path every page will use: the API's 422 body from the mocks, through
-// `fieldErrorsFrom422`, onto the field the error names. The page level half stays pending.
+// These tests drive the shared path every page uses: the API's 422 body from the mocks, through
+// `fieldErrorsFrom422`, onto the field the error names. The page level half (the builder rows on
+// `/`, the exit form on `/backtest`) is in `rule-builder.test.tsx`.
 import type { BacktestRequest, Rule } from "@swing-scan/api-client";
 import { render, screen } from "@testing-library/react";
 import { http, HttpResponse } from "msw";

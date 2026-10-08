@@ -8,6 +8,8 @@ Meta tests that check the harness itself carry `@pytest.mark.harness` instead an
 
 from __future__ import annotations
 
+import subprocess
+import sys
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -15,6 +17,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from acceptance.gate import MUST_IDS, StatusFileError, load_status
+from acceptance.support import GeneratedApi
 
 _HERE = Path(__file__).parent
 _IDS_KEY = pytest.StashKey[dict[str, tuple[str, ...]]]()
@@ -107,3 +110,15 @@ def client() -> Iterator[TestClient]:
 
     with TestClient(app) as test_client:
         yield test_client
+
+
+@pytest.fixture(scope="session")
+def generated_api(tmp_path_factory: pytest.TempPathFactory) -> GeneratedApi:
+    data_dir = tmp_path_factory.mktemp("synthetic")
+    subprocess.run(
+        [sys.executable, "-m", "engine.synthetic", "--seed", "42", "--out", str(data_dir)],
+        check=True,
+        capture_output=True,
+        timeout=300,
+    )
+    return GeneratedApi(data_dir, tmp_path_factory.mktemp("api"))

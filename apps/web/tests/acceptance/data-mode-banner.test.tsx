@@ -1,6 +1,7 @@
 // QA acceptance: U-1 (banner part) and U-2, from doc 01 section 6.6 and spec 0003 AC-3, AC-4.
 // Written against the MSW mocks; the health ping decides the banner text.
-// Not covered here: U-1's "builder opens with Breakout and its results" (feature 8 and 10 UI).
+// The rest of U-1 (the builder opening on Breakout with its results) is in template-scan.test.tsx
+// and rule-builder.test.tsx.
 import { screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 

@@ -19,8 +19,10 @@ import pytest
 from fastapi.testclient import TestClient
 
 from acceptance.support import (
+    GeneratedApi,
     build_market,
     config,
+    owed,
     random_walk_frames,
     trade_lab,
     ui_covered_by,
@@ -41,16 +43,28 @@ def _schema(name: str) -> dict[str, Any]:
 
 
 @pytest.mark.ac("U-1")
-def test_first_visit_data_is_the_synthetic_market(client: TestClient) -> None:
-    meta = client.get("/api/v1/meta").json()
-    assert meta["data"] is not None, "no market loaded yet (scope feature 7)"
-    assert meta["data"]["data_mode"] == "synthetic"
-    assert client.get("/api/v1/templates").json()[0]["id"] == "breakout_52w"
+def test_first_visit_data_is_the_synthetic_market(generated_api: GeneratedApi) -> None:
+    # The API as deployed: a seed 42 synthetic market loaded at start (the session `client`
+    # runs without data in CI). First visit: synthetic meta, Breakout first, and its scan answers.
+    meta, templates = generated_api.run(
+        ("GET", "/api/v1/meta", None), ("GET", "/api/v1/templates", None)
+    )[0]
+    assert meta["status"] == 200
+    assert meta["body"]["data"] is not None, "no market loaded"
+    assert meta["body"]["data"]["data_mode"] == "synthetic"
+    assert templates["body"][0]["id"] == "breakout_52w"
+    breakout = templates["body"][0]["rule"]
+    scan = generated_api.run(("POST", "/api/v1/scan", {"rule": breakout}))[0][0]
+    assert scan["status"] == 200, scan
 
 
 @pytest.mark.ac("U-1")
 def test_first_visit_opens_breakout_with_results_and_banner() -> None:
-    ui_owed("U-1")
+    # The banner on every page; the workspace opening on Breakout with its results, no sign up;
+    # the builder's rows holding Breakout's rule (spec 0003 AC-3, spec 0005 AC-9, spec 0008).
+    ui_covered_by(
+        "U-1", "data-mode-banner.test.tsx", "template-scan.test.tsx", "rule-builder.test.tsx"
+    )
 
 
 # ---------------------------------------------------------------- U-2 live badge
@@ -171,7 +185,10 @@ def test_422_paths_point_at_the_row_or_exit_field(client: TestClient) -> None:
 
 @pytest.mark.ac("U-7")
 def test_inline_error_shows_on_the_offending_row() -> None:
-    ui_owed("U-7")
+    # Written in Vitest (`rule-builder.test.tsx`): a left side error and the exit form's stop
+    # error land on their fields; a right side error, sent by the API as `right.ind.n`, lands as
+    # a row message instead of on the field (spec 0008 AC-7). Pending until the ruling.
+    owed("U-7-loc", "U-7 right side 422 on its field (rule-builder.test.tsx)")
 
 
 @pytest.mark.ac("U-8")
