@@ -52,6 +52,34 @@ describe("builderErrors", () => {
     expect(out.rows[1].left.group).toBe("Left kind");
   });
 
+  // The real API's paths: the right side is a union tagged by `kind`, so its tag sits in `loc`.
+  it.each([
+    [["ind", "n"], "n"],
+    [["ind", "ind"], "ind"],
+    [["ind", "offset"], "offset"],
+    [["ind", "mult"], "mult"],
+    [["value", "value"], "value"],
+  ] as const)("drops the right side's tag: right.%j lands on right.%s", (tail, field) => {
+    const out = map([issue(["rule", "conditions", 1, "right", ...tail], "must be in range")]);
+    expect(out.rows[1].right).toEqual({ [field]: "Must be in range" });
+    expect(out.rows[1].row).toBeUndefined();
+  });
+
+  it("keeps the untagged right.ind and right.value as those fields", () => {
+    const out = map([
+      issue(["rule", "conditions", 0, "right", "ind"], "ind"),
+      issue(["rule", "conditions", 1, "right", "value"], "value"),
+    ]);
+    expect(out.rows[0].right).toEqual({ ind: "Ind" });
+    expect(out.rows[1].right).toEqual({ value: "Value" });
+  });
+
+  it("puts the left side's kind (it has no tag) on the left group", () => {
+    const out = map([issue(["rule", "conditions", 1, "left", "kind"], "input should be 'ind'")]);
+    expect(out.rows[1].left.group).toBe("Input should be 'ind'");
+    expect(out.rows[1].row).toBeUndefined();
+  });
+
   it("shows anything else under a row as a row message", () => {
     const out = map([issue(["rule", "conditions", 0, "left", "ema", "n"], "deep")]);
     expect(out.rows[0].row).toBe("Deep");

@@ -3,7 +3,27 @@ import { describe, expect, it } from "vitest";
 import ruleNOutOfRange from "../../../../contracts/mocks/422.rule.n_out_of_range.json";
 import scanNotImplemented from "../../../../contracts/mocks/501.scan.json";
 
-import { errorAt, errorsUnder, fieldErrorsFrom422 } from "./field-errors";
+import { errorAt, errorsUnder, fieldErrorsFrom422, withoutTag } from "./field-errors";
+
+describe("withoutTag (U-7)", () => {
+  const tags = ["ind", "value"];
+  it.each([
+    ["rule.conditions.1.right.ind.n", "rule.conditions.1.right.n"],
+    ["rule.conditions.1.right.value.value", "rule.conditions.1.right.value"],
+    ["rule.conditions.1.right.ind", "rule.conditions.1.right.ind"],
+    ["rule.conditions.1.right.value", "rule.conditions.1.right.value"],
+    ["rule.conditions.1.right.n", "rule.conditions.1.right.n"],
+    ["rule.conditions.1.right", "rule.conditions.1.right"],
+  ])("%s → %s", (path, expected) => {
+    expect(withoutTag(path.split("."), 4, tags).join(".")).toBe(expected);
+  });
+
+  it("drops an exit's tag too", () => {
+    expect(withoutTag("configs.0.exits.0.stop_pct.pct".split("."), 4, ["stop_pct"])).toEqual(
+      "configs.0.exits.0.pct".split("."),
+    );
+  });
+});
 
 describe("fieldErrorsFrom422 (AC-7)", () => {
   it("maps the contract's 422 mock to its field path with a capitalised message", () => {

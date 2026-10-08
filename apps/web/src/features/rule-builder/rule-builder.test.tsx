@@ -210,6 +210,76 @@ describe("RuleBuilder", () => {
     ).toBeInTheDocument();
   });
 
+  // The real API names the right side's `kind` tag in `loc` (U-7 ruling 2026-10-09).
+  function answer422(loc: (string | number)[], msg: string) {
+    server.use(
+      http.post("*/api/v1/scan", () =>
+        HttpResponse.json(
+          { detail: [{ type: "x", loc: ["body", "rule", ...loc], msg, input: null }] },
+          { status: 422 },
+        ),
+      ),
+    );
+  }
+
+  async function expectOnField(field: HTMLElement, message: string) {
+    await waitFor(() => expect(field).toHaveAttribute("aria-invalid", "true"));
+    expect(field).toHaveAccessibleDescription(expect.stringContaining(message));
+  }
+
+  it("puts a tagged right ind n (right.ind.n) on that row's right Window (n) (AC-7)", async () => {
+    answer422(["conditions", 1, "right", "ind", "n"], "must be between 2 and 252");
+    const { user } = setup();
+    await user.click(screen.getByRole("button", { name: "Run scan" }));
+    await expectOnField(
+      within(side(2, "Right side")).getByLabelText("Window (n)"),
+      "Must be between 2 and 252",
+    );
+    expect(within(row(2)).getAllByText("Must be between 2 and 252")).toHaveLength(1);
+    expect(within(side(2, "Left side")).queryByText(/Must be/)).not.toBeInTheDocument();
+  });
+
+  it("puts a tagged right value (right.value.value) on that row's Number (AC-7)", async () => {
+    answer422(["conditions", 2, "right", "value", "value"], "input should be a valid number");
+    const { user } = setup();
+    await user.click(screen.getByRole("button", { name: "Run scan" }));
+    await expectOnField(
+      within(side(3, "Right side")).getByLabelText("Number"),
+      "Input should be a valid number",
+    );
+    expect(within(row(3)).getAllByText("Input should be a valid number")).toHaveLength(1);
+  });
+
+  it("puts a tagged right ind (right.ind.ind) on that row's right Indicator (AC-7)", async () => {
+    answer422(["conditions", 0, "right", "ind", "ind"], "input should be 'open'");
+    const { user } = setup();
+    await user.click(screen.getByRole("button", { name: "Run scan" }));
+    await expectOnField(
+      within(side(1, "Right side")).getByLabelText("Indicator"),
+      "Input should be 'open'",
+    );
+  });
+
+  it("puts the untagged left n (left.n) on that row's left Window (n) (AC-7)", async () => {
+    const rule: Rule = {
+      ...breakout.rule,
+      conditions: [
+        {
+          left: { kind: "ind", ind: "sma", n: 20, offset: 0, mult: 1 },
+          op: ">",
+          right: { kind: "value", value: 5 },
+        },
+      ],
+    };
+    answer422(["conditions", 0, "left", "n"], "must be between 2 and 252");
+    const { user } = setup(rule);
+    await user.click(screen.getByRole("button", { name: "Run scan" }));
+    await expectOnField(
+      within(side(1, "Left side")).getByLabelText("Window (n)"),
+      "Must be between 2 and 252",
+    );
+  });
+
   it("labels results stale after an edit until Run scan", async () => {
     recordScans();
     const { user } = setup();
