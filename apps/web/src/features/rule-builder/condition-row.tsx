@@ -8,6 +8,7 @@ import { useId } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { conditionText } from "@/features/scan/operands";
 
 import type { RowErrors } from "./errors";
 import { OPERATORS } from "./is-rule";
@@ -51,6 +52,8 @@ export function ConditionRow({
   return (
     <fieldset className="flex min-w-0 flex-col gap-4 rounded-lg border p-4">
       <legend className="px-1 text-sm font-medium">Condition {index + 1}</legend>
+      {/* The row as one line of text, as the scan's columns name it (R-10: nothing hidden). */}
+      <p className="font-mono text-sm break-words">{conditionText(condition)}</p>
       <GroupError message={errors.row} />
 
       <fieldset className="flex min-w-0 flex-col gap-2">

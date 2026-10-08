@@ -1,5 +1,5 @@
-// Rule builder (scope feature 10, spec 0008). Mounted in the template workspace once feature 8
-// merges; until then it lives on its own with tests and `/ui` gallery entries.
+// Rule builder (scope feature 10, spec 0008). Mounted on `/` by the scan workspace
+// (`features/scan/scan-workspace.tsx`), which owns the reducer, the link and the scan.
 export { builderErrors } from "./errors";
 export { MAX_CONDITIONS, normaliseRule, OPERATORS } from "./is-rule";
 export { JsonPanel, NOT_A_RULE } from "./json-panel";
