@@ -31,6 +31,8 @@ class BarView:
     """The window's last session, or the ticker's last bar in the cut market."""
     horizon: int | None = None
     """Trade mode only: the bar at which a `horizon` exit closes the trade."""
+    row: int | None = None
+    """Row in `market.bars`, for exits that read an indicator on this bar (`close_below_ma`)."""
 
 
 @dataclass(frozen=True)

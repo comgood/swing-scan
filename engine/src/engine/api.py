@@ -39,7 +39,7 @@ from .contracts import (
 )
 from .contracts._errors import error_at
 from .contracts.trial import pair_key, structure_key
-from .exits import ExitNotBuilt, build_exits
+from .exits import build_exits
 from .indicators import IndicatorKey, cache_for, dependencies, key_of
 from .indicators.compute import POS
 from .rules import COOLDOWN, compile_rule, entry_signals, operand_values
@@ -223,14 +223,11 @@ def _empty_metrics(n_trades: int) -> PortfolioMetrics:
 
 def _portfolio(request: BacktestRequest, market: Market) -> PortfolioResult:
     config = request.configs[0]
-    try:
-        exits = build_exits(config)
-    except ExitNotBuilt as missing:
-        raise NotYetImplemented(missing.feature, f"The {missing.exit_type} exit") from missing
     sim = request.sim
     slip = sim.slippage_bps / 10_000
     cache = cache_for(market)
     bars = BarArrays.build(market, cache)
+    exits = build_exits(config, cache.get)
 
     compiled = compile_rule(request.rule, cache)
     signals = entry_signals(cache.pos, cache.is_last, compiled.valid, compiled.value)
