@@ -2,7 +2,8 @@
 
 The rendering half of each criterion belongs in `apps/web/tests/acceptance/` (Vitest against
 the mocks, doc 02 section 15.4). The shell parts are written there (U-1 banner, U-2, U-5, U-6
-structure, U-7 helpers; see docs/qa/ac-questions.md#ui-tests); the rest waits for the pages.
+structure, U-7 helpers), and so are the honesty components (U-4 counter, U-8 note; see
+docs/qa/ac-questions.md#ui-tests); the rest waits for the pages.
 Each ID keeps a pending placeholder here until every part of it is covered. Where a criterion
 also depends on the contract (the data the page renders), that half is checked here through the
 API and the OpenAPI document.
@@ -22,6 +23,7 @@ from acceptance.support import (
     config,
     random_walk_frames,
     trade_lab,
+    ui_covered_by,
     ui_owed,
 )
 from engine.contracts import TEMPLATES, ExitConfig, Rule, pair_key, structure_key
@@ -56,7 +58,8 @@ def test_first_visit_opens_breakout_with_results_and_banner() -> None:
 
 @pytest.mark.ac("U-2")
 def test_live_mode_shows_the_survivors_badge_on_every_page() -> None:
-    ui_owed("U-2")
+    # Spec 0004 AC-8: the badge is the shell's data mode banner, checked on every page.
+    ui_covered_by("U-2", "data-mode-banner.test.tsx")
 
 
 # ---------------------------------------------------------------- U-3 assumptions header
@@ -124,7 +127,9 @@ def test_backtest_returns_the_trial_keys_for_the_counter() -> None:
 
 @pytest.mark.ac("U-4")
 def test_counter_counts_new_pairs_and_warns_at_ten() -> None:
-    ui_owed("U-4 (localStorage and sessionStorage counters, warning at 10, storage fallback)")
+    # Counting, storage layout, the warning at 10 and the fallback are covered in Vitest
+    # (`honesty.test.tsx`, spec 0004 AC-1 to AC-6); the counter inside the reports is owed.
+    ui_owed("U-4 (counter in the portfolio and exit lab reports, features 9 and 12)")
 
 
 # ---------------------------------------------------------------- U-5 to U-8
@@ -169,4 +174,6 @@ def test_inline_error_shows_on_the_offending_row() -> None:
 
 @pytest.mark.ac("U-8")
 def test_procedure_note_renders_under_the_exit_lab_table() -> None:
-    ui_owed("U-8")
+    # The note's words are covered in Vitest (`honesty.test.tsx`, spec 0004 AC-7); its place
+    # under the exit lab table is owed.
+    ui_owed("U-8 (note directly under the exit lab table, feature 12)")

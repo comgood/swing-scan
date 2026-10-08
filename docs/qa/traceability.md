@@ -9,6 +9,7 @@ Every MUST criterion in [doc 01 section 6](../01-market-research-and-product-spe
 - The end of every run prints an `acceptance gate` section: the required and pending counts, any required ID that failed, and any pending ID whose tests all passed (ready to flip).
 - QA flips an ID to `required` in a follow up PR once its tests pass on `main` (doc 02 section 15.4). Builders never edit QA files.
 - A disputed reading goes to [`ac-questions.md`](ac-questions.md) and the ID stays `pending` until the ruling.
+- Vitest UI acceptance tests for UI that is not on `main` yet go through `acIt` (`apps/web/tests/acceptance/gate.ts`), which reads the same `status.yaml`: while every ID of a test is `pending`, a failure is reported as skipped with its reason, and once any ID is `required` it fails the web suite like any other test. Tests written against UI already on `main` stay plain `it` and always block.
 - `make test-acceptance` runs only the golden and acceptance suites. `make test` and `make ci` run them with everything else.
 
 ## Levels
@@ -26,9 +27,9 @@ Test files are under `tests/acceptance/`. "Oracle" means the owner's protected s
 
 | ID | Criterion | Level | Test file | Fixture | Also covered by | Status | Verified |
 |---|---|---|---|---|---|---|---|
-| D-1 | Same seed gives identical frames | use case | `test_data.py` | synthetic market, seed 42 (owed hook, feature 7) | | pending | |
-| D-2 | Every bar sane, no bars after delisting | use case | `test_data.py` | synthetic market (owed hook) | | pending | |
-| D-3 | A bear segment and at least 20 delistings | use case | `test_data.py` | synthetic market (owed hook) | | pending | |
+| D-1 | Same seed gives identical frames | use case | `test_data.py` | `engine.synthetic.generate` seeds 42 (twice) and 7; the `python -m engine.synthetic` output read back by `read_market` (spec 0006) | `make data-check` | required | 2026-10-08 |
+| D-2 | Every bar sane, no bars after delisting | use case | `test_data.py` | `generate(42)`: bar bands, volume, positive finite prices, no bar outside `listed_from` to `delisted_on` | `make data-check` | required | 2026-10-08 |
+| D-3 | A bear segment and at least 20 delistings | use case | `test_data.py` | `generate(42)`: benchmark drawdown of at least 20%, 20 or more delistings | `make data-check` | required | 2026-10-08 |
 | D-4 | Live load from 2016-01-04, SPY present | local | `test_data.py` | local live data (owed hook) | owner run of `make load-live` | pending | |
 | D-5 | Live mode refuses a non localhost host | use case | `test_data.py` | owed: host detection rule | | pending | |
 | D-6 | Data and keys are blocked at commit | guard | `test_data.py` | temp files under `data/` and a runtime built fake key | CI guards job | required | 2026-10-07 |
@@ -41,11 +42,11 @@ Test files are under `tests/acceptance/`. "Oracle" means the owner's protected s
 | R-7 | `rs` lies in 0 to 99, top return gets 99 | use case | `test_rules.py` | 12 tickers with distinct 126 bar returns | Oracle | pending | |
 | R-8 | Builder rows match the request JSON | UI | `test_rules.py` | owed to Vitest | | pending | |
 | R-9 | Structure key ignores numbers only | contract | `test_rules.py` | rule pairs differing in numbers, indicator, operator, kind, count | engine unit tests | required | 2026-10-07 |
-| R-10 | Visible `close > 5`, no hidden price filter | contract, use case | `test_rules.py` | `/templates`, a penny stock fixture | | pending | |
-| S-1 | Scan returns exactly the alive, valid and true tickers | use case | `test_scan.py` | rising, falling, young and late listed tickers | | pending | |
-| S-2 | Delisted tickers never appear | use case | `test_scan.py` | a ticker delisted on bar 20 | | pending | |
-| S-3 | `new_today` equals the backtest signals | golden | `test_scan.py` | 20 ticker random walk, 120 bars | Oracle | pending | |
-| S-4 | Warm scan of 500 tickers under 1 s | use case | `test_scan.py` | 500 ticker, 1,260 bar random walk (deployed number via verify) | `make smoke` | pending | |
+| R-10 | Visible `close > 5`, no hidden price filter | contract, use case, UI | `test_rules.py`; Vitest `apps/web/tests/acceptance/template-scan.test.tsx` (conditions text) | `/templates`, a penny stock fixture, a penny breakout with and without the template's `close > 5` (spec 0005 AC-13) | | pending | |
+| S-1 | Scan returns exactly the alive, valid and true tickers | use case, contract, UI | `test_scan.py`; Vitest `apps/web/tests/acceptance/template-scan.test.tsx` (results table) | rising, falling, young and late listed tickers; row order, hand computed operands, `chg_pct` and `vol_ratio`, cold equals warm, `as_of` 422; `/scan` on a generated seed 42 market in a subprocess (spec 0005 AC-5, AC-6, AC-8); table columns, New badges, 50 row pages, empty and error states (AC-11, AC-12) | | pending | |
+| S-2 | Delisted tickers never appear | use case | `test_scan.py` | a ticker delisted on bar 20; one listed after `as_of`, one delisted on `as_of` (spec 0005 AC-1) | | pending | |
+| S-3 | `new_today` equals the backtest signals | golden | `test_scan.py` | 20 ticker random walk, 120 bars; chained cooldown with edges on bars 100, 108, 115; an edge on a ticker's real last bar (spec 0005 AC-4) | Oracle | pending | |
+| S-4 | Warm scan of 500 tickers under 1 s | use case | `test_scan.py` | 500 ticker, 1,260 bar random walk, template and 8 conditions (spec 0005 AC-7); the scan log line on the generated market (AC-8); deployed number via verify | `make smoke` | pending | |
 | B-1 | Percent stop fill | use case | `test_backtest.py` | one ticker, signal bar 3, low below the stop on bar 5 | Oracle | pending | |
 | B-2 | Gap through the stop fills at the open | use case | `test_backtest.py` | bar 5 opens below the stop | Oracle | pending | |
 | B-3 | ATR stop is fill minus k times ATR | use case | `test_backtest.py` | true range fixed at 2.0, signal bar 20 | Oracle | pending | |
@@ -70,16 +71,16 @@ Test files are under `tests/acceptance/`. "Oracle" means the owner's protected s
 | X-8 | Per trade metrics only, hand checked | use case | `test_exit_lab.py` | metrics recomputed from baseline trades | | pending | |
 | X-9 | Horizon exit at bar 60 and the warning | use case, UI | `test_exit_lab.py` | steady climb that never trips a 10% trail | Oracle | pending | |
 | X-10 | Random baseline counts, seed and edge | use case | `test_exit_lab.py` | five configs, seeds 42 and 7 | BE unit tests and Oracle B-10 (alive, never on a last bar; ruled 2026-10-07) | pending | |
-| U-1 | First visit: Breakout, results, synthetic banner | contract, UI | `test_ui.py`; Vitest `apps/web/tests/acceptance/data-mode-banner.test.tsx` (banner part) | `/meta`, `/templates`; health mock held, synthetic and failing, on every page; Breakout and results owed (features 8, 10) | | pending | |
-| U-2 | Survivors badge in live mode | UI | `test_ui.py`; Vitest `apps/web/tests/acceptance/data-mode-banner.test.tsx` | health mock `live`, on every page | | pending | |
+| U-1 | First visit: Breakout, results, synthetic banner | contract, UI | `test_ui.py`; Vitest `apps/web/tests/acceptance/data-mode-banner.test.tsx` (banner part), `apps/web/tests/acceptance/template-scan.test.tsx` (workspace) | `/meta`, `/templates`; health mock held, synthetic and failing, on every page; `/` on the mocks with `next/navigation` emulated: Breakout, conditions, "Hits on", the table, `?template` links, no scan before templates load, templates failure (spec 0005 AC-9, AC-10, AC-12); builder owed (feature 10) | | pending | |
+| U-2 | Survivors badge in live mode | UI | `test_ui.py` (pointer); Vitest `apps/web/tests/acceptance/data-mode-banner.test.tsx` | health mock `live`, on every page (spec 0004 AC-8: the shell banner) | | required | 2026-10-08 |
 | U-3 | Assumptions header lists every field | contract, UI | `test_ui.py` | OpenAPI `Assumptions`; Vitest owed | | pending | |
-| U-4 | Trial counter by structure, warning at 10 | use case, UI | `test_ui.py` | trial keys from a trade lab run; Vitest owed | | pending | |
-| U-5 | Warming up state after 1.5 s | UI | `test_ui.py`; Vitest `apps/web/tests/acceptance/warmup.test.tsx` | health mock delayed 2.5 s and held; `WarmupNotice` on fake timers (1,499 and 1,500 ms) | | pending | |
+| U-4 | Trial counter by structure, warning at 10 | use case, UI | `test_ui.py`; Vitest `apps/web/tests/acceptance/honesty.test.tsx` | trial keys from a trade lab run; `RunTrialCounter` on the mock `trial` blocks and seeded storage (spec 0004 AC-1 to AC-6, AC-9); counter inside the reports owed (features 9, 12) | | pending | |
+| U-5 | Warming up state after 1.5 s | UI | `test_ui.py`; Vitest `apps/web/tests/acceptance/warmup.test.tsx`, `apps/web/tests/acceptance/template-scan.test.tsx` (scan) | health mock delayed 2.5 s and held; `WarmupNotice` on fake timers (1,499 and 1,500 ms); the scan held 2.5 s on `/` (spec 0005 AC-12) | | pending | |
 | U-6 | Layout holds at 375 px | UI | `test_ui.py`; Vitest `apps/web/tests/acceptance/layout-375.test.tsx` (structure only) | every page, a 12 column `DataTable`, `FormRow` with 2 to 4 columns; builder rows owed (feature 10) | browser pass in `/check verify` (scroll width, real stacking) | pending | |
 | U-7 | 422 shows inline on the row or field | contract, UI | `test_ui.py`; Vitest `apps/web/tests/acceptance/errors-422.test.tsx` (shared helpers) | bad `n` on row 2, bad exit param; the 422 mocks through `fieldErrorsFrom422`; builder and exit editor owed (features 10, 12) | | pending | |
-| U-8 | Procedure note under the exit lab table | UI | `test_ui.py` | owed to Vitest | | pending | |
+| U-8 | Procedure note under the exit lab table | UI | `test_ui.py`; Vitest `apps/web/tests/acceptance/honesty.test.tsx` (words) | `ProcedureNote` and the `/ui` gallery (spec 0004 AC-7, AC-9); placement under the exit lab table owed (feature 12) | | pending | |
 
-**Totals:** 52 MUST criteria, 3 required, 49 pending. Stretch criteria (S-5, B-4R, B-12, X-5S, X-6) get a row when they are picked up.
+**Totals:** 52 MUST criteria, 7 required, 45 pending. Stretch criteria (S-5, B-4R, B-12, X-5S, X-6) get a row when they are picked up.
 
 ## Golden reference
 

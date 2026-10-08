@@ -36,3 +36,7 @@ build/
 
 # Local agent cache
 docs/.agent-cache/
+
+# Claude Code personal settings and agent worktrees
+.claude/settings.local.json
+.claude/worktrees/
