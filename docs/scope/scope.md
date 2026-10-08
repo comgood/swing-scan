@@ -203,10 +203,21 @@ Lane BE. Add the remaining exits behind the same exit interface: ATR stop, % tar
 **Done when:** each exit passes its oracle and the per bar precedence holds (B-3 to B-6). Rests on the spec from feature 9.
 - [ ] Build it: `/develop exit types`
 
-### 12. Exit lab · planned · needs a decision · GA
+### 12. Exit lab · planned · GA
 Lanes BE and FE. Hold one entry rule fixed and compare 2 to 6 exit setups on identical entries, trade by trade, with a random entry baseline run through the same exits.
 **Done when:** entries are identical across configs, metrics are per trade only with IS and OOS columns, the best IS config is highlighted, MAE and MFE guides use IS trades only, expectancy per bar, distinct entry weeks and horizon exits show, edge versus random is reported, and six configs finish within the time budget (X-1 to X-5, X-7 to X-10).
-- [ ] Design it (spec): `/architect exit lab`
+- [x] Design it (spec): `/architect exit lab` (proposed, pending owner sign-off)
+- [ ] Build it: `/develop exit lab`
+  - [ ] BE trade mode thread (after G2, PR #31): per trade loop over `walk_trade()` with the horizon, shared entries, per trade metrics, `best_is`, `guides_is`, warnings, still 501 for 2 to 6 configs (AC-1, AC-3 to AC-7, AC-9, AC-12)
+  - [ ] BE random baseline and edge, then drop the 501; B-10 trade mode and parity (AC-2, AC-8, AC-10)
+  - [ ] BE budget: 6 configs plus baseline under 10 s and 6 MB on seed 42 (AC-11)
+  - [ ] FE exit lab table on the mock: IS and OOS pairs, best IS highlight, R n/a footnote, horizon badge, edge and random rows, `ProcedureNote` directly under, guide row (AC-13 to AC-18)
+  - [ ] FE page wiring on `/backtest` after feature 9's report page: 2 to 6 config form, assumptions, trial counter, states, 375 px (AC-19, AC-20)
+- [ ] Verify it: `/check verify exit lab`
+- [ ] Test it: `/test exit lab`
+- [ ] Review it (fresh model): `/check review exit lab`
+- [ ] Document it: `/document exit lab`
+Spec [0009](../specs/0009-exit-lab/index.md)
 
 ### 13. Research honesty guards · in-progress
 Lanes FE and BE. The things that stop you fooling yourself: the structure keyed trial counter with a session total and a warning at 10, the procedure note under the exit lab table, and the data banners.
