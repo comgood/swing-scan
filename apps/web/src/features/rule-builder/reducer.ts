@@ -21,7 +21,8 @@ export interface BuilderState {
 }
 
 export type BuilderAction =
-  | { type: "load"; rule: Rule; source: RuleSource }
+  /** `dirty` marks a load that counts as an edit (a pasted rule), so it waits for "Run scan". */
+  | { type: "load"; rule: Rule; source: RuleSource; dirty?: boolean }
   | { type: "add" }
   | { type: "remove"; index: number }
   | { type: "setLeft"; index: number; operand: IndOperand }
@@ -83,7 +84,7 @@ function editRow(state: BuilderState, index: number, row: Partial<Condition>): B
 export function builderReducer(state: BuilderState, action: BuilderAction): BuilderState {
   switch (action.type) {
     case "load":
-      return initBuilder(action.rule, action.source);
+      return { ...initBuilder(action.rule, action.source), dirty: action.dirty ?? false };
     case "add": {
       if (state.rule.conditions.length >= MAX_CONDITIONS) return state;
       return {

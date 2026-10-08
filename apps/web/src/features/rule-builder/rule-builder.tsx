@@ -4,10 +4,11 @@
 // JSON panel. It is controlled: the caller owns `useReducer(builderReducer, …)`, so the scan
 // request is `state.rule` and nothing else holds a copy (R-8). 422s map to their fields (U-7).
 import type { IndicatorSpec } from "@swing-scan/api-client";
+import Link from "next/link";
 import { useId, useState } from "react";
 
 import { FormErrorSummary } from "@/components/form-error-summary";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import type { FieldErrors } from "@/lib/field-errors";
@@ -69,6 +70,8 @@ export interface RuleBuilderProps {
   /** Results on screen are for an earlier rule. */
   stale?: boolean;
   jsonOpen?: boolean;
+  /** "Backtest this rule" opens this link (`/backtest?r=…`, decision 12). */
+  backtestHref?: string;
 }
 
 export function RuleBuilder({
@@ -80,6 +83,7 @@ export function RuleBuilder({
   running,
   stale,
   jsonOpen,
+  backtestHref,
 }: RuleBuilderProps) {
   const { rule, rowIds } = state;
   const shown = builderErrors(errors, rule.conditions.length);
@@ -132,6 +136,11 @@ export function RuleBuilder({
             Run scan
           </Button>
         )}
+        {backtestHref && (
+          <Link href={backtestHref} className={buttonVariants({ variant: "outline" })}>
+            Backtest this rule
+          </Link>
+        )}
       </div>
       {stale && (
         <p role="status" className="text-sm text-muted-foreground">
@@ -142,7 +151,7 @@ export function RuleBuilder({
         rule={rule}
         names={names}
         defaultOpen={jsonOpen}
-        onLoad={(loaded) => dispatch({ type: "load", rule: loaded, source: "custom" })}
+        onLoad={(loaded) => dispatch({ type: "load", rule: loaded, source: "custom", dirty: true })}
       />
     </div>
   );

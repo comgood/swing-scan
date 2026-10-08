@@ -1,12 +1,36 @@
 "use client";
 
-// The workspace's two queries (spec 0005): the template list and the scan of one rule. Errors
-// reach the page as ApiRequestError, so ErrorState can say what went wrong (spec 0003 AC-10).
-import type { Rule, ScanResponse, TemplateOut } from "@swing-scan/api-client";
+// The workspace's queries (spec 0005, spec 0008): the template list, the indicator catalog and
+// the scan of one rule. Errors reach the page as ApiRequestError, so ErrorState can say what went
+// wrong (spec 0003 AC-10); a 422 also carries its field errors for the builder (U-7).
+import type { IndicatorSpec, Rule, ScanResponse, TemplateOut } from "@swing-scan/api-client";
 import { useQuery } from "@tanstack/react-query";
 
 import { api } from "@/lib/api";
-import { ApiRequestError, toApiError } from "@/lib/api-error";
+import { ApiRequestError, toApiError, type ApiError } from "@/lib/api-error";
+import { fieldErrorsFrom422, type FieldErrors } from "@/lib/field-errors";
+
+/** A scan the API rejected with 422: the rule is invalid, and these fields say where. */
+export class RuleRejectedError extends ApiRequestError {
+  constructor(
+    apiError: ApiError,
+    readonly fieldErrors: FieldErrors,
+  ) {
+    super(apiError);
+    this.name = "RuleRejectedError";
+  }
+}
+
+async function fetchIndicators({ signal }: { signal: AbortSignal }): Promise<IndicatorSpec[]> {
+  let result;
+  try {
+    result = await api.GET("/api/v1/indicators", { signal });
+  } catch (error) {
+    throw new ApiRequestError(toApiError(error));
+  }
+  if (!result.data) throw new ApiRequestError(toApiError(result));
+  return result.data;
+}
 
 async function fetchTemplates({ signal }: { signal: AbortSignal }): Promise<TemplateOut[]> {
   let result;
@@ -27,8 +51,21 @@ async function fetchScan(rule: Rule, signal: AbortSignal): Promise<ScanResponse>
   } catch (error) {
     throw new ApiRequestError(toApiError(error));
   }
+  if (result.response.status === 422) {
+    throw new RuleRejectedError(toApiError(result), fieldErrorsFrom422(result.error));
+  }
   if (!result.data) throw new ApiRequestError(toApiError(result));
   return result.data;
+}
+
+/** The indicator catalog never changes while the app is open. */
+export function useIndicators() {
+  return useQuery({
+    queryKey: ["indicators"],
+    queryFn: fetchIndicators,
+    staleTime: Infinity,
+    retry: false,
+  });
 }
 
 /** Templates never change while the app is open. Failures wait for "Try again". */
