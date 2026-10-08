@@ -79,7 +79,7 @@ Doc 02 section 15.4 puts these in `apps/web/tests/acceptance/` as Vitest tests a
 - U-7, shared helpers: `errors-422.test.tsx`. The 422 mocks come back through the `api` client and `fieldErrorsFrom422`, land on the named field (`aria-invalid`, the message as its description) and on no other row; a body level error shows in `FormErrorSummary`.
 
 **Still owed** (the UI does not exist yet, so the IDs stay `pending`):
-- U-1: the builder opens with Breakout and its scan results (features 8 and 10).
+- U-1: the workspace on `/` opening with Breakout and its scan results (feature 8) is written in `template-scan.test.tsx` through the `acIt` gate, so it runs but cannot fail CI until U-1 is `required`; the editable builder (feature 10) is still owed.
 - U-6: real builder rows stacking (feature 10), and anything that needs layout: `scrollWidth` at 375 px and the actual column stacking. jsdom has no CSS, so these stay a browser check in `/check verify` until Playwright is added (spec 0003 follow up).
 - U-7: the real builder row and exit config editor showing the error (features 10 and 12).
 - U-4: the counter inside the portfolio report (feature 9) and the exit lab report (feature 12), and no count for a failed run. `it.todo` in `honesty.test.tsx`.
@@ -95,6 +95,23 @@ Each ID keeps its pending placeholder in `tests/acceptance/`, plus a contract le
 The criteria name the deployed API (S-4, X-7) or a warm run (B-13). CI never calls the deployed API, so the acceptance tests time the use case in process on a seeded 500 ticker, 1,260 bar random walk.
 **Tests assume:** an in process pass is the CI gate, and the deployed numbers are a `/check verify` step (`make smoke`).
 **Ruling:** the split stands. The in process timing is the CI gate; the deployed numbers for S-4 and X-7 are a `/check verify` step after a deploy (`make smoke`). Once feature 7 lands, the tests switch to the real synthetic market.
+
+<a id="AC-10-url"></a>
+## U-1 (spec 0005 AC-10): how the workspace changes the URL
+
+**Status:** owed (a QA test fix, no ruling needed).
+AC-10 says switching templates uses `router.replace`. In the real browser (verify of #29 with #21, 2026-10-08), switching changes the URL with no new history entry, and an unknown `?template` is dropped from the URL. Both behaviors are correct. Two Vitest tests in `template-scan.test.tsx` (#23) emulate `next/navigation` and expect `useRouter().replace` to be called, and they never see the call, so the pending gate skips them.
+**Fix owed in #23:** assert on what the user sees, not on which API changed it: the URL's `template` parameter (from `window.location` or the emulated router, whichever moved) and `history.length` unchanged. Until then those two tests stay skipped and U-1 stays `pending`.
+
+<a id="feature-8"></a>
+## Feature 8 (template scan): readings the tests take
+
+**Status:** open (spec 0005 is In Progress; nothing here blocks the build).
+- **Exception type for a bad `as_of`.** Spec 0005 says `engine.api.scan` "raises the `as_of_not_session` validation error" but freezes no exception class. **Tests assume:** any exception whose message or `errors()` names `as_of_not_session`; the HTTP test checks the full 422 shape (`type`, `loc`, `ctx`).
+- **`/scan` needs a market, CI has none.** The API loads its market at import from `SYNTHETIC_DATA_DIR` (AC-8), and `make test` runs without `make data`. **Tests assume:** the route tests generate the seed 42 market into a temp folder with `python -m engine.synthetic` and run the real app in a fresh process with `SYNTHETIC_DATA_DIR` set. They read the stdout scan log line there too. A builder who wants the session `client` to carry a market can say so here.
+- **The UI words the spec leaves open.** AC-11 fixes the columns but not the header words for % change and volume ratio, nor the badge word beyond "New". **Tests assume:** headers matching `/change/i` and `/vol(ume)? ratio/i`, a `New` header, and a badge whose text is exactly `New`. The template dropdown is a combobox named `Template` (native `select` or Base UI).
+- **`next/navigation` in jsdom.** The tests emulate `useRouter`, `useSearchParams` and `usePathname` with a small store (`replace` updates the params and re renders). **Tests assume:** the workspace reads the template from `useSearchParams` and changes it with `router.replace`, as AC-10 says.
+- **Conditions text.** Each condition is checked as one element whose whole text is `<left label> <op> <right>`, e.g. `volume > 1.5×avg_volume(50)` and `close > 5` (spec 0005 value sourcing).
 
 <a id="U-4"></a>
 ## U-4: what the session total `M` counts, and which storage failure hides the counter

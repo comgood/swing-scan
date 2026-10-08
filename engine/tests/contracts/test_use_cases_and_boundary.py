@@ -1,4 +1,4 @@
-"""AC-15: use case stubs and the contracts package's import boundary."""
+"""AC-15: use cases and the contracts package's import boundary."""
 
 from __future__ import annotations
 
@@ -33,22 +33,24 @@ def market() -> object:
     return make_market({"AAA": FrameSpec(1, [10.0, 11.0])})
 
 
-def test_scan_stub_names_feature_8(market: object) -> None:
-    with pytest.raises(api.NotYetImplemented) as caught:
-        api.scan(ScanRequest(rule=TEMPLATES[0].rule), market)  # type: ignore[arg-type]
-    assert caught.value.feature == 8
+def test_scan_is_implemented(market: object) -> None:
+    result = api.scan(ScanRequest(rule=TEMPLATES[0].rule), market)  # type: ignore[arg-type]
+    assert result.rows == []  # two bars: highest(252)[1] is still warming up
 
 
-def test_backtest_stub_names_feature_9(market: object) -> None:
+def test_backtest_trade_mode_names_feature_12(market: object) -> None:
     request = BacktestRequest.model_validate(
         {
             "rule": TEMPLATES[0].rule.model_dump(),
-            "configs": [{"name": "A", "exits": [{"type": "time"}]}],
+            "configs": [
+                {"name": "A", "exits": [{"type": "time"}]},
+                {"name": "B", "exits": [{"type": "time"}]},
+            ],
         }
     )
     with pytest.raises(api.NotYetImplemented) as caught:
         api.backtest(request, market)  # type: ignore[arg-type]
-    assert caught.value.feature == 9
+    assert caught.value.feature == 12
 
 
 def test_not_yet_implemented_is_not_a_not_implemented_error() -> None:
