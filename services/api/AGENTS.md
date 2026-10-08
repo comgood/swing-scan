@@ -12,6 +12,9 @@ The `swing-api` package (import name `api`): a thin FastAPI layer over `engine`,
 | `src/api/settings.py` | Environment settings, parsed once at import |
 | `Dockerfile` | Two stage Lambda image (synthetic data generated in stage 1) |
 | `tests/test_health.py` | Health route test |
+| `src/api/state.py` | The one `Market`, read with `read_market()` and warmed at import; `None` (routes answer 501) only when no dataset exists |
+| `src/api/routes/scan.py` | `POST /scan`, and the one JSON `api.scan` log line per successful scan |
+| `src/api/routes/backtest.py` | `POST /backtest`; maps `range_outside_data` to a 422 like the scan route maps `as_of_not_session` |
 
 ## Commands
 
@@ -36,6 +39,7 @@ make smoke-image               # run the built image, check health and one templ
 - `DATA_MODE` is `synthetic` only until scope feature 14; live mode must refuse to start on Lambda, in CI, or bound to anything but `127.0.0.1` (D-5).
 - Function URLs do not compress responses, so `GZipMiddleware` stays on.
 - After any schema change run `make openapi` and `make gen-client` and commit both outputs; CI fails on a diff.
+- `contracts/mocks/` is generated from the running app (`scripts/make_mocks.py`), so changing an error body, such as the 501 detail, changes a mock too. Run `make contracts` and commit the result; `make contracts-check` fails on a stale mock.
 - The image generates the market into `/data` and sets `SYNTHETIC_DATA_DIR=/data`; routes load it with `engine.data.read_market()` (wired with feature 8, spec 0005).
 - On Apple Silicon `make build-api` (linux/amd64) segfaults at the data step: Polars crashes under x86 emulation. Locally run `make build-api-local` then `make smoke-image API_IMAGE=swing-scan-api:local-arm64` (arm64 copy, not the deploy image); the real x86 build and smoke run in the CI `api-image` job on every PR.
 
