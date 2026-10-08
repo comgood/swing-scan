@@ -173,7 +173,7 @@ Lanes BE and FE. The portfolio simulator with next open fills, % stop and time e
 - [x] Design it (spec): `/architect portfolio backtest core` (proposed, pending owner sign-off)
 - [ ] Build it: `/develop portfolio backtest core`
   - [x] BE thread: `Exit` protocol, one `step()`, `stop_pct`, `time`, delisting, `end_of_test`, `walk_trade()`, the day loop and a minimal `PortfolioResult` behind `/backtest` (AC-1 to AC-3, AC-8, AC-11)
-  - [ ] BE portfolio rules and metrics: ranking, slots, sizing, window cut, IS and OOS, metrics, curves, truncation, `trial`, `assumptions`, the 3 s and 6 MB budget (AC-4 to AC-7, AC-9, AC-10); B-9 and B-10 portfolio turn green with feature 11's exits
+  - [x] BE portfolio rules and metrics: ranking, slots, sizing, window cut, IS and OOS, metrics, curves, truncation, `trial`, `assumptions`, the 3 s and 6 MB budget (AC-4 to AC-7, AC-9, AC-10); B-9 and B-10 portfolio turn green with feature 11's exits
   - [ ] FE report page: `/backtest` with the exit form, assumptions header, IS and OOS metrics, equity chart, trade list, trial counter and every state, on mocks first (AC-12 to AC-17)
 - [ ] Verify it: `/check verify portfolio backtest core`
 - [ ] Test it: `/test portfolio backtest core`
