@@ -30,6 +30,7 @@ import { Plus } from "lucide-react";
 
 import { ProcedureNote, TrialCounter } from "@/features/honesty";
 
+import { BacktestDemo } from "./backtest-demo";
 import { HonestyDemo } from "./honesty-demo";
 import { RuleBuilderStates } from "./rule-builder-states";
 
@@ -118,7 +119,7 @@ export function Gallery() {
         <h1 className="text-2xl font-semibold">UI gallery</h1>
         <p className="text-sm text-muted-foreground">
           Every foundation component in every state, with invented data (spec 0003), plus the
-          research honesty guards (spec 0004).
+          research honesty guards (spec 0004) and the backtest report parts (spec 0007).
         </p>
       </header>
 
@@ -337,6 +338,14 @@ export function Gallery() {
           <Banner variant="warning">{SYNTHETIC_TEXT}</Banner>
           <Banner variant="warning">{LIVE_TEXT}</Banner>
         </div>
+      </GallerySection>
+
+      <GallerySection id="backtest" title="Backtest report">
+        <p className="text-sm text-muted-foreground">
+          The assumptions header with its trial counter, IS beside OOS metrics, and the trade list
+          in full and truncated (spec 0007). The equity chart arrives later.
+        </p>
+        <BacktestDemo />
       </GallerySection>
 
       <GallerySection id="rule-builder" title="Rule builder">

@@ -63,7 +63,7 @@ describe("BacktestReport", () => {
       await within(header).findByText(/^Trial #1 for this rule structure/),
     ).toBeInTheDocument();
 
-    const table = screen.getByRole("table");
+    const table = within(screen.getByRole("region", { name: "Results" })).getByRole("table");
     const columns = within(table)
       .getAllByRole("columnheader")
       .map((c) => c.textContent);
@@ -91,6 +91,7 @@ describe("BacktestReport", () => {
     expect(await screen.findByText("No trades")).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Assumptions" })).toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Trades" })).not.toBeInTheDocument();
   });
 
   it("says when the trade list is truncated", async () => {
@@ -101,6 +102,8 @@ describe("BacktestReport", () => {
     expect(
       await screen.findByText(mocks.backtestTruncated.warnings[0]!.message),
     ).toBeInTheDocument();
+    const trades = screen.getByRole("region", { name: "Trades" });
+    expect(within(trades).getByText(/^Showing 2,000 of 2,600 trades/)).toBeInTheDocument();
   });
 
   it("puts a 422 on the field it belongs to", async () => {

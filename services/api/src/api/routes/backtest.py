@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from fastapi import APIRouter
+from fastapi.exceptions import RequestValidationError
+from pydantic import ValidationError
 
 from engine import api as use_cases
 from engine.api import NotYetImplemented
@@ -22,4 +24,11 @@ def backtest(request: BacktestRequest) -> BacktestResponse:
     """1 config runs a portfolio backtest; 2 to 6 configs run the exit lab (trade mode)."""
     if state.market is None:
         raise NotYetImplemented(7, "Loading the market")
-    return use_cases.backtest(request, state.market)
+    try:
+        return use_cases.backtest(request, state.market)
+    except ValidationError as exc:
+        # `range_outside_data`: the same 422 body as any other request error, under `body`.
+        errors = exc.errors(include_url=False)
+        raise RequestValidationError(
+            [{**error, "loc": ("body", *error["loc"])} for error in errors]
+        ) from exc
