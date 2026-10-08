@@ -62,4 +62,5 @@ class BarArrays:
             is_delisting=bool(self.is_delisting[row]),
             is_final=is_final or bool(self.is_last[row]),
             horizon=horizon,
+            row=row,
         )

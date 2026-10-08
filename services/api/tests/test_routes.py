@@ -49,13 +49,12 @@ def test_trade_mode_is_501_naming_feature_12(count: int, monkeypatch: pytest.Mon
     assert "feature 12" in res.json()["detail"]
 
 
-def test_a_feature_11_exit_is_501_naming_feature_11(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_a_feature_11_exit_runs(monkeypatch: pytest.MonkeyPatch) -> None:
     _fixture_market(monkeypatch)
     trail = [{"name": "T", "exits": [{"type": "trail_pct", "pct": 10}]}]
     res = client.post("/api/v1/backtest", json={"rule": RULE, "configs": trail})
-    assert res.status_code == 501
-    assert "trail_pct" in res.json()["detail"]
-    assert "feature 11" in res.json()["detail"]
+    assert res.status_code == 200
+    assert res.json()["mode"] == "portfolio"
 
 
 def test_one_config_runs_the_portfolio_backtest(monkeypatch: pytest.MonkeyPatch) -> None:

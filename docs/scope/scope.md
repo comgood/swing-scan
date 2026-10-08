@@ -23,7 +23,7 @@ _Source of truth: acceptance criteria IDs (D, R, S, B, X, U) and settled default
 | 8 | Template scan | Slice 1 | in-progress |
 | 9 | Portfolio backtest core | Slice 1 | in-progress |
 | 10 | Rule builder | Slice 2 | in-progress |
-| 11 | Exit types | Slice 3 | planned |
+| 11 | Exit types | Slice 3 | in-progress |
 | 12 | Exit lab | Slice 3 | planned |
 | 13 | Research honesty guards | Slice 3 | in-progress |
 | 14 | Live research mode (local) | Slice 4 | planned |
@@ -198,10 +198,11 @@ Spec [0008](../specs/0008-rule-builder/index.md)
 
 ## Slice 3: Exit research
 
-### 11. Exit types · planned · GA
+### 11. Exit types · in-progress · GA
 Lane BE. Add the remaining exits behind the same exit interface: ATR stop, % target, trailing stop, and close below a moving average filled at the next open, with stops checked before targets.
 **Done when:** each exit passes its oracle and the per bar precedence holds (B-3 to B-6). Rests on the spec from feature 9.
-- [ ] Build it: `/develop exit types`
+- [x] Build it: `/develop exit types`
+Spec [0007](../specs/0007-portfolio-backtest-core/index.md) · code in `engine/src/engine/exits/`
 
 ### 12. Exit lab · planned · GA
 Lanes BE and FE. Hold one entry rule fixed and compare 2 to 6 exit setups on identical entries, trade by trade, with a random entry baseline run through the same exits.

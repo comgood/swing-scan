@@ -43,7 +43,7 @@ from .contracts import (
 )
 from .contracts._errors import error_at
 from .contracts.trial import pair_key, structure_key
-from .exits import ExitNotBuilt, build_exits
+from .exits import build_exits
 from .indicators import IndicatorKey, cache_for, dependencies, key_of
 from .indicators.compute import POS
 from .metrics import CurveStats, curve_stats, exposure_pct, thin, trade_stats
@@ -294,15 +294,12 @@ def _warnings(n_trades: int) -> list[ResultWarning]:
 
 def _portfolio(request: BacktestRequest, market: Market) -> PortfolioResult:
     config = request.configs[0]
-    try:
-        exits = build_exits(config)
-    except ExitNotBuilt as missing:
-        raise NotYetImplemented(missing.feature, f"The {missing.exit_type} exit") from missing
     sim = request.sim
     slip = sim.slippage_bps / 10_000
     market, sessions = _window(market, sim.start, sim.end)
     cache = cache_for(market)
     bars = BarArrays.build(market, cache)
+    exits = build_exits(config, cache.get)
 
     compiled = compile_rule(request.rule, cache)
     signals = entry_signals(cache.pos, cache.is_last, compiled.valid, compiled.value)
@@ -392,9 +389,8 @@ def _portfolio(request: BacktestRequest, market: Market) -> PortfolioResult:
 
 def backtest(request: BacktestRequest, market: Market) -> BacktestResponse:
     """1 config runs the portfolio day loop (feature 9); 2 to 6 configs are the exit lab,
-    which answers `NotYetImplemented` until feature 12. Exit types feature 11 builds answer
-    `NotYetImplemented` too. A `sim.start` or `sim.end` outside the data raises the
-    `range_outside_data` `ValidationError`."""
+    which answers `NotYetImplemented` until feature 12. A `sim.start` or `sim.end` outside
+    the data raises the `range_outside_data` `ValidationError`."""
     if len(request.configs) > 1:
         raise NotYetImplemented(12, "Trade mode (the exit lab)")
     return _portfolio(request, market)
