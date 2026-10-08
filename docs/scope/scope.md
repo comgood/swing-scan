@@ -149,8 +149,8 @@ Generated data, one template scan, one simple backtest, shown on the deployed pa
 ### 7. Synthetic market · done
 Lane DI. A seeded generated market of 500 invented tickers over 5 years with regimes, planted delistings, and a demo index, built into the API image.
 **Done when:** the same seed gives identical data, every bar passes sanity checks, and at least one bear segment and 20 delisted tickers exist (D-1 to D-3).
-- [x] Design it (spec): `/architect synthetic market` (ratified, proposed, pending owner sign-off)
-- [x] Build it: `/develop synthetic market` · spec [0006](../specs/0006-synthetic-market/index.md) (ratified, proposed, pending owner sign-off) · code in `engine/src/engine/synthetic/`, `engine/src/engine/data/`
+- [x] Design it (spec): `/architect synthetic market` (signed off by the owner 2026-10-08)
+- [x] Build it: `/develop synthetic market` · spec [0006](../specs/0006-synthetic-market/index.md) (signed off by the owner 2026-10-08) · code in `engine/src/engine/synthetic/`, `engine/src/engine/data/`
 - [x] Verify it: `/check verify synthetic market` (D-1 to D-3 pass; the linux/amd64 image build still needs an x86 runner, since it segfaults under emulation on Apple Silicon. See [the report](../reviews/2026-10-08-verify-synthetic-market.md))
 - [x] Test it: `/test synthetic market` (54 engine tests pass; QA still owes the D-1 to D-3 acceptance hook)
 
@@ -170,7 +170,7 @@ Spec [0005](../specs/0005-template-scan/index.md)
 ### 9. Portfolio backtest core · in-progress · GA
 Lanes BE and FE. The portfolio simulator with next open fills, % stop and time exit, equal weight, max positions, slippage, delisting exits, IS and OOS split, an equity curve against the benchmark, a trade list with MAE and MFE, and the report page with its assumptions header.
 **Done when:** all approved oracles pass, results are deterministic, the top ranked signals fill free slots, and the report shows IS and OOS side by side with the assumptions header (B-1, B-2, B-7 to B-11, B-13 to B-16, U-3).
-- [x] Design it (spec): `/architect portfolio backtest core` (proposed, pending owner sign-off)
+- [x] Design it (spec): `/architect portfolio backtest core` (signed off by the owner 2026-10-08)
 - [ ] Build it: `/develop portfolio backtest core`
   - [x] BE thread: `Exit` protocol, one `step()`, `stop_pct`, `time`, delisting, `end_of_test`, `walk_trade()`, the day loop and a minimal `PortfolioResult` behind `/backtest` (AC-1 to AC-3, AC-8, AC-11)
   - [x] BE portfolio rules and metrics: ranking, slots, sizing, window cut, IS and OOS, metrics, curves, truncation, `trial`, `assumptions`, the 3 s and 6 MB budget (AC-4 to AC-7, AC-9, AC-10); B-9 and B-10 portfolio turn green with feature 11's exits
@@ -186,7 +186,7 @@ Spec [0007](../specs/0007-portfolio-backtest-core/index.md)
 ### 10. Rule builder · in-progress
 Lanes BE and FE. Build your own entry rules: a flat AND list of up to 8 conditions over 12 indicators, with numbers or indicators on the right side, crosses, offsets, and clear validation. The templates load into it as editable starting points.
 **Done when:** rules round trip as JSON, crosses and offsets behave as specified, warm up bars evaluate as not computable, invalid rules return a clear 422 shown on the right row, and the structure key ignores numbers (R-1 to R-9, U-7).
-- [x] Design it (spec): `/architect rule builder` (proposed, pending owner sign-off)
+- [x] Design it (spec): `/architect rule builder` (signed off by the owner 2026-10-08)
 - [ ] Build it: `/develop rule builder`
   - [x] FE thread: reducer over the contract `Rule`, one editable row, "Run scan" on the mocks, UI to JSON parity (AC-4, AC-8)
   - [x] FE rows and links: every field, add and remove limits, catalog hints, 422 on the right field, `?template` to `?r=` links, bad link fallback, JSON panel (AC-1 to AC-3, AC-5 to AC-7, AC-9)
@@ -207,7 +207,7 @@ Spec [0007](../specs/0007-portfolio-backtest-core/index.md) · code in `engine/s
 ### 12. Exit lab · planned · GA
 Lanes BE and FE. Hold one entry rule fixed and compare 2 to 6 exit setups on identical entries, trade by trade, with a random entry baseline run through the same exits.
 **Done when:** entries are identical across configs, metrics are per trade only with IS and OOS columns, the best IS config is highlighted, MAE and MFE guides use IS trades only, expectancy per bar, distinct entry weeks and horizon exits show, edge versus random is reported, and six configs finish within the time budget (X-1 to X-5, X-7 to X-10).
-- [x] Design it (spec): `/architect exit lab` (proposed, pending owner sign-off)
+- [x] Design it (spec): `/architect exit lab` (signed off by the owner 2026-10-08)
 - [ ] Build it: `/develop exit lab`
   - [ ] BE trade mode thread (after G2, PR #31): per trade loop over `walk_trade()` with the horizon, shared entries, per trade metrics, `best_is`, `guides_is`, warnings, still 501 for 2 to 6 configs (AC-1, AC-3 to AC-7, AC-9, AC-12)
   - [ ] BE random baseline and edge, then drop the 501; B-10 trade mode and parity (AC-2, AC-8, AC-10)
@@ -223,13 +223,13 @@ Spec [0009](../specs/0009-exit-lab/index.md)
 ### 13. Research honesty guards · in-progress
 Lanes FE and BE. The things that stop you fooling yourself: the structure keyed trial counter with a session total and a warning at 10, the procedure note under the exit lab table, and the data banners.
 **Done when:** tweaking only numbers still counts toward the same rule's trials, the warning shows at 10, the procedure note renders, and the synthetic and survivors only banners appear in the right modes (U-2, U-4, U-8).
-- [x] Design it (spec): `/architect research honesty guards` (ratified, proposed, pending owner sign-off)
+- [x] Design it (spec): `/architect research honesty guards` (signed off by the owner 2026-10-08)
 - [x] Build it: `/develop research honesty guards`
   - [x] Trial store, counter and procedure note in `features/honesty/` (U-4, U-8; spec 0004 AC-1 to AC-7)
   - [x] `/ui` gallery with every state, U-2 shell banner confirmed (spec 0004 AC-8, AC-9)
 - [x] Verify it: `/check verify research honesty guards`
 - [x] Test it: `/test research honesty guards`
-Spec [0004](../specs/0004-research-honesty-guards/index.md) (ratified by `/architect`, proposed, pending owner sign-off) · code in `apps/web/src/features/honesty/` · placed by features 9 and 12
+Spec [0004](../specs/0004-research-honesty-guards/index.md) (signed off by the owner 2026-10-08) · code in `apps/web/src/features/honesty/` · placed by features 9 and 12
 
 ## Slice 4: Live research mode
 

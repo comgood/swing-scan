@@ -1,7 +1,7 @@
 # 0008. Build the rule builder as typed condition rows over the frozen rule contract
 
 **Date**: 2026-10-08
-**Status**: Proposed, pending owner sign-off
+**Status**: In Progress (owner signed off 2026-10-08)
 **Authorized by**: /architect, run unattended overnight by the orchestrator lane; every open
 question took /architect's recommended answer (listed below) and waits for the owner
 
@@ -16,7 +16,7 @@ paste it. The engine already accepts every valid rule (spec 0005), so this is mo
 FE lane builds it against the mocks now, and the BE lane adds the R-3 to R-7 tests on custom rules
 once feature 8's rule evaluator merges.
 
-## Assumed decisions (pending owner sign-off)
+## Assumed decisions (signed off by the owner, 2026-10-08)
 
 The owner could not answer during this run. Each question took /architect's recommended answer;
 the runner up is in [rationale.md](rationale.md).
@@ -259,6 +259,6 @@ starts when feature 8's evaluator merges.
 
 ## Follow-up
 
-- [ ] Owner sign-off on the thirteen assumed decisions above.
+- [x] Owner sign-off on the thirteen assumed decisions above.
 - [ ] Feature 9 FE reads `?r=` on `/backtest` once this feature merges.
 - [ ] OR groups stay Stretch (ADR-013); the reducer keeps a flat list.

@@ -363,7 +363,7 @@ Other criteria (B-11, B-13, R-1, R-6, R-8, R-9, R-10, S-1, S-2, S-4, X-2 to X-5,
 | UI | Warm-up state after 1.5 s (U-5). 375 px (U-6) |
 
 **Exit-lab work and payload:**
-- Strategy entries are expected at 5–15k on synthetic data (capped at 25k with a warning), plus the same number of random entries.
+- Strategy entries are expected at 5–15k on synthetic data (no cap: the frozen `WarningCode` has none, so above 25k a run is just slower; spec 0009 assumed decision 7, signed off 2026-10-08), plus the same number of random entries.
 - Each trade runs ≤ 60 bars in the per-trade loop, which breaks early at the exit. That's about 2 × 15k × 6 × ~15 bars ≈ 2.7M steps worst case.
 - If X-7 misses on Day 4, ADR-016's vectorized per-trade windows (E × 60 arrays) cost about 2 h.
 - Payload: aggregates + guides + ≤ 2,000 baseline trades ≈ 150–350 KB gzipped.

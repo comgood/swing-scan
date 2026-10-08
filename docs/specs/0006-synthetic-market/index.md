@@ -1,7 +1,7 @@
 # 0006. Generate the synthetic market from a seeded NumPy factor model at build time
 
 **Date**: 2026-10-07 (assumed by /develop) · ratified by /architect 2026-10-08
-**Status**: Proposed, pending owner sign-off
+**Status**: Accepted (owner signed off 2026-10-08)
 **Authorized by**: owner's standing instruction to the DI lane agent, during /develop; ratification
 run unattended overnight, every open question took /architect's recommended answer (listed below)
 
@@ -15,7 +15,7 @@ generated when the API image builds and when you run `make data`; it is never co
 already exists in `engine/src/engine/synthetic/` and `engine/src/engine/data/`; this ratification
 confirms what was built, writes every number down, and records why.
 
-## Assumed decisions (pending owner sign-off)
+## Assumed decisions (signed off by the owner, 2026-10-08)
 
 The owner could not answer during this run. Each question took /architect's recommended answer.
 Where the earlier assumed text and the code disagreed, the recommendation was to keep the code
@@ -226,7 +226,7 @@ All tasks are built (feature 7, commit 6985f06); listed so each AC traces to cod
 
 ## Follow-up
 
-- [ ] Owner sign-off on the nine assumed decisions above, then the status follows the feature
+- [x] Owner sign-off on the nine assumed decisions above, then the status follows the feature
   lifecycle (`In Progress` until feature 7 is `done`, then `Accepted`).
 - Text corrected to match the code (no code change needed): the assumed spec said the bear starts
   between sessions 300 and 700 (code: 302 to 693), listings land in sessions 252 to 1,000 (code:
