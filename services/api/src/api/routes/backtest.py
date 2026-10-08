@@ -1,4 +1,4 @@
-"""`POST /backtest`: one config runs the portfolio backtest; 501 for what is not built yet."""
+"""`POST /backtest`: 1 config is a portfolio backtest, 2 to 6 the exit lab; 501 with no market."""
 
 from __future__ import annotations
 
