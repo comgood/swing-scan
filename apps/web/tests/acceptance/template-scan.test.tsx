@@ -21,17 +21,39 @@ import { renderPage, SYNTHETIC_BANNER, WARMUP_TEXT } from "./pages";
 
 // ------------------------------------------------------------------ next/navigation, emulated
 
+// The App Router keeps `useSearchParams` in step with `window.history.pushState` and
+// `replaceState` (spec 0005 AC-10 updates `?template` with `history.replaceState`). The emulation
+// does the same: the URL lives in jsdom's `window.location`, the history methods are wrapped to
+// re render subscribers, and `router.replace` / `push` go through them. Tests assert on the URL and
+// on `history.length`, never on which API the workspace called (ac-questions.md#AC-10-url).
 const nav = vi.hoisted(() => {
   const listeners = new Set<() => void>();
-  const state = { search: "", params: new URLSearchParams() };
-  const set = (search: string) => {
-    state.search = search.replace(/^\?/, "");
-    state.params = new URLSearchParams(state.search);
-    listeners.forEach((l) => l());
+  let cached = { search: "\u0000", params: new URLSearchParams() };
+  const params = () => {
+    const search = window.location.search;
+    if (cached.search !== search) cached = { search, params: new URLSearchParams(search) };
+    return cached.params;
   };
-  const replace = vi.fn((href: string) => set(new URL(href, "http://app.test/").search));
-  const push = vi.fn((href: string) => set(new URL(href, "http://app.test/").search));
-  return { listeners, state, set, replace, push };
+  const notify = () => listeners.forEach((l) => l());
+  const original = {
+    push: window.history.pushState.bind(window.history),
+    replace: window.history.replaceState.bind(window.history),
+  };
+  window.history.pushState = (...args: Parameters<History["pushState"]>) => {
+    original.push(...args);
+    notify();
+  };
+  window.history.replaceState = (...args: Parameters<History["replaceState"]>) => {
+    original.replace(...args);
+    notify();
+  };
+  /** Open the page at `search` as a fresh visit (the setup itself adds no history entry). */
+  const set = (search: string) => {
+    const q = search.replace(/^\?/, "");
+    original.replace(null, "", q ? `/?${q}` : "/");
+    notify();
+  };
+  return { listeners, params, set };
 });
 
 vi.mock("next/navigation", async (importOriginal) => {
@@ -41,8 +63,8 @@ vi.mock("next/navigation", async (importOriginal) => {
     return () => nav.listeners.delete(l);
   };
   const router = {
-    replace: nav.replace,
-    push: nav.push,
+    replace: (href: string) => window.history.replaceState(null, "", href),
+    push: (href: string) => window.history.pushState(null, "", href),
     prefetch: () => {},
     back: () => {},
     forward: () => {},
@@ -52,12 +74,7 @@ vi.mock("next/navigation", async (importOriginal) => {
     ...actual,
     useRouter: () => router,
     usePathname: () => "/",
-    useSearchParams: () =>
-      useSyncExternalStore(
-        subscribe,
-        () => nav.state.params,
-        () => nav.state.params,
-      ),
+    useSearchParams: () => useSyncExternalStore(subscribe, nav.params, nav.params),
   };
 });
 
@@ -90,8 +107,12 @@ function recordScans(body: ScanResponse = mocks.scan, init: { delayMs?: number }
   );
 }
 
+/** History entries when the page opened; AC-10 updates the URL without adding any. */
+let openedHistoryLength = 0;
+
 function openAt(search = "") {
   nav.set(search);
+  openedHistoryLength = window.history.length;
   return renderPage(Home);
 }
 
@@ -131,10 +152,9 @@ async function chooseTemplate(name: string) {
   await user.click(await screen.findByRole("option", { name }));
 }
 
-function lastReplaceTemplate(): string | null {
-  const href = nav.replace.mock.lastCall?.[0];
-  expect(href).toBeDefined();
-  return new URL(String(href), "http://app.test/").searchParams.get("template");
+/** `?template` in the address bar right now. */
+function urlTemplate(): string | null {
+  return new URLSearchParams(window.location.search).get("template");
 }
 
 async function resultsTable(): Promise<HTMLElement> {
@@ -150,8 +170,6 @@ function bodyRows(table: HTMLElement): HTMLElement[] {
 
 beforeEach(() => {
   scanBodies = [];
-  nav.replace.mockClear();
-  nav.push.mockClear();
 });
 
 // ------------------------------------------------------------------ U-1 first visit
@@ -190,8 +208,9 @@ describe("U-1 first visit opens Breakout with its results", () => {
       recordScans();
       openAt("?template=nope");
       await waitFor(async () => expect(selectedText(await templateBox())).toContain(BREAKOUT.name));
-      await waitFor(() => expect(nav.replace).toHaveBeenCalled());
-      expect(lastReplaceTemplate()).toBeNull();
+      await waitFor(() => expect(window.location.search).toBe(""));
+      expect(urlTemplate()).toBeNull();
+      expect(window.history.length).toBe(openedHistoryLength); // replaced, not pushed
       await waitFor(() => expect(scanBodies.length).toBeGreaterThan(0));
       expect(scanBodies.at(-1)?.rule).toEqual(BREAKOUT.rule);
     },
@@ -218,18 +237,44 @@ describe("U-1 first visit opens Breakout with its results", () => {
     );
   });
 
-  acIt(["U-1"], "U-1: switching templates replaces the URL and scans the new rule", async () => {
-    recordScans();
+  acIt(["U-1"], "U-1: switching templates rewrites ?template in place and scans it", async () => {
+    // Each template answers with its own tickers, so the rows on screen show which scan they
+    // are. Switching back to a template already scanned may be served from the query cache
+    // (the market is fixed, so the answer is the same): the test checks the rows the user
+    // sees, not that a second request went out (ac-questions.md#AC-10-url).
+    const rowsFor = (prefix: string) =>
+      mocks.scan.rows.map((row, i) => ({ ...row, ticker: `${prefix}${i}` }));
+    const answers: Record<string, ScanResponse> = {
+      [JSON.stringify(BREAKOUT.rule)]: { ...mocks.scan, rows: rowsFor("BRK") },
+      [JSON.stringify(PULLBACK.rule)]: { ...mocks.scan, rows: rowsFor("PUL") },
+    };
+    server.use(
+      http.post("*/api/v1/scan", async ({ request }) => {
+        const body = (await request.json()) as { rule: Rule };
+        scanBodies.push(body);
+        const answer = answers[JSON.stringify(body.rule)];
+        return answer ? HttpResponse.json(answer) : HttpResponse.json({}, { status: 500 });
+      }),
+    );
+    const firstTicker = async () => {
+      const rows = bodyRows(await resultsTable());
+      return norm(rows[0]?.textContent);
+    };
     openAt();
     await screen.findByText(HITS_TITLE, {}, { timeout: 2000 });
+    await waitFor(async () => expect(await firstTicker()).toContain("BRK0"));
+
     await chooseTemplate(PULLBACK.name);
-    await waitFor(() => expect(lastReplaceTemplate()).toBe("pullback_ema21"));
-    expect(nav.push).not.toHaveBeenCalled();
+    await waitFor(() => expect(urlTemplate()).toBe("pullback_ema21"));
+    expect(window.history.length).toBe(openedHistoryLength); // no new history entry
     await waitFor(() => expect(scanBodies.at(-1)?.rule).toEqual(PULLBACK.rule));
+    await waitFor(async () => expect(await firstTicker()).toContain("PUL0"));
 
     await chooseTemplate(BREAKOUT.name);
-    await waitFor(() => expect(lastReplaceTemplate()).toBeNull()); // Breakout has no parameter
-    await waitFor(() => expect(scanBodies.at(-1)?.rule).toEqual(BREAKOUT.rule));
+    await waitFor(() => expect(urlTemplate()).toBeNull()); // Breakout has no parameter
+    expect(window.history.length).toBe(openedHistoryLength);
+    await waitFor(async () => expect(await firstTicker()).toContain("BRK0"));
+    expect(scanBodies.every((b) => JSON.stringify(b.rule) in answers)).toBe(true);
   });
 
   acIt(["U-1"], "U-1: a failed templates request shows Try again, which refetches", async () => {
