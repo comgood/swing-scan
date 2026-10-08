@@ -1,7 +1,7 @@
 # 0007. Build the portfolio backtest as a day loop over one shared exit `step()`
 
 **Date**: 2026-10-08
-**Status**: Proposed, pending owner sign-off
+**Status**: In Progress (owner signed off 2026-10-08)
 **Authorized by**: /architect, run unattended overnight by the orchestrator lane; every open
 question took /architect's recommended answer (listed below) and waits for the owner
 
@@ -16,7 +16,7 @@ assumptions header, the metrics, the chart, the trades and the trial counter. Th
 (BE lane) is built first against the approved oracles in `tests/oracle/` (gate G1, PR #9); the
 report page (FE lane) is built in parallel against the existing mocks.
 
-## Assumed decisions (pending owner sign-off)
+## Assumed decisions (signed off by the owner, 2026-10-08)
 
 The owner could not answer during this run. Each question took /architect's recommended answer;
 the runner up is in [rationale.md](rationale.md).
@@ -327,7 +327,7 @@ until the API is real.
 
 ## Follow-up
 
-- [ ] Owner sign-off on the twelve assumed decisions above.
+- [x] Owner sign-off on the twelve assumed decisions above.
 - [ ] Feature 11 adds the four remaining `Exit` classes against this spec's `step()`; B-9 and
   B-10 (portfolio) turn green there.
 - [ ] Feature 12 builds the trade mode loop on `walk_trade()` and makes the parity oracle green.

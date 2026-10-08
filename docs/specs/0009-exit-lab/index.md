@@ -1,7 +1,7 @@
 # 0009. Build the exit lab as a per trade loop over spec 0007's `walk_trade()` and one `step()`
 
 **Date**: 2026-10-08
-**Status**: Proposed, pending owner sign-off
+**Status**: In Progress (owner signed off 2026-10-08)
 **Authorized by**: /architect, run unattended overnight by the orchestrator lane; every open
 question took /architect's recommended answer (listed below) and waits for the owner
 
@@ -16,7 +16,7 @@ only. The engine part (BE lane) starts once feature 9's simulator is on `main` (
 #31); the exit lab table (FE lane) starts now against `contracts/mocks/backtest.trade_lab.json`.
 The contract (`TradeLabResult`, spec 0002) is already frozen, so no contract change is needed.
 
-## Assumed decisions (pending owner sign-off)
+## Assumed decisions (signed off by the owner, 2026-10-08)
 
 The owner could not answer during this run. Each question took /architect's recommended answer;
 the runner up is in [rationale.md](rationale.md).
@@ -328,7 +328,7 @@ Tracer Bullet, thickening spec 0007's thread. FE runs now on the mocks; BE start
 
 ## Follow-up
 
-- [ ] Owner sign-off on the eleven assumed decisions above.
+- [x] Owner sign-off on the eleven assumed decisions above.
 - [ ] Depends on PR #31 (feature 9 BE thread with `step()` and `walk_trade()`) merging (G2).
 - [ ] Feature 11's exits turn the parity, X-9 and B-10 trade mode oracles fully green and let the
   default configs run on the real API (AC-10, AC-20).

@@ -1,7 +1,7 @@
 # 0004. Count trials per rule structure in browser storage, keyed by the backtest response
 
 **Date**: 2026-10-07 (assumed by /develop) · ratified by /architect 2026-10-08
-**Status**: Proposed, pending owner sign-off
+**Status**: In Progress (owner signed off 2026-10-08)
 **Authorized by**: Kenneth Wu (owner), through the FE lane brief, during /develop; ratification run
 unattended overnight, every open question took /architect's recommended answer (listed below)
 
@@ -15,7 +15,7 @@ itself: it reads `structure_key` and `pair_keys` straight from the backtest resp
 The code already exists in `apps/web/src/features/honesty/`; this ratification confirms the
 assumption it was built on and records why. Features 9 and 12 place the parts on their reports.
 
-## Assumed decisions (pending owner sign-off)
+## Assumed decisions (signed off by the owner, 2026-10-08)
 
 The owner could not answer during this run. Each question below took /architect's recommended
 answer; all six match what was built, so no code change follows from ratifying.
@@ -182,7 +182,7 @@ All tasks are built (feature 13, commit d63b458); listed so each AC traces to co
 
 ## Follow-up
 
-- [ ] Owner sign-off on the six assumed decisions above, then set the status to follow the
+- [x] Owner sign-off on the six assumed decisions above, then set the status to follow the
   feature lifecycle (`In Progress` until feature 13 is `done`, then `Accepted`).
 - [ ] Feature 9 places `RunTrialCounter` near the assumptions header of the portfolio report.
 - [ ] Feature 12 places `RunTrialCounter` on the exit lab report and `ProcedureNote` directly under
