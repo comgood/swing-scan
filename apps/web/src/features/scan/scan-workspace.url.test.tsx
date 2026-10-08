@@ -1,7 +1,7 @@
 // covers: spec 0005 AC-10 (`?template` in the URL). `next/navigation` is replaced by a store that
 // follows `history.replaceState`, as the App Router does.
-import type { Rule, ScanRequest } from "@swing-scan/api-client";
-import { screen, waitFor } from "@testing-library/react";
+import type { Rule, ScanRequest, ScanResponse } from "@swing-scan/api-client";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -125,6 +125,52 @@ describe("ScanWorkspace and ?template", () => {
     await user.selectOptions(select, "breakout_52w");
     expect(window.location.search).toBe("");
     expect(window.history.length).toBe(before);
+  });
+});
+
+// covers: spec 0005 AC-10 edges (Breakout named outright, empty id, other keys, page 1 on switch)
+describe("ScanWorkspace and ?template edges", () => {
+  it.each(["breakout_52w", ""])(
+    "opens Breakout for ?template=%s and drops the parameter",
+    async (id) => {
+      open(`/?template=${id}`);
+      const bodies = recordScans();
+      const before = window.history.length;
+      renderWithQuery(<ScanWorkspace />);
+      expect(await screen.findByLabelText("Template")).toHaveValue("breakout_52w");
+      await waitFor(() => expect(window.location.search).toBe(""));
+      await waitFor(() => expect(bodies).toHaveLength(1));
+      expect(bodies[0]).toEqual({ rule: ruleOf("breakout_52w") });
+      expect(window.history.length).toBe(before);
+    },
+  );
+
+  it("keeps other query keys and the hash when it drops an unknown template", async () => {
+    open("/?x=1&template=nope#top");
+    recordScans();
+    renderWithQuery(<ScanWorkspace />);
+    expect(await screen.findByLabelText("Template")).toHaveValue("breakout_52w");
+    await waitFor(() => expect(window.location.search).toBe("?x=1"));
+    expect(window.location.hash).toBe("#top");
+  });
+
+  it("returns the table to page 1 when you switch templates", async () => {
+    const many: ScanResponse = {
+      ...mocks.scan,
+      rows: Array.from({ length: 120 }, (_, i) => ({
+        ...mocks.scan.rows[0],
+        ticker: `T${String(i).padStart(3, "0")}`,
+      })),
+    };
+    server.use(http.post("*/api/v1/scan", () => HttpResponse.json(many)));
+    const user = userEvent.setup();
+    renderWithQuery(<ScanWorkspace />);
+    const pages = await screen.findByRole("navigation", { name: /pages$/ });
+    await user.click(within(pages).getByRole("button", { name: "Next" }));
+    expect(screen.getByText("Page 2 of 3")).toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText("Template"), "pullback_ema21");
+    await waitFor(() => expect(screen.getByText("Page 1 of 3")).toBeInTheDocument());
   });
 });
 
