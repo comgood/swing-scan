@@ -61,10 +61,25 @@ def _compare(op: str, a: pl.Series, b: pl.Series) -> pl.Series:
     raise ValueError(f"unknown comparison {op!r}")
 
 
+def _previous(operand: Operand, series: pl.Series, cache: IndicatorCache) -> pl.Series:
+    """The operand at t-1, with its offset counted from t-1; a number is the same."""
+    return _shift(cache, series, 1) if isinstance(operand, IndOperand) else series
+
+
 def _condition(condition: Condition, cache: IndicatorCache) -> tuple[pl.Series, pl.Series]:
     left = _series(condition.left, cache)
     right = _series(condition.right, cache)
     valid = left.is_not_null() & right.is_not_null()
+    if condition.op in ("crosses_above", "crosses_below"):
+        # A[t] > B[t] and A[t-1] <= B[t-1] (or the mirror); a first bar is never valid.
+        prev_left = _previous(condition.left, left, cache)
+        prev_right = _previous(condition.right, right, cache)
+        valid = valid & prev_left.is_not_null() & prev_right.is_not_null()
+        if condition.op == "crosses_above":
+            crossed = (left > right) & (prev_left <= prev_right)
+        else:
+            crossed = (left < right) & (prev_left >= prev_right)
+        return valid, crossed.fill_null(False) & valid
     value = _compare(condition.op, left, right).fill_null(False) & valid
     return valid, value
 
