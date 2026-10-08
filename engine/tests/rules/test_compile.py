@@ -69,3 +69,37 @@ def test_comparisons_use_raw_values() -> None:
     cache = cache_for(market)
     compiled = compile_rule(rule((ind("close"), ">", val(5))), cache)
     assert _of(cache, compiled.value) == [True]
+
+
+def test_crosses_above_is_true_only_on_the_crossing_bar() -> None:
+    market = make_market({"AAA": FrameSpec(1, [9.0, 9.0, 11.0, 11.0])})
+    cache = cache_for(market)
+    compiled = compile_rule(rule((ind("close"), "crosses_above", val(10))), cache)
+    assert _of(cache, compiled.valid) == [False, True, True, True]
+    assert _of(cache, compiled.value) == [False, False, True, False]
+
+
+def test_crosses_below_mirrors_crosses_above() -> None:
+    market = make_market({"AAA": FrameSpec(1, [11.0, 10.0, 9.0, 9.0])})
+    cache = cache_for(market)
+    compiled = compile_rule(rule((ind("close"), "crosses_below", val(10))), cache)
+    # 10 then 9: 9 < 10 and 10 >= 10, so bar 3 crosses; bar 2 (10 < 10) does not.
+    assert _of(cache, compiled.value) == [False, False, True, False]
+
+
+def test_a_cross_needs_both_operands_valid_on_the_previous_bar() -> None:
+    # sma(2) first exists on bar 2, so the cross is first valid on bar 3.
+    market = make_market({"AAA": FrameSpec(1, [5.0, 5.0, 9.0, 9.0])})
+    cache = cache_for(market)
+    compiled = compile_rule(rule((ind("close"), "crosses_above", ind("sma", 2))), cache)
+    assert _of(cache, compiled.valid) == [False, False, True, True]
+    assert _of(cache, compiled.value) == [False, False, True, False]
+
+
+def test_a_cross_with_an_offset_counts_it_from_the_previous_bar() -> None:
+    # close crosses above close[1]: close[t] > close[t-1] and close[t-1] <= close[t-2].
+    market = make_market({"AAA": FrameSpec(1, [5.0, 4.0, 6.0, 7.0])})
+    cache = cache_for(market)
+    compiled = compile_rule(rule((ind("close"), "crosses_above", ind("close", offset=1))), cache)
+    assert _of(cache, compiled.valid) == [False, False, True, True]
+    assert _of(cache, compiled.value) == [False, False, True, False]

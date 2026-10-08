@@ -160,8 +160,8 @@ Lanes BE and FE. Indicators, rule evaluation with the valid rising edge and the 
 - [x] Design it (spec): `/architect template scan`
 - [ ] Build it: `/develop template scan`
   - [ ] Thread: BE engine slice with the shared entry signal function and `/scan` on fixtures; FE workspace with the template dropdown, conditions and results from the mocks (AC-1, AC-4, AC-5, AC-8, AC-9, AC-11, AC-13)
-  - [ ] Engine breadth (BE): all 14 indicators, crosses, the locked and pinned cache (AC-2, AC-3, AC-7)
-  - [ ] Scan contract (BE): `chg_pct`, `vol_ratio`, golden parity, `as_of` 422, warm start, the scan log, the S-4 timing test, and `read_market()` once feature 7 merges (AC-4 to AC-8, AC-13)
+  - [x] Engine breadth (BE): all 14 indicators, crosses, the locked and pinned cache (AC-2, AC-3, AC-7)
+  - [x] Scan contract (BE): `chg_pct`, `vol_ratio`, golden parity, `as_of` 422, warm start, the scan log, the S-4 timing test, and `read_market()` once feature 7 merges (AC-4 to AC-8, AC-13)
   - [ ] Workspace finish (FE): `?template` URL, number formats, New badge, paging, states, 375 px; switch to the real API at G3 (AC-10 to AC-12, AC-14)
 - [ ] Verify it: `/check verify template scan`
 - [ ] Test it: `/test template scan`
@@ -215,8 +215,8 @@ Lanes FE and BE. The things that stop you fooling yourself: the structure keyed 
 - [x] Build it: `/develop research honesty guards`
   - [x] Trial store, counter and procedure note in `features/honesty/` (U-4, U-8; spec 0004 AC-1 to AC-7)
   - [x] `/ui` gallery with every state, U-2 shell banner confirmed (spec 0004 AC-8, AC-9)
-- [ ] Verify it: `/check verify research honesty guards`
-- [ ] Test it: `/test research honesty guards`
+- [x] Verify it: `/check verify research honesty guards`
+- [x] Test it: `/test research honesty guards`
 Spec [0004](../specs/0004-research-honesty-guards/index.md) (ratified by `/architect`, proposed, pending owner sign-off) · code in `apps/web/src/features/honesty/` · placed by features 9 and 12
 
 ## Slice 4: Live research mode

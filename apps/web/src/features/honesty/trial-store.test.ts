@@ -118,6 +118,63 @@ describe("recordTrial (U-4, spec 0004)", () => {
   });
 });
 
+// Edges spec 0004 records under Consequences, locked so a change to them is deliberate.
+describe("recordTrial edges (spec 0004 consequences)", () => {
+  it("counts a pair repeated inside one response once (AC-2)", () => {
+    expect(recordTrial(trial(STRUCTURE, "p1", "p1"), memoryStores())).toEqual({
+      trialNumber: 1,
+      sessionTotal: 1,
+    });
+  });
+
+  it("records nothing for an empty pair list and shows trial 0 for a new structure", () => {
+    const stores = memoryStores();
+    expect(recordTrial(trial(STRUCTURE), stores)).toEqual({ trialNumber: 0, sessionTotal: 0 });
+    expect(stores.local().length).toBe(0);
+    expect(stores.session().length).toBe(0);
+  });
+
+  it("returns null when only the session write fails, keeping the pair in N (AC-6)", () => {
+    const local = new MemoryStorage();
+    const session = new MemoryStorage();
+    session.setItem = () => {
+      throw new DOMException("Quota exceeded", "QuotaExceededError");
+    };
+    const stores = { local: () => local, session: () => session };
+    expect(recordTrial(trial(STRUCTURE, "p1"), stores)).toBeNull();
+    expect(local.getItem(TRIAL_KEY_PREFIX + STRUCTURE)).toBe('["p1"]');
+  });
+
+  it("does not rewrite storage when a re run adds nothing (AC-2)", () => {
+    const local = new MemoryStorage();
+    const session = new MemoryStorage();
+    const stores = { local: () => local, session: () => session };
+    recordTrial(trial(STRUCTURE, "p1"), stores);
+    let writes = 0;
+    const counted = (storage: MemoryStorage) => {
+      const original = storage.setItem.bind(storage);
+      storage.setItem = (key, value) => {
+        writes += 1;
+        original(key, value);
+      };
+    };
+    counted(local);
+    counted(session);
+    recordTrial(trial(STRUCTURE, "p1"), stores);
+    expect(writes).toBe(0);
+  });
+
+  it("keeps a separate N per structure key while M sums them (AC-1, AC-3)", () => {
+    const stores = memoryStores();
+    recordTrial(trial(STRUCTURE, "p1", "p2", "p3"), stores);
+    recordTrial(trial("b".repeat(64), "q1"), stores);
+    expect(recordTrial(trial(STRUCTURE, "p4"), stores)).toEqual({
+      trialNumber: 4,
+      sessionTotal: 5,
+    });
+  });
+});
+
 describe("isOverTrialLimit (AC-5)", () => {
   it("warns from trial 10, not before", () => {
     expect(TRIAL_WARNING_AT).toBe(10);
