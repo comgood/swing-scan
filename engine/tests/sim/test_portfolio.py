@@ -16,19 +16,23 @@ from engine.sim import BarArrays, walk_trade
 SLIP = 0.001
 
 
-def _run(market: Market, exits: list[dict[str, Any]], **sim: Any) -> PortfolioResult:
+CLOSE_ABOVE_5 = {
+    "left": {"kind": "ind", "ind": "close"},
+    "op": ">",
+    "right": {"kind": "value", "value": 5},
+}
+
+
+def _run(
+    market: Market,
+    exits: list[dict[str, Any]],
+    rule: dict[str, Any] = CLOSE_ABOVE_5,
+    **sim: Any,
+) -> PortfolioResult:
+    """One config portfolio run of a one condition rule (default `close > 5`)."""
     request = BacktestRequest.model_validate(
         {
-            "rule": {
-                "name": "t",
-                "conditions": [
-                    {
-                        "left": {"kind": "ind", "ind": "close"},
-                        "op": ">",
-                        "right": {"kind": "value", "value": 5},
-                    }
-                ],
-            },
+            "rule": {"name": "t", "conditions": [rule]},
             "configs": [{"name": "c", "exits": exits}],
             "sim": sim,
         }

@@ -68,6 +68,17 @@ def test_one_config_runs_the_portfolio_backtest(monkeypatch: pytest.MonkeyPatch)
     assert [t["exit_reason"] for t in body["trades"]] == ["end_of_test"]
 
 
+def test_an_end_after_the_data_is_422_range_outside_data(monkeypatch: pytest.MonkeyPatch) -> None:
+    _fixture_market(monkeypatch)  # bars 1 to 6: 2020-01-02 to 2020-01-09
+    body = {"rule": RULE, "configs": configs(1), "sim": {"end": "2021-01-04"}}
+    res = client.post("/api/v1/backtest", json=body)
+    assert res.status_code == 422
+    (error,) = res.json()["detail"]
+    assert error["type"] == "range_outside_data"
+    assert error["loc"] == ["body", "sim", "end"]
+    assert error["ctx"] == {"min": "2020-01-02", "max": "2020-01-09"}
+
+
 def test_seven_configs_is_422_not_501() -> None:
     res = client.post("/api/v1/backtest", json={"rule": RULE, "configs": configs(7)})
     assert res.status_code == 422
