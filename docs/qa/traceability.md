@@ -71,15 +71,15 @@ Test files are under `tests/acceptance/`. "Oracle" means the owner's protected s
 | X-9 | Horizon exit at bar 60 and the warning | use case, UI | `test_exit_lab.py` | steady climb that never trips a 10% trail | Oracle | pending | |
 | X-10 | Random baseline counts, seed and edge | use case | `test_exit_lab.py` | five configs, seeds 42 and 7 | BE unit tests and Oracle B-10 (alive, never on a last bar; ruled 2026-10-07) | pending | |
 | U-1 | First visit: Breakout, results, synthetic banner | contract, UI | `test_ui.py`; Vitest `apps/web/tests/acceptance/data-mode-banner.test.tsx` (banner part) | `/meta`, `/templates`; health mock held, synthetic and failing, on every page; Breakout and results owed (features 8, 10) | | pending | |
-| U-2 | Survivors badge in live mode | UI | `test_ui.py`; Vitest `apps/web/tests/acceptance/data-mode-banner.test.tsx` | health mock `live`, on every page | | pending | |
+| U-2 | Survivors badge in live mode | UI | `test_ui.py` (pointer); Vitest `apps/web/tests/acceptance/data-mode-banner.test.tsx` | health mock `live`, on every page (spec 0004 AC-8: the shell banner) | | required | 2026-10-08 |
 | U-3 | Assumptions header lists every field | contract, UI | `test_ui.py` | OpenAPI `Assumptions`; Vitest owed | | pending | |
-| U-4 | Trial counter by structure, warning at 10 | use case, UI | `test_ui.py` | trial keys from a trade lab run; Vitest owed | | pending | |
+| U-4 | Trial counter by structure, warning at 10 | use case, UI | `test_ui.py`; Vitest `apps/web/tests/acceptance/honesty.test.tsx` | trial keys from a trade lab run; `RunTrialCounter` on the mock `trial` blocks and seeded storage (spec 0004 AC-1 to AC-6, AC-9); counter inside the reports owed (features 9, 12) | | pending | |
 | U-5 | Warming up state after 1.5 s | UI | `test_ui.py`; Vitest `apps/web/tests/acceptance/warmup.test.tsx` | health mock delayed 2.5 s and held; `WarmupNotice` on fake timers (1,499 and 1,500 ms) | | pending | |
 | U-6 | Layout holds at 375 px | UI | `test_ui.py`; Vitest `apps/web/tests/acceptance/layout-375.test.tsx` (structure only) | every page, a 12 column `DataTable`, `FormRow` with 2 to 4 columns; builder rows owed (feature 10) | browser pass in `/check verify` (scroll width, real stacking) | pending | |
 | U-7 | 422 shows inline on the row or field | contract, UI | `test_ui.py`; Vitest `apps/web/tests/acceptance/errors-422.test.tsx` (shared helpers) | bad `n` on row 2, bad exit param; the 422 mocks through `fieldErrorsFrom422`; builder and exit editor owed (features 10, 12) | | pending | |
-| U-8 | Procedure note under the exit lab table | UI | `test_ui.py` | owed to Vitest | | pending | |
+| U-8 | Procedure note under the exit lab table | UI | `test_ui.py`; Vitest `apps/web/tests/acceptance/honesty.test.tsx` (words) | `ProcedureNote` and the `/ui` gallery (spec 0004 AC-7, AC-9); placement under the exit lab table owed (feature 12) | | pending | |
 
-**Totals:** 52 MUST criteria, 3 required, 49 pending. Stretch criteria (S-5, B-4R, B-12, X-5S, X-6) get a row when they are picked up.
+**Totals:** 52 MUST criteria, 4 required, 48 pending. Stretch criteria (S-5, B-4R, B-12, X-5S, X-6) get a row when they are picked up.
 
 ## Golden reference
 
