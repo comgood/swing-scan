@@ -47,9 +47,13 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v4
+        id: buildx
       # Exposes the Actions cache URL and token so the `docker build` CLI can use type=gha.
       - uses: crazy-max/ghaction-github-runtime@v4
       - run: make build-api API_BUILD_FLAGS="--load --cache-from type=gha,scope=api-image --cache-to type=gha,mode=max,scope=api-image"
+        env:
+          # The docker driver cannot export a cache; build on the buildx container builder.
+          BUILDX_BUILDER: ${{ steps.buildx.outputs.name }}
       - run: make smoke-image
         timeout-minutes: 5
 
