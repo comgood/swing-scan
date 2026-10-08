@@ -141,4 +141,53 @@ describe("RunTrialCounter (U-4, spec 0004)", () => {
     expect(html).not.toContain("Trial #");
     expect(html).not.toContain("overfit");
   });
+
+  it("sums pairs under two structure keys into one session total (AC-3)", async () => {
+    const stores = memoryStores();
+    const { rerender } = render(<RunTrialCounter trial={trial("p1", "p2")} stores={stores} />);
+    await screen.findByText(/Trial #2 /);
+    rerender(
+      <RunTrialCounter
+        trial={{ structure_key: "d".repeat(64), pair_keys: ["q1"] }}
+        stores={stores}
+      />,
+    );
+    expect(
+      await screen.findByText("Trial #1 for this rule structure · 3 this session"),
+    ).toBeVisible();
+  });
+
+  it("shows the same totals after a remount of the same run, without counting it again (AC-2)", async () => {
+    const stores = memoryStores();
+    const first = render(<RunTrialCounter trial={trial("p1")} stores={stores} />);
+    await screen.findByText("Trial #1 for this rule structure · 1 this session");
+    first.unmount();
+    render(<RunTrialCounter trial={trial("p1")} stores={stores} />);
+    expect(
+      await screen.findByText("Trial #1 for this rule structure · 1 this session"),
+    ).toBeVisible();
+  });
+
+  it("keeps one live region from pending to counted, so the new count is announced", async () => {
+    const { container } = render(<RunTrialCounter trial={trial("p1")} stores={memoryStores()} />);
+    const region = container.querySelector('[role="status"]');
+    expect(region).toHaveAttribute("aria-live", "polite");
+    await screen.findByText(/Trial #1 /);
+    expect(container.querySelector('[role="status"]')).toBe(region);
+  });
+});
+
+describe("trialCounterText formatting (AC-4)", () => {
+  it("writes large counts with separators through the shared formatter", () => {
+    expect(trialCounterText(1234, 56789)).toBe(
+      "Trial #1,234 for this rule structure · 56,789 this session",
+    );
+  });
+
+  it("shows the warning for any count past 10, not only exactly 10 (AC-5)", () => {
+    render(
+      <TrialCounter state={{ status: "counted", count: { trialNumber: 37, sessionTotal: 40 } }} />,
+    );
+    expect(screen.getByText(OVERFIT_WARNING)).toBeInTheDocument();
+  });
 });
