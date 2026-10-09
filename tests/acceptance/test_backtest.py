@@ -12,6 +12,7 @@ volume spike on the signal bar `s` (rule `volume > 1,500,000`), so the entry is 
 from __future__ import annotations
 
 import time
+from functools import cache
 from typing import Any
 
 import pytest
@@ -32,7 +33,8 @@ from acceptance.support import (
     trade_lab,
     val,
 )
-from engine.contracts import TEMPLATES, Market, Trade, entries_hash
+from engine.contracts import TEMPLATES, Market, Rule, TemplateOut, Trade, entries_hash
+from engine.synthetic import generate
 
 FILL = 10.0 * 1.001  # 10.01
 OUT = 0.999
@@ -331,12 +333,46 @@ def test_identical_inputs_give_identical_results() -> None:
     rule = TEMPLATES[1].rule
     exits = [{"type": "stop_pct", "pct": 8}, {"type": "time", "bars": 10}]
     assert portfolio(rule, exits, market) == portfolio(rule, exits, market)
+
+
+@pytest.mark.ac("X-7")
+def test_identical_inputs_give_identical_trade_lab_results() -> None:
+    """B-13's determinism in trade mode. Spec 0007 AC-7 scopes B-13 to portfolio mode; spec 0009
+    owns the trade mode run ("run twice equal" in its budget test), so this gates with X-7."""
+    market = build_market(random_walk_frames(n_tickers=20, n_bars=320, seed=9))
+    rule = TEMPLATES[1].rule
+    exits = [{"type": "stop_pct", "pct": 8}, {"type": "time", "bars": 10}]
     configs = [config("a", *exits), config("b", {"type": "trail_pct", "pct": 10})]
     assert trade_lab(rule, configs, market) == trade_lab(rule, configs, market)
 
 
+@cache
+def _seed_42() -> Market:
+    """The full history synthetic market (spec 0006) that spec 0007 AC-7 names."""
+    return generate(42)
+
+
 @pytest.mark.ac("B-13")
-def test_full_history_run_is_under_3_seconds_and_6_mb() -> None:
+@pytest.mark.parametrize("template", TEMPLATES, ids=lambda t: t.id)
+def test_seed_42_full_history_run_is_deterministic_under_3_seconds_and_6_mb(
+    template: TemplateOut,
+) -> None:
+    """Spec 0007 AC-7 on the generated seed 42 market, both templates. The in process run is
+    the CI gate; the deployed number is a verify step (ac-questions#perf)."""
+    exits = [{"type": "stop_pct", "pct": 8}, {"type": "time", "bars": 20}]
+    portfolio(VOLUME_SPIKE, exits, build_market({"AAA": spiked(10, 3)}))  # fail fast on a stub
+    market = _seed_42()
+    first = portfolio(template.rule, exits, market)  # also warms the caches
+    started = time.perf_counter()
+    result = portfolio(template.rule, exits, market)
+    assert time.perf_counter() - started < 3.0
+    assert result == first
+    assert result.trades_total > 0, "the budget must be measured on a run that trades"
+    assert len(result.model_dump_json(by_alias=True)) < 6_000_000
+
+
+@pytest.mark.ac("B-13")
+def test_500_ticker_random_walk_run_is_under_3_seconds_and_6_mb() -> None:
     exits = [{"type": "stop_pct", "pct": 8}, {"type": "time", "bars": 10}]
     portfolio(VOLUME_SPIKE, exits, build_market({"AAA": spiked(10, 3)}))  # fail fast on a stub
     market: Market = build_market(
@@ -352,53 +388,84 @@ def test_full_history_run_is_under_3_seconds_and_6_mb() -> None:
 
 # ---------------------------------------------------------------- B-14 to B-16 entry rules
 
+# Portfolio mode is feature 9 (spec 0007 AC-8); the trade mode halves gate with feature 12. B-14's
+# trade mode check is X-1's (spec 0009 AC-1); B-15's and B-16's trade mode halves are their own,
+# named in both specs' test plans, so those two IDs stay pending until feature 12 lands.
+
+TIME_3 = [{"type": "time", "bars": 3}]
 TIME_CONFIGS = [
     config("t3", {"type": "time", "bars": 3}),
     config("t5", {"type": "time", "bars": 5}),
 ]
+BAR_OF = {bar_date(k): k for k in range(1, 400)}
+CLOSE_ABOVE_5 = make_rule((ind("close"), ">", val(5)))
+BREAKOUT_252 = make_rule((ind("close"), ">", ind("highest", n=252, offset=1)))
 
 
-def _entry_bars(market: Market, rule: dict[str, Any] | Any) -> list[tuple[str, int]]:
+def _portfolio_entry_bars(market: Market, rule: Rule) -> list[tuple[str, int]]:
+    return sorted((t.ticker, BAR_OF[t.entry_date]) for t in portfolio(rule, TIME_3, market).trades)
+
+
+def _lab_entry_bars(market: Market, rule: Rule) -> list[tuple[str, int]]:
     lab = trade_lab(rule, TIME_CONFIGS, market)
-    by_date = {bar_date(k): k for k in range(1, 400)}
-    return sorted((t.ticker, by_date[t.entry_date]) for t in lab.baseline_trades)
+    return sorted((t.ticker, BAR_OF[t.entry_date]) for t in lab.baseline_trades)
 
 
-@pytest.mark.ac("B-14")
-def test_no_signal_on_the_first_valid_bar() -> None:
+def _first_valid_market() -> Market:
     close = [10.0 + 0.01 * i for i in range(259)]  # bars 1..259 rising: true from bar 253
     close.append(5.0)  # bar 260: valid and false
     close += [20.0 + 0.01 * i for i in range(10)]  # bars 261..270: true again
-    market = build_market({"AAA": Frame(1, list(close), list(close), list(close), close)})
-    rule = make_rule((ind("close"), ">", ind("highest", n=252, offset=1)))
-    # Only bar 261 is a signal, so the only entry fills on bar 262.
-    assert _entry_bars(market, rule) == [("AAA", 262)]
+    return build_market({"AAA": Frame(1, list(close), list(close), list(close), close)})
 
 
-@pytest.mark.ac("B-14")
-def test_no_signal_on_a_listing_day() -> None:
+def _listing_day_market() -> Market:
     always = flat(50, 30)  # listed on bar 50, true from its first bar
     later = flat(50, 30)
     for k in range(50, 53):
         set_bar(later, k, 4.0, 4.2, 3.8, 4.0)  # false for 3 bars, then true from bar 53
-    market = build_market({"ALWAYS": always, "LATER": later}, end_bar=90)
-    rule = make_rule((ind("close"), ">", val(5)))
-    assert _entry_bars(market, rule) == [("LATER", 54)]
+    return build_market({"ALWAYS": always, "LATER": later}, end_bar=90)
 
 
-@pytest.mark.ac("B-15")
-def test_no_entry_on_a_last_bar() -> None:
+@pytest.mark.ac("B-14")
+def test_no_signal_on_the_first_valid_bar() -> None:
+    # Only bar 261 is a signal, so the only entry fills on bar 262.
+    assert _portfolio_entry_bars(_first_valid_market(), BREAKOUT_252) == [("AAA", 262)]
+
+
+@pytest.mark.ac("B-14")
+def test_no_signal_on_a_listing_day() -> None:
+    assert _portfolio_entry_bars(_listing_day_market(), CLOSE_ABOVE_5) == [("LATER", 54)]
+
+
+@pytest.mark.ac("X-1")
+def test_trade_mode_has_no_signal_on_the_first_valid_bar_or_a_listing_day() -> None:
+    """B-14 in the exit lab's entry list (X-1, spec 0009 AC-1)."""
+    assert _lab_entry_bars(_first_valid_market(), BREAKOUT_252) == [("AAA", 262)]
+    assert _lab_entry_bars(_listing_day_market(), CLOSE_ABOVE_5) == [("LATER", 54)]
+
+
+def _last_bar_market() -> Market:
     gone = Frame(1, [4.0] * 10, [4.0] * 10, [4.0] * 10, [4.0] * 9 + [6.0])  # delists on bar 10
     gone.open[-1] = gone.high[-1] = 6.0
     end = Frame(1, [4.0] * 20, [4.0] * 20, [4.0] * 20, [4.0] * 19 + [6.0])  # data ends on bar 20
     end.open[-1] = end.high[-1] = 6.0
-    market = build_market({"GONE": gone, "END": end})
-    rule = make_rule((ind("close"), ">", val(5)))
-    lab = trade_lab(rule, TIME_CONFIGS, market)
+    return build_market({"GONE": gone, "END": end})
+
+
+@pytest.mark.ac("B-15")
+def test_no_portfolio_entry_on_a_last_bar() -> None:
+    result = portfolio(CLOSE_ABOVE_5, TIME_3, _last_bar_market())
+    assert result.trades == []
+    assert [w.code for w in result.warnings] == ["no_entries"]
+
+
+@pytest.mark.ac("B-15")
+def test_no_entry_on_a_last_bar() -> None:
+    """The trade mode half (spec 0007 and 0009 test plans), green with feature 12."""
+    lab = trade_lab(CLOSE_ABOVE_5, TIME_CONFIGS, _last_bar_market())
     assert lab.entries.count == 0
     assert lab.baseline_trades == []
     assert [w.code for w in lab.warnings] == ["no_entries"]
-    assert portfolio(rule, [{"type": "time", "bars": 3}], market).trades == []
 
 
 def _cooldown_market() -> Market:
@@ -410,14 +477,14 @@ def _cooldown_market() -> Market:
 
 @pytest.mark.ac("B-16")
 def test_cooldown_accepts_100_and_112_in_every_config() -> None:
+    """The trade mode half (spec 0007 and 0009 test plans), green with feature 12."""
     market = _cooldown_market()
-    rule = make_rule((ind("close"), ">", val(5)))
     configs = [
         config("time 1", {"type": "time", "bars": 1}),
         config("stop and time", {"type": "stop_pct", "pct": 8}, {"type": "time", "bars": 20}),
         config("trail", {"type": "trail_pct", "pct": 10}),
     ]
-    lab = trade_lab(rule, configs, market)
+    lab = trade_lab(CLOSE_ABOVE_5, configs, market)
     expected = [("AAA", bar_date(101)), ("AAA", bar_date(113))]
     assert [(t.ticker, t.entry_date) for t in lab.baseline_trades] == expected
     assert lab.entries.count == 2
@@ -426,8 +493,23 @@ def test_cooldown_accepts_100_and_112_in_every_config() -> None:
         assert row.strategy.is_.n_trades + row.strategy.oos.n_trades == 2, row.name
 
 
+# One exit set per exit type, each closing the bar 101 trade well before bar 112: a held ticker's
+# signal is skipped (spec 0007 AC-8), which would hide what the cooldown does. The fill is
+# open(101) x 1.001 = 4.004 and every later bar is a flat 4.0.
+PORTFOLIO_EXIT_SETS: dict[str, list[dict[str, Any]]] = {
+    "time 1": [{"type": "time", "bars": 1}],
+    "stop_pct and time": [{"type": "stop_pct", "pct": 8}, {"type": "time", "bars": 5}],
+    "stop_atr and time": [{"type": "stop_atr", "k": 2, "n": 14}, {"type": "time", "bars": 5}],
+    "target and time": [{"type": "target", "pct": 15}, {"type": "time", "bars": 5}],
+    "trail_pct and time": [{"type": "trail_pct", "pct": 10}, {"type": "time", "bars": 5}],
+    # sma(5) on bar 101 still holds bar 100's 6.0, so close 4.0 is below it
+    "close_below_ma": [{"type": "close_below_ma", "ma": "sma", "n": 5}],
+}
+
+
 @pytest.mark.ac("B-16")
-def test_cooldown_applies_in_portfolio_mode() -> None:
-    rule = make_rule((ind("close"), ">", val(5)))
-    result = portfolio(rule, [{"type": "time", "bars": 1}], _cooldown_market())
+@pytest.mark.parametrize("exits", list(PORTFOLIO_EXIT_SETS.values()), ids=list(PORTFOLIO_EXIT_SETS))
+def test_cooldown_applies_in_portfolio_mode(exits: list[dict[str, Any]]) -> None:
+    result = portfolio(CLOSE_ABOVE_5, exits, _cooldown_market())
     assert [t.entry_date for t in result.trades] == [bar_date(101), bar_date(113)]
+    assert BAR_OF[result.trades[0].exit_date] < 112

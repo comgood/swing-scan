@@ -3,12 +3,17 @@
 // The rest of U-1 (the builder opening on Breakout with its results) is in template-scan.test.tsx
 // and rule-builder.test.tsx.
 import { screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { healthHandler } from "@/mocks/handlers";
 import { server } from "@/mocks/node";
 
 import { LIVE_BANNER, PAGES, renderPage, SYNTHETIC_BANNER } from "./pages";
+
+// The App Router is not mounted in jsdom; `/backtest` reads its inputs through `useSearchParams`.
+vi.mock("next/navigation", async (importOriginal) =>
+  (await import("./navigation")).emulatedNavigation(await importOriginal<object>()),
+);
 
 // The data mode banner is main's first child (spec 0003 AC-3). Assertions target that element,
 // not the whole page: the /ui gallery shows both banner texts as static samples.

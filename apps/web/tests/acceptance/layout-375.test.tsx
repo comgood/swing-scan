@@ -8,12 +8,17 @@
 // measuring `scrollWidth <= 375` on every page, the actual column stacking below 640 px, and
 // the real builder rows (feature 10), which do not exist yet.
 import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { FormRow } from "@/components/form-row";
 
 import { PAGES, renderPage } from "./pages";
+
+// The App Router is not mounted in jsdom; `/backtest` reads its inputs through `useSearchParams`.
+vi.mock("next/navigation", async (importOriginal) =>
+  (await import("./navigation")).emulatedNavigation(await importOriginal<object>()),
+);
 
 const VIEWPORT_PX = 375;
 

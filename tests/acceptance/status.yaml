@@ -31,7 +31,7 @@ R-10: required
 # Scan
 S-1: required
 S-2: required
-S-3: pending
+S-3: required
 S-4: required
 
 # Backtest and exits
@@ -46,8 +46,8 @@ B-8: required
 B-9: required
 B-10: pending
 B-11: required
-B-13: pending
-B-14: pending
+B-13: required
+B-14: required
 B-15: pending
 B-16: pending
 
