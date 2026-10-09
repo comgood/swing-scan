@@ -9,7 +9,7 @@ API_PLATFORM ?= linux/amd64
 API_BUILD_FLAGS ?=
 
 .PHONY: setup dev dev-api dev-web lint format typecheck test test-acceptance hooks guards build-web \
-        build-api build-api-local smoke smoke-image test-oracle openapi gen-client mocks contracts contracts-check data data-check load-live ci
+        build-api build-api-local smoke smoke-image test-oracle openapi gen-client mocks contracts contracts-check data data-check load-live dev-live ci
 
 setup: ## Install all JS and Python dependencies from the lockfiles
 	pnpm install --frozen-lockfile
@@ -101,5 +101,15 @@ data: ## Generate the synthetic market into data/synthetic (gitignored): make da
 data-check: ## CI: build the seed 42 market twice in a temp folder, same hashes, D-1 to D-3 hold
 	uv run python scripts/check_synthetic.py
 
-test-oracle load-live:
-	@echo "make $@ is not implemented yet (see docs/scope/scope.md, features 6 and 14)"; exit 1
+UNIVERSE ?= research/sp500.csv
+LIVE_DIR ?= data/live
+
+load-live: ## Local only: Alpaca daily bars into data/live (gitignored); keys from env, else .env
+	@if [ -z "$$ALPACA_API_KEY_ID" ] && [ -f .env ]; then set -a; . ./.env; set +a; fi; \
+	uv run python -m engine.live --universe $(UNIVERSE) --out $(LIVE_DIR)
+
+dev-live: ## Local only: run the API in live mode on 127.0.0.1 with the web app (D-5)
+	DATA_MODE=live SYNTHETIC_DATA_DIR=$(LIVE_DIR) $(MAKE) dev
+
+test-oracle:
+	@echo "make $@ is not implemented yet (see docs/scope/scope.md, feature 6)"; exit 1

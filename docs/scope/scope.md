@@ -26,7 +26,7 @@ _Source of truth: acceptance criteria IDs (D, R, S, B, X, U) and settled default
 | 11 | Exit types | Slice 3 | done |
 | 12 | Exit lab | Slice 3 | in-progress |
 | 13 | Research honesty guards | Slice 3 | in-progress |
-| 14 | Live research mode (local) | Slice 4 | planned |
+| 14 | Live research mode (local) | Slice 4 | in-progress |
 | 15 | Deploy hardening & demo readiness | Slice 5 | planned |
 | 16 | README, research note & GIF | Slice 5 | planned |
 
@@ -233,10 +233,11 @@ Spec [0004](../specs/0004-research-honesty-guards/index.md) (signed off by the o
 
 ## Slice 4: Live research mode
 
-### 14. Live research mode (local) · planned
+### 14. Live research mode (local) · in-progress
 Lane DI, run by you. Load Alpaca free daily bars since 2016 for about 500 current S&P 500 names plus SPY into the same schema, on your machine only.
 **Done when:** `make load-live` fills local data with keys from the environment, the API refuses live mode anywhere but localhost, and `research/` is ignored by git (D-4, D-5).
-- [ ] Build it: `/develop live research mode`
+- [x] Build it: `/develop live research mode` (assumed decisions, spec 0010; you run `make load-live`)
+Spec [0010](../specs/0010-live-research-mode/index.md) (Assumed) · code in `engine/src/engine/live/`, `services/api/src/api/settings.py`
 
 ## Slice 5: Ship
 
