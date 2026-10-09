@@ -1,0 +1,145 @@
+# Deploy the API after CI passes on main (spec 0001, doc 02 section 9; scope feature 15).
+# Reuses the linux/amd64 image CI built and smoked (artifact api-image-<sha>), pushes it to ECR
+# tagged with the 7 character commit SHA, points the Lambda at it, then smoke tests the
+# Function URL. AWS access is GitHub OIDC only: no stored keys. The role trusts only this
+# repo's main branch (infra/iam/deploy-trust.json). Vercel deploys the web app from Git itself.
+# Manual run (rollback): Actions > Deploy API > Run workflow on main, with a commit SHA.
+name: Deploy API
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: Commit to deploy (7 to 40 hex characters); its image is reused from ECR or its CI run
+        required: true
+
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+
+concurrency:
+  group: deploy-api
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'ap-southeast-1' }}
+  ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY || 'swing-scan-api' }}
+  LAMBDA_FUNCTION_NAME: ${{ vars.LAMBDA_FUNCTION_NAME || 'swing-scan-api' }}
+
+jobs:
+  deploy:
+    name: push image, update Lambda, smoke
+    # Only a green CI run from a push to main in this repo (not a fork's or a manual CI run),
+    # or a manual run on main. Skipped until the owner sets AWS_ROLE_ARN (infra/README.md).
+    if: >-
+      vars.AWS_ROLE_ARN != '' && (
+        (github.event_name == 'workflow_run'
+          && github.event.workflow_run.conclusion == 'success'
+          && github.event.workflow_run.event == 'push'
+          && github.event.workflow_run.head_repository.full_name == github.repository)
+        || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Resolve the commit and its CI run
+        id: target
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_SHA: ${{ github.event.workflow_run.head_sha }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          INPUT_SHA: ${{ inputs.sha }}
+        run: |
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_run" ]]; then
+            full="$RUN_SHA"
+            run_id="$RUN_ID"
+          else
+            if [[ ! "$INPUT_SHA" =~ ^[0-9a-f]{7,40}$ ]]; then
+              echo "sha must be 7 to 40 lowercase hex characters, got '$INPUT_SHA'" >&2
+              exit 1
+            fi
+            full="$(gh api "repos/$GITHUB_REPOSITORY/commits/$INPUT_SHA" -q .sha)"
+            run_id="$(gh run list --workflow CI --commit "$full" --event push --status success \
+              --json databaseId -q '.[0].databaseId')"
+          fi
+          {
+            echo "full=$full"
+            echo "tag=${full:0:7}"
+            echo "run_id=$run_id"
+          } >> "$GITHUB_OUTPUT"
+          echo "Deploying $full (tag ${full:0:7}), CI run ${run_id:-none}"
+
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          role-session-name: swing-scan-deploy-${{ github.run_id }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to ECR and check for the tag
+        id: ecr
+        env:
+          TAG: ${{ steps.target.outputs.tag }}
+        run: |
+          account="$(aws sts get-caller-identity --query Account --output text)"
+          registry="$account.dkr.ecr.$AWS_REGION.amazonaws.com"
+          aws ecr get-login-password | docker login --username AWS --password-stdin "$registry"
+          echo "image=$registry/$ECR_REPOSITORY:$TAG" >> "$GITHUB_OUTPUT"
+          if aws ecr describe-images --repository-name "$ECR_REPOSITORY" \
+            --image-ids "imageTag=$TAG" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "$TAG is already in ECR; reusing it"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check the CI image is available
+        if: steps.ecr.outputs.exists != 'true' && steps.target.outputs.run_id == ''
+        run: |
+          echo "No green CI push run and no ECR image for this commit; nothing to deploy." >&2
+          exit 1
+
+      - uses: actions/download-artifact@v8
+        if: steps.ecr.outputs.exists != 'true'
+        with:
+          name: api-image-${{ steps.target.outputs.full }}
+          run-id: ${{ steps.target.outputs.run_id }}
+          github-token: ${{ github.token }}
+          path: api-image
+
+      - name: Push the image
+        if: steps.ecr.outputs.exists != 'true'
+        env:
+          IMAGE: ${{ steps.ecr.outputs.image }}
+        run: |
+          gunzip -c api-image/api-image.tar.gz | docker load
+          docker tag swing-scan-api:latest "$IMAGE"
+          docker push "$IMAGE"
+
+      - name: Update the Lambda and wait
+        env:
+          IMAGE: ${{ steps.ecr.outputs.image }}
+        run: |
+          aws lambda update-function-code --function-name "$LAMBDA_FUNCTION_NAME" \
+            --image-uri "$IMAGE" --query '{state:State,update:LastUpdateStatus}' --output text
+          aws lambda wait function-updated-v2 --function-name "$LAMBDA_FUNCTION_NAME"
+
+      # The first call after an update lands on a new execution environment: a cold start.
+      # Fails with a usage line if the API_URL variable is not set.
+      - name: Smoke test the Function URL
+        env:
+          API_URL: ${{ vars.API_URL }}
+        run: |
+          set -o pipefail
+          make smoke API_URL="$API_URL" | tee smoke.txt
+          {
+            echo "### API deploy ${{ steps.target.outputs.tag }}"
+            echo '```'
+            cat smoke.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
