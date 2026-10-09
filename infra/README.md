@@ -7,7 +7,7 @@ Region: `ap-southeast-1`. Architecture: `x86_64`. Replace `<account-id>` with yo
 ## Before you start
 
 - An AWS account with the AWS CLI v2 configured (`aws configure` or `aws sso login`).
-- Docker Desktop running (`make build-api` needs it).
+- Docker Desktop running, and the GitHub CLI (`gh auth login`) to download the CI built image.
 - A Vercel account linked to the GitHub repo.
 
 ## 1. Budget alarm first ($1)
@@ -31,15 +31,24 @@ aws ecr put-lifecycle-policy --repository-name swing-scan-api --region ap-southe
   --lifecycle-policy-text '{"rules":[{"rulePriority":1,"description":"keep last 5","selection":{"tagStatus":"any","countType":"imageCountMoreThan","countNumber":5},"action":{"type":"expire"}}]}'
 ```
 
-## 4. Build and push the image, tagged with the git commit
+## 4. Get the image from CI and push it, tagged with the git commit
+
+The image must be built on x86: Polars segfaults under Docker's x86 emulation on Apple Silicon, so `make build-api` fails on an M series Mac. CI builds and smoke tests the real image on an x86 runner, and on every push to `main` (or a manual run of the CI workflow on any branch) it keeps that image as an artifact for 7 days.
 
 ```bash
-SHA=$(git rev-parse --short HEAD)
+FULL=$(git rev-parse origin/main)     # the commit to deploy; its CI run must be green
+SHA=${FULL:0:7}                        # the image tag, used again in step 6
 REPO=<account-id>.dkr.ecr.ap-southeast-1.amazonaws.com/swing-scan-api
+RUN=$(gh run list --workflow CI --commit $FULL --event push --json databaseId -q '.[0].databaseId')
+# (no run for that commit: gh workflow run CI --ref main, then repeat the line above with --event workflow_dispatch)
+gh run download $RUN --name api-image-$FULL --dir /tmp/api-image
+gunzip -c /tmp/api-image/api-image.tar.gz | docker load    # loads swing-scan-api:latest (linux/amd64)
+docker tag swing-scan-api:latest $REPO:$SHA
 aws ecr get-login-password --region ap-southeast-1 | docker login --username AWS --password-stdin ${REPO%/*}
-make build-api API_IMAGE=$REPO:$SHA
 docker push $REPO:$SHA
 ```
+
+On an x86 machine you can still build it yourself: `make build-api API_IMAGE=$REPO:$SHA`. To smoke test locally on Apple Silicon, use `make build-api-local && make smoke-image API_IMAGE=swing-scan-api:local-arm64`.
 
 ## 5. Execution role
 
