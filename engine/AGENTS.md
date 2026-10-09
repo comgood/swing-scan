@@ -41,6 +41,8 @@ make data-check                # CI: rebuild twice, same hashes, D-1 to D-3 hold
 
 - Never import `fastapi`, `starlette` or `uvicorn` here; the boundary test fails.
 - Every exit runs through one `step(position, bar)` function shared by both loops. Never special case an exit outside it.
+- The portfolio loop aligns on session dates, never `row + 1`: a ticker with no bar on a session is not stepped (marked at its last close) and cannot be entered that day. Entries spend only the cash at the previous close; no exit on day d funds an entry on d.
+- A ticker whose bars stop early without a `delisted_on` exits `end_of_test` on its last bar, mid window. A live loader must set `delisted_on` for real delistings.
 - The random baseline seed default changes only with an ADR.
 - Rule compilation never uses `eval` or `exec`.
 - Tests for `data/` live in `engine/tests/dataset/`, because `.gitignore` ignores every folder named `data/`.
