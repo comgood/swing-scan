@@ -10,7 +10,13 @@ import numpy as np
 import pytest
 
 from engine import api
-from engine.contracts import BacktestRequest, Market, TradeLabResult, entries_hash
+from engine.contracts import (
+    BacktestRequest,
+    Market,
+    PortfolioResult,
+    TradeLabResult,
+    entries_hash,
+)
 from engine.data.fixtures import FrameSpec, bar_date, make_market
 
 SLIP = 0.001
@@ -149,9 +155,9 @@ def test_best_is_and_guides_is_come_from_is_strategy_values() -> None:  # AC-6, 
     assert result.best_is.expectancy_pct == is_values.index(max(is_values))
 
     is_trades = [t for t in result.baseline_trades if t.segment == "is"]
-    winners = [t.mae_pct for t in is_trades if t.return_pct > 0]
-    assert winners and len(is_trades) < len(result.baseline_trades)
-    assert result.guides_is.winner_mae_p75_pct == pytest.approx(float(np.percentile(winners, 75)))
+    depths = [-t.mae_pct for t in is_trades if t.return_pct > 0]
+    assert depths and len(is_trades) < len(result.baseline_trades)
+    assert result.guides_is.winner_mae_p75_pct == pytest.approx(-float(np.percentile(depths, 75)))
     assert result.guides_is.mfe_median_pct == pytest.approx(
         statistics.median(t.mfe_pct for t in is_trades)
     )
@@ -204,3 +210,39 @@ def _keys(body: str) -> list[str]:
 
     walk(json.loads(body))
     return found
+
+
+# Edges on bars 3 (cold: ATR(14) has no value yet) and 22 (warm), entries on bars 4 and 23,
+# both in IS: the data runs to bar 40, so OOS starts at bar 29.
+WARM_AND_COLD = FrameSpec(1, [4.0, 4.0, 6.0] + [6.0] * 17 + [4.0, 6.0] + [6.0] * 18)
+ATR_STOP = {
+    "name": "atr",
+    "exits": [{"type": "stop_atr", "k": 2, "n": 14}, {"type": "time", "bars": 5}],
+}
+
+
+def test_a_stop_atr_config_averages_r_over_the_trades_that_have_it() -> None:  # ruling 2026-10-09
+    market = make_market({"AAA": WARM_AND_COLD})
+    result = _lab(market, ATR_STOP, TIME_30, horizon_bars=60)
+    is_trades = [t for t in result.baseline_trades if t.segment == "is"]
+    with_r = [t.r_multiple for t in is_trades if t.r_multiple is not None]
+    assert len(is_trades) == 2 and len(with_r) == 1, "fixture needs one cold and one warm entry"
+    metrics = result.rows[0].strategy.is_
+    assert metrics.n_trades == 2  # the cold trade still counts everywhere but R
+    assert metrics.expectancy_r == pytest.approx(statistics.fmean(with_r))
+    assert metrics.expectancy_pct == pytest.approx(
+        statistics.fmean(t.return_pct for t in is_trades)
+    )
+
+
+def test_portfolio_mode_averages_r_over_the_trades_that_have_it() -> None:  # ruling 2026-10-09
+    market = make_market({"AAA": WARM_AND_COLD})
+    request = BacktestRequest.model_validate(
+        {"rule": {"name": "t", "conditions": [CLOSE_ABOVE_5]}, "configs": [ATR_STOP]}
+    )
+    result = api.backtest(request, market)
+    assert isinstance(result, PortfolioResult)
+    is_trades = [t for t in result.trades if t.segment == "is"]
+    with_r = [t.r_multiple for t in is_trades if t.r_multiple is not None]
+    assert len(is_trades) == 2 and len(with_r) == 1, "fixture needs one cold and one warm entry"
+    assert result.metrics.is_.expectancy_r == pytest.approx(statistics.fmean(with_r))

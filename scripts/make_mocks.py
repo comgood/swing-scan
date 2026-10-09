@@ -251,7 +251,7 @@ def trade_stats(trades: Sequence[Trade]) -> Stats:
         avg_win_pct=mean(wins),
         avg_loss_pct=mean(losses),
         expectancy_pct=mean(returns),
-        expectancy_r=mean(r_values) if n and len(r_values) == n else None,
+        expectancy_r=mean(r_values),
         expectancy_per_bar_pct=sum(returns) / bars if bars else None,
         profit_factor=sum(wins) / abs(sum(losses)) if n and losses and sum(losses) else None,
         avg_bars_held=mean([float(t.bars_held) for t in trades]),
@@ -551,10 +551,16 @@ def percentile(values: list[float], q: float) -> float | None:
 
 
 def guides(baseline_is: list[Trade]) -> Guides:
-    winners = [t.mae_pct for t in baseline_is if t.return_pct > 0]
+    # Percentiles of adverse depth (-mae_pct), reported back signed: p90 is deeper than p75.
+    depths = [-t.mae_pct for t in baseline_is if t.return_pct > 0]
+
+    def deep(q: float) -> float | None:
+        value = percentile(depths, q)
+        return -value if value is not None else None
+
     return Guides(
-        winner_mae_p75_pct=percentile(winners, 0.75),
-        winner_mae_p90_pct=percentile(winners, 0.90),
+        winner_mae_p75_pct=deep(0.75),
+        winner_mae_p90_pct=deep(0.90),
         mfe_median_pct=percentile([t.mfe_pct for t in baseline_is], 0.5),
     )
 
