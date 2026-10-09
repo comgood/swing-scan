@@ -1,10 +1,11 @@
 "use client";
 
-// The single config backtest report on `/backtest` (spec 0007, FE tasks 5 and 6). Inputs come
-// from the URL and go back into it on submit; the run starts only when you press "Run
-// backtest", so reloading a shared link never records a trial on its own. A `?r=` link from the
-// rule builder (spec 0008 decision 12) is checked against the indicator catalog; one that does
-// not decode falls back to the template with a notice.
+// The backtest report on `/backtest`: one config is the portfolio report (spec 0007, FE tasks 5
+// and 6), 2 to 6 the exit lab (spec 0009 FE task 5), picked by the response's `mode`. Inputs come
+// from the URL and go back into it on submit; the run starts only when you press the run button,
+// so reloading a shared link never records a trial on its own. A `?r=` link from the rule
+// builder (spec 0008 decision 12) is checked against the indicator catalog; one that does not
+// decode falls back to the template with a notice.
 import type { BacktestRequest } from "@swing-scan/api-client";
 import { useMemo, useState } from "react";
 
@@ -14,6 +15,7 @@ import { ErrorState } from "@/components/error-state";
 import { FormErrorSummary } from "@/components/form-error-summary";
 import { Skeleton } from "@/components/ui/skeleton";
 import { WarmupNotice } from "@/components/warmup-notice";
+import { ExitLabResults } from "@/features/exit-lab";
 import { decodeRule } from "@/features/rule-builder";
 import { pickTemplate } from "@/features/scan";
 import type { TrialStores } from "@/features/honesty";
@@ -30,6 +32,7 @@ import {
   useTemplates,
   ValidationFailed,
   type PortfolioResult,
+  type TradeLabResult,
 } from "./queries";
 import { TradeList } from "./trade-list";
 
@@ -77,7 +80,9 @@ export function BacktestReport({ initialParams, stores }: BacktestReportProps) {
   };
 
   const invalid = backtest.error instanceof ValidationFailed ? backtest.error : null;
-  const placed = invalid ? placeErrors(invalid.errors, sent) : { fields: {}, form: [] };
+  const placed = invalid
+    ? placeErrors(invalid.errors, sent)
+    : { fields: {}, configs: [], form: [] };
   const failed = backtest.error instanceof ApiRequestError ? backtest.error.apiError : null;
   const loading = templates.isPending || (opened.r !== null && indicators.isPending);
 
@@ -111,6 +116,7 @@ export function BacktestReport({ initialParams, stores }: BacktestReportProps) {
             onSubmit={submit}
             running={backtest.isPending}
             errors={placed.fields}
+            configErrors={placed.configs}
             link={link}
           />
         )}
@@ -123,7 +129,8 @@ export function BacktestReport({ initialParams, stores }: BacktestReportProps) {
         )}
       </section>
       {backtest.isPending && <ReportSkeleton />}
-      {backtest.data && <Report result={backtest.data} stores={stores} />}
+      {backtest.data?.mode === "portfolio" && <Report result={backtest.data} stores={stores} />}
+      {backtest.data?.mode === "trade" && <LabReport result={backtest.data} stores={stores} />}
     </div>
   );
 }
@@ -181,6 +188,54 @@ function Report({ result, stores }: { result: PortfolioResult; stores?: TrialSto
               total={result.trades_total}
               truncated={result.trades_truncated}
               oosStart={result.oos_start}
+            />
+          </section>
+        </>
+      )}
+    </>
+  );
+}
+
+/** Shown as row badges in the lab table (AC-15), so not repeated as banners. */
+const ROW_WARNINGS = new Set(["no_entries", "horizon_exits_over_10pct"]);
+
+/** The exit lab report (spec 0009 decision 9): header and counter, table, baseline trades. */
+function LabReport({ result, stores }: { result: TradeLabResult; stores?: TrialStores }) {
+  const noEntries = result.warnings.find((w) => w.code === "no_entries");
+  const others = result.warnings.filter((w) => !ROW_WARNINGS.has(w.code));
+  const baseline = result.rows[result.assumptions.baseline_config_index ?? 0]?.name;
+  return (
+    <>
+      <AssumptionsHeader result={result} stores={stores} />
+      {others.map((w) => (
+        <Banner key={w.code} variant="info">
+          {w.message}
+        </Banner>
+      ))}
+      {noEntries ? (
+        <EmptyState title="No trades" hint={noEntries.message} />
+      ) : (
+        <>
+          <section aria-labelledby="lab-title" className="flex min-w-0 flex-col gap-3">
+            <h2 id="lab-title" className="text-lg font-semibold">
+              Exit lab
+            </h2>
+            <ExitLabResults result={result} />
+          </section>
+          <section aria-labelledby="trades-title" className="flex min-w-0 flex-col gap-3">
+            <h2 id="trades-title" className="text-lg font-semibold">
+              Baseline trades
+            </h2>
+            <p className="text-sm break-words">
+              The trades of the baseline config{baseline ? `, "${baseline}"` : ""}.
+            </p>
+            <TradeList
+              trades={result.baseline_trades}
+              total={result.baseline_trades_total}
+              truncated={result.baseline_trades_truncated}
+              oosStart={result.oos_start}
+              caption="Baseline config trades, sortable by any column"
+              kept="spread"
             />
           </section>
         </>

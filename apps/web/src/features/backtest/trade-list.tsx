@@ -108,6 +108,8 @@ interface TradeListProps {
   oosStart: string;
   /** The table's accessible name; must be unique on the page. */
   caption?: string;
+  /** Which trades a truncated list kept: the latest (portfolio) or an even spread (exit lab). */
+  kept?: "latest" | "spread";
 }
 
 export function TradeList({
@@ -116,12 +118,13 @@ export function TradeList({
   truncated,
   oosStart,
   caption = "Trade list, sortable by any column",
+  kept = "latest",
 }: TradeListProps) {
   return (
     <div className="flex min-w-0 flex-col gap-2">
       <p className="text-sm text-muted-foreground">
         {truncated
-          ? `Showing ${formatInt(trades.length)} of ${formatInt(total)} trades, the latest by entry date; the metrics use every trade.`
+          ? `Showing ${formatInt(trades.length)} of ${formatInt(total)} trades, ${kept === "latest" ? "the latest" : "spread evenly"} by entry date; the metrics use every trade.`
           : `${formatInt(total)} trades.`}{" "}
         IS is in sample; OOS is out of sample, entries from {formatDate(oosStart)}. MAE and MFE are
         the worst and best move from the entry price while the trade was open.
