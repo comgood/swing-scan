@@ -66,7 +66,7 @@ D-5 says the API exits with a clear error when `DATA_MODE=live` runs on a non lo
 <a id="ui-tests"></a>
 ## UI halves of R-1, R-8, X-3, X-4, X-9 and U-1 to U-8
 
-**Status:** owed (QA follow up), partly written.
+**Status:** owed (QA follow up), partly written. R-1, R-8 and U-1 are fully written and `required` since 2026-10-08.
 Doc 02 section 15.4 puts these in `apps/web/tests/acceptance/` as Vitest tests against the mocks. Vitest runs that folder (one line added to `apps/web/vitest.config.mts`), and those tests always block CI through `pnpm --filter web test`.
 
 **Written** (against the shipped app shell, spec 0003):
@@ -76,15 +76,16 @@ Doc 02 section 15.4 puts these in `apps/web/tests/acceptance/` as Vitest tests a
 - U-6, structure only: `layout-375.test.tsx`. No page carries a fixed width over 375 px, every table sits in its own labelled scroll box, and `FormRow` is one column unless the `sm` breakpoint applies.
 - U-4, components: `honesty.test.tsx`. `RunTrialCounter` on the mock `trial` blocks and seeded storage: the counter line, a numbers only tweak adding to the same `N`, re runs and re renders adding nothing, `M` across structure keys, k pairs per exit lab run, the spec 0004 storage keys, `N` surviving a new session, no warning at 9 and the warning word for word at 10 and above, unparsable values treated as empty, and either store throwing hiding the counter behind the static warning. The `/ui` gallery shows every state.
 - U-8, words: `honesty.test.tsx`. `ProcedureNote` renders the doc 01 text word for word, as body text, and the `/ui` gallery shows it.
+- R-1, R-8 and U-1 (builder part): `rule-builder.test.tsx`, against the builder on `/` (feature 10, spec 0008). R-8: edits, an added row (decision 8's `close > sma(50)`, then an indicator and a Number right side) and a removed row reach `POST /scan` exactly as the rows read back, and a rule pasted into the JSON panel becomes rows that read back as the same JSON. R-1: the first edit switches the link to `?r=` (it decodes, by spec 0008 decision 3, to the rows), and reopening that address gives the same rows and scans the same rule; a `?r=` built in that encoding (every operand shape, non ASCII name) opens that exact rule. U-1: the builder opens holding Breakout's rule and scans it.
+- U-7, pages: `rule-builder.test.tsx`. A 422 on row 2's left "Bars ago" lands on that field only, and a 422 on the stop's `pct` lands on "Stop loss (%)" on `/backtest`, not on the time exit. A 422 on a right side field does not reach the field (see [U-7-loc](#U-7-loc)).
 - U-7, shared helpers: `errors-422.test.tsx`. The 422 mocks come back through the `api` client and `fieldErrorsFrom422`, land on the named field (`aria-invalid`, the message as its description) and on no other row; a body level error shows in `FormErrorSummary`.
 
 **Still owed** (the UI does not exist yet, so the IDs stay `pending`):
-- U-1: the workspace on `/` opening with Breakout and its scan results (feature 8) is written in `template-scan.test.tsx` through the `acIt` gate, so it runs but cannot fail CI until U-1 is `required`; the editable builder (feature 10) is still owed.
-- U-6: real builder rows stacking (feature 10), and anything that needs layout: `scrollWidth` at 375 px and the actual column stacking. jsdom has no CSS, so these stay a browser check in `/check verify` until Playwright is added (spec 0003 follow up).
-- U-7: the real builder row and exit config editor showing the error (features 10 and 12).
+- U-6: real builder rows stacking (the builder is on `/` now; jsdom cannot see stacking), and anything that needs layout: `scrollWidth` at 375 px and the actual column stacking. jsdom has no CSS, so these stay a browser check in `/check verify` until Playwright is added (spec 0003 follow up).
+- U-7: a right side error on its field, waiting on the [U-7-loc](#U-7-loc) ruling; the exit lab's config editor (feature 12).
 - U-4: the counter inside the portfolio report (feature 9) and the exit lab report (feature 12), and no count for a failed run. `it.todo` in `honesty.test.tsx`.
 - U-8: the note directly under the exit lab table (feature 12). `it.todo` in `honesty.test.tsx`.
-- U-3 (report header), R-1 and R-8 (builder), X-3, X-4 and X-9 (exit lab report): no UI yet.
+- U-3 (report header): the `/backtest` report exists (feature 9), Vitest still owed. X-3, X-4 and X-9 (exit lab report): no UI yet.
 
 Each ID keeps its pending placeholder in `tests/acceptance/`, plus a contract level test where one applies (U-3 fields, U-7 error paths, U-4 trial keys, X-3 `best_is`, X-4 null R). U-2 is `required` since 2026-10-08: its placeholder is now a pointer (`ui_covered_by`) that checks the Vitest file exists and owes nothing for the ID. U-5 is fully covered too and flips the same way in its own PR.
 
@@ -113,12 +114,23 @@ AC-10 says switching templates uses `router.replace`. In the real browser (verif
 - **`next/navigation` in jsdom.** The tests emulate `useRouter`, `useSearchParams` and `usePathname` with a small store backed by jsdom's `window.location` and `window.history` (either history call re renders). **Tests assume:** the workspace reads the template from `useSearchParams`; how it rewrites the URL is not asserted (see [AC-10-url](#AC-10-url)).
 - **Conditions text.** Each condition is checked as one element whose whole text is `<left label> <op> <right>`, e.g. `volume > 1.5×avg_volume(50)` and `close > 5` (spec 0005 value sourcing).
 
+<a id="U-7-loc"></a>
+## U-7: a right side 422 path carries the operand's `kind`, and the builder does not map it
+
+**Status:** open (found 2026-10-08 against `main` after features 10 and 11).
+The real API answers a bad right side field with the union member in the path: a right `n` of 300 on row 2 gives `loc: ["body", "rule", "conditions", 1, "right", "ind", "n"]`, a bad Number gives `[..., "right", "value", "value"]` (`test_ui.py::test_422_paths_point_at_the_row_or_exit_field` checks the first; a TestClient probe shows the second). Left side paths carry no tag (`[..., "left", "offset"]`), since `left` is always an indicator. Spec 0008's 422 table maps `conditions.i.right.<field>` and `conditions.i.right.value` to the row's right field, with no tag segment, and AC-7 says "on the exact field its `loc` names (for example row 3's right `n`)". The exit form on `/backtest` already maps the tagged path (`exits.0.stop_pct.pct` lands on "Stop loss (%)").
+**What the builder does on `main`:** given the real path `right.ind.n`, the message shows as a row level message on Condition 2, and the "Window (n)" field is not marked (`aria-invalid` unset). Given the untagged `right.n`, it lands on the field. The contract mocks never show the difference: `422.rule.n_out_of_range` uses a left side path.
+**Reading:** doc 01 U-7 ("the offending builder row or exit field shows the inline error") is met by the row message; spec 0008 AC-7 (ratified as written) is not, on the real API.
+**Tests assume:** AC-7: the field is marked. `rule-builder.test.tsx` sends the real API's tagged path, so "U-7: a 422 on row 2's right n ..." is skipped by the pending gate, and U-7 stays `pending`.
+**Ruling needed, one of:** (a) the builder strips the `ind` / `value` tag after `right` (an FE fix, matching the exit form); (b) the API drops the tag from `loc` (a `contract-change` PR, with the `right.ind.n` assertion in `test_ui.py` updated); (c) the row message is enough for U-7, and spec 0008's table and AC-7 are amended. QA suggests (a): the exit form already does it, and the contract stays as is. Either way, a contract mock with a right side path (`422.rule.right_n_out_of_range`, say) would let the FE lane see it.
+
 <a id="U-4"></a>
 ## U-4: what the session total `M` counts, and which storage failure hides the counter
 
-**Status:** open (spec 0004 is "Assumed", not ratified by `/architect`).
+**Status:** ruled (owner, 2026-10-08): spec 0004 as written. The owner ratified specs 0004, 0006, 0007, 0008 and 0009 as written.
 Doc 01 U-4 says "a global session total across all rules is kept in sessionStorage" but not whether it counts runs or distinct pairs, and "storage unavailable" does not say which store. Spec 0004 assumes `M` is the number of distinct pair keys run this session (a re run adds nothing; a pair first seen in an earlier session counts once toward `M` but not again toward `N`), and that either store throwing hides both counters.
-**Tests assume:** spec 0004 as written, including its storage keys (`swing-scan:trials:v1:<structure_key>`, `swing-scan:session-trials:v1`). `honesty.test.tsx` checks the keys directly, so a ratification that changes the layout changes those tests. U-4 stays `pending` anyway until the counter is in the reports (features 9 and 12).
+**Tests assume:** spec 0004 as written, including its storage keys (`swing-scan:trials:v1:<structure_key>`, `swing-scan:session-trials:v1`). `honesty.test.tsx` checks the keys directly.
+**Ruling:** spec 0004 as written: `M` counts distinct pair keys run this session, either store throwing hides both counters, and the storage keys stand. The tests are unchanged. U-4 stays `pending` only because the counter inside the reports is still owed (features 9 and 12), not over its meaning.
 
 <a id="U-8"></a>
 ## U-8: "one line" in a DOM test

@@ -18,7 +18,7 @@ from acceptance.support import (
     rule_json,
     run_scan,
     set_bar,
-    ui_owed,
+    ui_covered_by,
     val,
 )
 from engine.contracts import TEMPLATES, Rule, structure_key
@@ -56,7 +56,9 @@ def test_rule_json_round_trips(rule: dict[str, Any]) -> None:
 
 @pytest.mark.ac("R-1")
 def test_rule_survives_the_url_after_reload() -> None:
-    ui_owed("R-1 (URL encoded form reproduces the rule after reload)")
+    # The first edit switches the link to `?r=`, a reload reproduces the rule row for row, and a
+    # link in spec 0008's encoding opens that exact rule (spec 0008 AC-1, AC-2).
+    ui_covered_by("R-1", "rule-builder.test.tsx")
 
 
 # ---------------------------------------------------------------- R-2 golden templates
@@ -249,7 +251,9 @@ def test_rs_lies_in_0_to_99_and_the_top_return_gets_99() -> None:
 
 @pytest.mark.ac("R-8")
 def test_builder_rows_match_the_request_json() -> None:
-    ui_owed("R-8")
+    # Edits, an added and a removed row reach the scan request exactly as the rows show, and a
+    # rule loaded from the JSON panel serialises back unchanged (spec 0008 AC-4).
+    ui_covered_by("R-8", "rule-builder.test.tsx")
 
 
 # ---------------------------------------------------------------- R-9 structure key
