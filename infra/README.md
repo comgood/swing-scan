@@ -36,17 +36,20 @@ aws ecr put-lifecycle-policy --repository-name swing-scan-api --region ap-southe
 The image must be built on x86: Polars segfaults under Docker's x86 emulation on Apple Silicon, so `make build-api` fails on an M series Mac. CI builds and smoke tests the real image on an x86 runner, and on every push to `main` (or a manual run of the CI workflow on any branch) it keeps that image as an artifact for 7 days.
 
 ```bash
-FULL=$(git rev-parse origin/main)     # the commit to deploy; its CI run must be green
-SHA=${FULL:0:7}                        # the image tag, used again in step 6
+git fetch origin
+FULL=$(git rev-parse origin/main)
+SHA=${FULL:0:7}
 REPO=<account-id>.dkr.ecr.ap-southeast-1.amazonaws.com/swing-scan-api
 RUN=$(gh run list --workflow CI --commit $FULL --event push --json databaseId -q '.[0].databaseId')
-# (no run for that commit: gh workflow run CI --ref main, then repeat the line above with --event workflow_dispatch)
+gh run watch $RUN --exit-status
 gh run download $RUN --name api-image-$FULL --dir /tmp/api-image
-gunzip -c /tmp/api-image/api-image.tar.gz | docker load    # loads swing-scan-api:latest (linux/amd64)
+gunzip -c /tmp/api-image/api-image.tar.gz | docker load
 docker tag swing-scan-api:latest $REPO:$SHA
 aws ecr get-login-password --region ap-southeast-1 | docker login --username AWS --password-stdin ${REPO%/*}
 docker push $REPO:$SHA
 ```
+
+`FULL` is the commit to deploy and `SHA` is the image tag that step 6 uses again. `gh run watch` waits for that commit's CI run and stops if it failed. `docker load` gives you `swing-scan-api:latest` (linux/amd64). If the commit has no push run, start one with `gh workflow run CI --ref main` and use `--event workflow_dispatch` in the `RUN=` line. The block has no inline comments, because zsh treats `#` as a command unless `setopt interactive_comments` is on.
 
 On an x86 machine you can still build it yourself: `make build-api API_IMAGE=$REPO:$SHA`. To smoke test locally on Apple Silicon, use `make build-api-local && make smoke-image API_IMAGE=swing-scan-api:local-arm64`.
 
@@ -67,11 +70,18 @@ aws lambda create-function --function-name swing-scan-api --region ap-southeast-
   --role arn:aws:iam::<account-id>:role/swing-scan-api-exec \
   --architectures x86_64 --memory-size 2048 --timeout 30 \
   --environment 'Variables={DATA_MODE=synthetic,ALLOWED_ORIGINS=https://<your-vercel-domain>,ALLOWED_ORIGIN_REGEX=^https://swing-scan-[a-z0-9-]+\.vercel\.app$}'
+```
 
-# Only if step 2 allows it:
+Only if step 2 allows it:
+
+```bash
 aws lambda put-function-concurrency --function-name swing-scan-api --region ap-southeast-1 \
   --reserved-concurrent-executions 5
+```
 
+Then the public Function URL:
+
+```bash
 aws lambda create-function-url-config --function-name swing-scan-api --region ap-southeast-1 \
   --auth-type NONE
 aws lambda add-permission --function-name swing-scan-api --region ap-southeast-1 \
