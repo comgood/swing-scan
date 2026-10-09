@@ -72,6 +72,14 @@ def test_expectancy_r_is_null_without_a_stop() -> None:
     assert trade_stats([_trade(4, r=None), _trade(-2, r=None)]).expectancy_r is None
 
 
+def test_expectancy_r_leaves_out_only_the_trades_without_r() -> None:  # ruling 2026-10-09
+    # A stop config where one trade has no R (a `stop_atr` entry during ATR warm up).
+    stats = trade_stats([_trade(10, r=2.0), _trade(-4, r=None), _trade(-2, r=-1.0)])
+    assert stats.expectancy_r == pytest.approx((2.0 - 1.0) / 2)
+    assert stats.n_trades == 3
+    assert stats.expectancy_pct == pytest.approx(4 / 3)  # every other metric counts it
+
+
 def test_curve_stats_follow_the_formulas() -> None:
     closes = [110.0, 99.0, 121.0]
     stats = curve_stats(closes, start=100.0, peak=100.0)

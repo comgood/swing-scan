@@ -134,9 +134,10 @@ def test_guides_use_is_trades_only_and_reject_oos() -> None:  # AC-7
     ]
     oos_winners = [_trade(9, mae=-20, mfe=30, segment="oos") for _ in range(4)]
     got = guides_is(is_trades)
-    # Winner MAE [-4, -3, -2, -1]: linear p75 at position 2.25 = -1.75, p90 at 2.7 = -1.3.
-    assert got.winner_mae_p75_pct == pytest.approx(-1.75)
-    assert got.winner_mae_p90_pct == pytest.approx(-1.3)
+    # Winner depths (-mae) [1, 2, 3, 4]: linear p75 at position 2.25 = 3.25, p90 at 2.7 = 3.7,
+    # reported back signed (owner ruling 2026-10-09).
+    assert got.winner_mae_p75_pct == pytest.approx(-3.25)
+    assert got.winner_mae_p90_pct == pytest.approx(-3.7)
     assert got.mfe_median_pct == pytest.approx(4.0)
     with pytest.raises(ValueError, match="IS trades only"):
         guides_is(is_trades + oos_winners)
@@ -167,3 +168,12 @@ def test_even_spread_keeps_both_ends_and_rounds_halves_up() -> None:
     picked = even_spread(list(range(5000)), 2000)
     assert (len(picked), picked[0], picked[-1]) == (2000, 0, 4999)
     assert picked == [round(i * 4999 / 1999 + 1e-9) for i in range(2000)]
+
+
+def test_the_p90_mae_guide_is_deeper_than_p75() -> None:  # owner ruling 2026-10-09
+    # A stop guide: 90% of winners never dipped deeper than p90, so p90 <= p75 <= 0.
+    winners = [_trade(1 + i, mae=-0.5 * i, mfe=2 + i) for i in range(20)]
+    got = guides_is(winners)
+    assert got.winner_mae_p75_pct is not None and got.winner_mae_p90_pct is not None
+    assert got.winner_mae_p90_pct <= got.winner_mae_p75_pct <= 0
+    assert got.winner_mae_p90_pct < got.winner_mae_p75_pct
