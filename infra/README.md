@@ -89,10 +89,15 @@ aws lambda create-function-url-config --function-name swing-scan-api --region ap
 aws lambda add-permission --function-name swing-scan-api --region ap-southeast-1 \
   --statement-id public-url --action lambda:InvokeFunctionUrl \
   --principal '*' --function-url-auth-type NONE
+aws lambda add-permission --function-name swing-scan-api --region ap-southeast-1 \
+  --statement-id public-url-invoke --action lambda:InvokeFunction \
+  --principal '*' --invoked-via-function-url
 
 aws logs put-retention-policy --log-group-name /aws/lambda/swing-scan-api \
   --retention-in-days 7 --region ap-southeast-1
 ```
+
+Since October 2025 a new public Function URL needs both statements, `lambda:InvokeFunctionUrl` and `lambda:InvokeFunction` (restricted to calls through the URL); with only the first, every request gets 403 Forbidden. The log group only exists after the first invocation, so if `put-retention-policy` says it does not exist, call `/api/v1/health` once and run it again.
 
 Check it: `make smoke API_URL=<function-url>`. Record the first (cold) response time in the README; over 8 s reopens ADR-001.
 
