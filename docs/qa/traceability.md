@@ -56,7 +56,7 @@ Test files are under `tests/acceptance/`. "Oracle" means the owner's protected s
 | B-7 | Time exit at the close of bar N | use case | `test_backtest.py` | N = 3 | Oracle | required | 2026-10-08 |
 | B-8 | Delisting exits at the last close | use case | `test_backtest.py` | ticker ends on bar 8, data on bar 20 | Oracle | required | 2026-10-08 |
 | B-9 | MAE and MFE with the exit bar capped | use case | `test_backtest.py` | stop, target and time trades | Oracle | required | 2026-10-08 |
-| B-10 | A poisoned future changes nothing up to T | use case | `test_backtest.py` | 30 ticker random walk, garbage after bar 400, all six exits, portfolio and trade mode (pass) plus the scan at T − 20 and T (pullback differs in the last bit, [B-10-scan](ac-questions.md#B-10-scan)) | Oracle | pending | |
+| B-10 | A poisoned future changes nothing up to T | use case | `test_backtest.py` | 30 ticker random walk, garbage after bar 400, all six exits, portfolio and trade mode exact, plus the scan at T − 20 and T (rows, tickers and `new_today` exact, numbers within 1e-12, [B-10-scan](ac-questions.md#B-10-scan) ruled) | Oracle | required | 2026-10-09 |
 | B-11 | Top 10 by `rs` fill 10 slots at equity over 10 | use case | `test_backtest.py` | 15 tickers signalling on bar 200 | | required | 2026-10-08 |
 | B-13 | Deterministic, under 3 s and 6 MB | use case | `test_backtest.py` | 20 ticker random walk run twice; the generated seed 42 market, both templates, run twice, timed warm (spec 0007 AC-7); a 500 ticker, 1,260 bar random walk; trade mode determinism is X-7's (spec 0009) | `make smoke` | required | 2026-10-09 |
 | B-14 | No signal on the first valid bar or a listing day | golden, use case | `test_backtest.py` | portfolio runs: 270 bar `highest(252)[1]` path; late listings (spec 0007 AC-8); the trade mode entry list is X-1's | Oracle, golden self tests | required | 2026-10-09 |
@@ -80,7 +80,7 @@ Test files are under `tests/acceptance/`. "Oracle" means the owner's protected s
 | U-7 | 422 shows inline on the row or field | contract, UI | `test_ui.py`; Vitest `apps/web/tests/acceptance/errors-422.test.tsx` (shared helpers), `apps/web/tests/acceptance/rule-builder.test.tsx` (pages) | bad `n` on row 2, bad exit param; the 422 mocks through `fieldErrorsFrom422`; real API paths on the builder rows (left, right `ind` and right `value` tags, [U-7-loc](ac-questions.md#U-7-loc) ruled (a)) and the `/backtest` exit form; exit lab config editor owed (feature 12, spec 0009 AC-20) | | pending | |
 | U-8 | Procedure note under the exit lab table | UI | `test_ui.py`; Vitest `apps/web/tests/acceptance/honesty.test.tsx` (words) | `ProcedureNote` and the `/ui` gallery (spec 0004 AC-7, AC-9); placement under the exit lab table owed (feature 12) | | pending | |
 
-**Totals:** 52 MUST criteria, 40 required, 12 pending. Stretch criteria (S-5, B-4R, B-12, X-5S, X-6) get a row when they are picked up.
+**Totals:** 52 MUST criteria, 41 required, 11 pending. Stretch criteria (S-5, B-4R, B-12, X-5S, X-6) get a row when they are picked up.
 
 ## Golden reference
 

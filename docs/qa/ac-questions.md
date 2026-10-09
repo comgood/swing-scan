@@ -139,11 +139,11 @@ The real API answers a bad right side field with the union member in the path: a
 <a id="B-10-scan"></a>
 ## B-10: the scan half of QA's look-ahead test differs in the last bit
 
-**Status:** open (found 2026-10-09 on PR #67's base, after feature 12's BE milestones 1 and 2).
+**Status:** ruled (owner, 2026-10-09): option (b). Found 2026-10-09 on PR #67's base, after feature 12's BE milestones 1 and 2.
 Doc 01 B-10 names backtests only: "trades and equity up to T are identical". `test_backtest.py::test_a_poisoned_future_changes_nothing_up_to_t` also asks the scan at `as_of` T − 20 and T to be identical on the clean and the poisoned market. For both templates the portfolio and the trade lab responses (random baseline included) are now identical. For the pullback template the scan is not: one ticker's `sma(50)` operand differs in the last binary digit at T − 20 (33.324742030926174 against 33.32474203092618), and at T one ticker's `vol_ratio` does too (1.680529991534194 against 1.6805299915341938). No row, `hit` or `new_today` changes.
-**Reading:** bars after T reach a value up to T only through floating point (a rolling window computed over the whole series), not through the logic. It is still the future touching the past, so QA reads "identical" as bit for bit and leaves the test as is.
-**Tests assume:** exact equality, so B-10 stays `pending` (the breakout case passes, the pullback case fails only on the scan).
-**Ruling needed, one of:** (a) the engine computes rolling indicators so a cut at T gives bit identical values (a BE fix; the operands are what a user sees); (b) the scan half compares numbers to a relative 1e-12 and keeps rows, `hit` and `new_today` exact (a QA change); (c) the scan half moves out of B-10, which names backtests only. QA suggests (b), plus (a) if it is cheap. The owner's B-10 oracle is unaffected.
+**Reading:** bars after T reach a value up to T only through floating point (a rolling window computed over the whole series), not through the logic. QA first read "identical" as bit for bit; the owner ruled that last bit noise is not a look ahead.
+**Tests assume:** the ruling. The scan half compares the two scan responses key by key: every key, row, ticker, flag (`new_today`) and list length exact, every float within 1e-12 absolute or relative (`_assert_same_up_to_float_noise` in `test_backtest.py`). The portfolio and trade mode halves stay exact. Both templates pass, and B-10 is `required` since 2026-10-09.
+**Ruling:** (b). **Options that were considered:** (a) the engine computes rolling indicators so a cut at T gives bit identical values (a BE fix; the operands are what a user sees); (b) the scan half compares numbers to a relative 1e-12 and keeps rows, `hit` and `new_today` exact (a QA change); (c) the scan half moves out of B-10, which names backtests only. The owner's B-10 oracle is unaffected.
 
 <a id="U-4"></a>
 ## U-4: what the session total `M` counts, and which storage failure hides the counter
