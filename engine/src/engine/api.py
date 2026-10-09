@@ -13,6 +13,7 @@ from datetime import date
 from typing import Literal
 
 import numpy as np
+import numpy.typing as npt
 import polars as pl
 from pydantic import ValidationError
 from pydantic_core import PydanticCustomError
@@ -24,6 +25,9 @@ from .contracts import (
     BacktestResponse,
     BenchmarkMetrics,
     BenchmarkSplit,
+    ConfigRow,
+    EdgeSplit,
+    Entries,
     IndOperand,
     Market,
     Point,
@@ -35,7 +39,10 @@ from .contracts import (
     ScanResponse,
     ScanRow,
     Trade,
+    TradeLabResult,
+    TradeSplit,
     Trial,
+    entries_hash,
     scan_columns,
 )
 from .contracts import (
@@ -45,10 +52,33 @@ from .contracts._errors import error_at
 from .contracts.trial import pair_key, structure_key
 from .exits import build_exits
 from .indicators import IndicatorKey, cache_for, dependencies, key_of
+from .indicators.cache import IndicatorCache
 from .indicators.compute import POS
-from .metrics import CurveStats, curve_stats, exposure_pct, thin, trade_stats
+from .metrics import (
+    CurveStats,
+    best_is,
+    curve_stats,
+    distinct_weeks,
+    edge,
+    even_spread,
+    exposure_pct,
+    guides_is,
+    over_horizon_limit,
+    thin,
+    trade_metrics,
+    trade_stats,
+)
 from .rules import COOLDOWN, compile_rule, entry_signals, operand_values
-from .sim import START_EQUITY, BarArrays, make_trade, run_portfolio, signal_sessions
+from .sim import (
+    START_EQUITY,
+    BarArrays,
+    EntryPoint,
+    entry_points,
+    make_trade,
+    run_portfolio,
+    run_trade_mode,
+    signal_sessions,
+)
 
 FEATURE_NAMES = {
     7: "Synthetic market",
@@ -238,6 +268,19 @@ def _window(market: Market, start: date | None, end: date | None) -> tuple[Marke
     return market, sessions
 
 
+def _signal_rows(rule: Rule, cache: IndicatorCache) -> npt.NDArray[np.int64]:
+    """Rows of the shared entry signals (S-3), benchmark excluded, in `market.bars` order."""
+    compiled = compile_rule(rule, cache)
+    signals = entry_signals(cache.pos, cache.is_last, compiled.valid, compiled.value)
+    universe = (cache.bars["ticker"] != cache.benchmark).to_numpy()
+    return np.flatnonzero(signals.to_numpy() & universe)
+
+
+def _oos_split(sessions: list[date]) -> int:
+    """Index of the first OOS session: the last 30% of the window's sessions."""
+    return math.floor((1 - OOS_FRACTION) * len(sessions))
+
+
 def _metrics(trades: list[Trade], curve: CurveStats, invested: list[float]) -> PortfolioMetrics:
     stats = trade_stats(trades)
     return PortfolioMetrics(
@@ -301,11 +344,7 @@ def _portfolio(request: BacktestRequest, market: Market) -> PortfolioResult:
     bars = BarArrays.build(market, cache)
     exits = build_exits(config, cache.get)
 
-    compiled = compile_rule(request.rule, cache)
-    signals = entry_signals(cache.pos, cache.is_last, compiled.valid, compiled.value)
-    universe = (cache.bars["ticker"] != cache.benchmark).to_numpy()
-    signal_rows = np.flatnonzero(signals.to_numpy() & universe)
-
+    signal_rows = _signal_rows(request.rule, cache)
     session_index = {day: i for i, day in enumerate(sessions)}
     rs126 = cache.get(IndicatorKey("rs", 126)).fill_null(float("nan")).to_numpy()
     run = run_portfolio(
@@ -318,7 +357,7 @@ def _portfolio(request: BacktestRequest, market: Market) -> PortfolioResult:
         slip,
     )
 
-    split = math.floor((1 - OOS_FRACTION) * len(sessions))
+    split = _oos_split(sessions)
     oos_start = sessions[split]
     trades = sorted(
         (
@@ -384,6 +423,147 @@ def _portfolio(request: BacktestRequest, market: Market) -> PortfolioResult:
         trades=trades[-MAX_TRADES:],
         trades_total=len(trades),
         trades_truncated=len(trades) > MAX_TRADES,
+    )
+
+
+def _lab_warnings(
+    names: list[str], strategy: list[list[Trade]], n_entries: int, horizon: int
+) -> list[ResultWarning]:
+    """`no_entries`, then each `horizon_exits_over_10pct` in config order, then
+    `trades_truncated` (spec 0009 value sourcing)."""
+    warnings: list[ResultWarning] = []
+    if n_entries == 0:
+        warnings.append(
+            ResultWarning(
+                code="no_entries",
+                config_index=None,
+                message="No entries: the rule never produced a signal in this window.",
+            )
+        )
+    warnings += [
+        ResultWarning(
+            code="horizon_exits_over_10pct",
+            config_index=i,
+            message=(
+                f"{names[i]}: more than 10% of trades hit the {horizon} bar horizon, "
+                "so its results are cut short."
+            ),
+        )
+        for i, trades in enumerate(strategy)
+        if over_horizon_limit(trades)
+    ]
+    baseline_total = len(strategy[0])
+    if baseline_total > MAX_TRADES:
+        warnings.append(
+            ResultWarning(
+                code="trades_truncated",
+                config_index=None,
+                message=(
+                    f"Showing 2,000 of {baseline_total:,} baseline trades; metrics use all of them."
+                ),
+            )
+        )
+    return warnings
+
+
+def _split(trades: list[Trade]) -> TradeSplit:
+    return TradeSplit(
+        is_=trade_metrics([t for t in trades if t.segment == "is"]),
+        oos=trade_metrics([t for t in trades if t.segment == "oos"]),
+    )
+
+
+def _trade_lab(request: BacktestRequest, market: Market) -> TradeLabResult:
+    """Trade mode, the exit lab (spec 0009): one entry list for every config, each entry a
+    unit notional trade walked through the config's exits by `walk_trade()` up to the
+    horizon, then per trade metrics in IS and OOS columns.
+
+    Not served yet: `backtest()` answers 2 to 6 configs with 501 until the random baseline
+    lands (spec 0009, assumed decision 2). Until then the random list is empty, so random
+    metrics are the empty segment ones and every edge is null.
+    """
+    sim = request.sim
+    slip = sim.slippage_bps / 10_000
+    market, sessions = _window(market, sim.start, sim.end)
+    cache = cache_for(market)
+    bars = BarArrays.build(market, cache)
+    oos_start = sessions[_oos_split(sessions)]
+
+    session_set = set(sessions)
+    signal_rows = [
+        r for r in _signal_rows(request.rule, cache).tolist() if bars.date[r] in session_set
+    ]
+    entries = entry_points(signal_rows, bars, slip, oos_start)
+    random_entries: list[EntryPoint] = []  # the seeded random baseline arrives in BE 2
+
+    exit_sets = [build_exits(config, cache.get) for config in request.configs]
+    runs = run_trade_mode(
+        entries, random_entries, exit_sets, bars, sim.horizon_bars, slip, oos_start
+    )
+
+    rows = []
+    for config, run in zip(request.configs, runs, strict=True):
+        strategy, random = _split(run.strategy), _split(run.random)
+        rows.append(
+            ConfigRow(
+                name=config.name,
+                strategy=strategy,
+                random=random,
+                edge=EdgeSplit(
+                    is_=edge(strategy.is_, random.is_), oos=edge(strategy.oos, random.oos)
+                ),
+            )
+        )
+    baseline = sorted(runs[0].strategy, key=lambda t: (t.entry_date, t.ticker))
+    names = [config.name for config in request.configs]
+    assumptions = Assumptions(
+        fill_model="signal_close_entry_next_open",
+        slippage_bps=sim.slippage_bps,
+        commission_bps=0,
+        sizing="unit_notional",
+        max_positions=None,
+        entry_rising_edge=True,
+        cooldown_bars=COOLDOWN,
+        cooldown_basis="signal",
+        no_last_bar_entry=True,
+        same_ticker_overlap=True,
+        horizon_bars=sim.horizon_bars,
+        seed=sim.seed,
+        configs=list(request.configs),
+        baseline_config_index=0,
+        delisting_rule="exit_last_close",
+        oos_start=oos_start,
+        oos_fraction=OOS_FRACTION,
+        data_mode=market.meta.data_mode,
+        data_version=market.meta.data_version,
+        data_seed=market.meta.seed,
+    )
+    return TradeLabResult(
+        mode="trade",
+        assumptions=assumptions,
+        oos_start=oos_start,
+        trial=Trial(
+            structure_key=structure_key(request.rule),
+            pair_keys=[pair_key(request.rule, config) for config in request.configs],
+        ),
+        warnings=_lab_warnings(
+            names, [run.strategy for run in runs], len(entries), sim.horizon_bars
+        ),
+        entries=Entries(
+            count=len(entries),
+            is_count=sum(e.segment == "is" for e in entries),
+            oos_count=sum(e.segment == "oos" for e in entries),
+            distinct_weeks=distinct_weeks([e.entry_date for e in entries]),
+            hash=entries_hash((e.ticker, e.entry_date) for e in entries),
+            random_is_count=sum(e.segment == "is" for e in random_entries),
+            random_oos_count=sum(e.segment == "oos" for e in random_entries),
+        ),
+        rows=rows,
+        best_is=best_is([row.strategy.is_ for row in rows]),
+        guides_is=guides_is([t for t in baseline if t.segment == "is"]),
+        baseline_trades=even_spread(baseline, MAX_TRADES),
+        baseline_trades_total=len(baseline),
+        baseline_trades_truncated=len(baseline) > MAX_TRADES,
     )
 
 
