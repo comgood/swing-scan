@@ -296,3 +296,342 @@ describe("RuleBuilder", () => {
     await expectNoAxeViolations(container);
   });
 });
+
+const rows = () => screen.getAllByRole("group", { name: /^Condition \d$/ });
+
+async function runScan(user: ReturnType<typeof userEvent.setup>, bodies: ScanRequest[]) {
+  const before = bodies.length;
+  await user.click(screen.getByRole("button", { name: "Run scan" }));
+  await waitFor(() => expect(bodies).toHaveLength(before + 1));
+  return bodies[before].rule;
+}
+
+describe("RuleBuilder right side switch (decision 9)", () => {
+  it("starts an Indicator right side at sma(50) and a Number at 0, keeping nothing", async () => {
+    const bodies = recordScans();
+    const { user } = setup();
+    const compare = within(row(3)).getByLabelText("Compare with");
+
+    await user.selectOptions(compare, "ind");
+    const right = side(3, "Right side");
+    expect(within(right).getByLabelText("Indicator")).toHaveValue("sma");
+    expect(within(right).getByLabelText("Window (n)")).toHaveValue("50");
+    expect(within(right).getByLabelText("Bars ago")).toHaveValue("0");
+    expect(within(right).getByLabelText("Multiplier (×)")).toHaveValue("1");
+    expect((await runScan(user, bodies)).conditions[2].right).toEqual({
+      kind: "ind",
+      ind: "sma",
+      n: 50,
+      offset: 0,
+      mult: 1,
+    });
+
+    await user.selectOptions(compare, "value");
+    expect(within(side(3, "Right side")).getByLabelText("Number")).toHaveValue("0");
+    expect((await runScan(user, bodies)).conditions[2].right).toEqual({ kind: "value", value: 0 });
+  });
+
+  it("drops a custom right indicator entirely when you switch to Number and back", async () => {
+    const bodies = recordScans();
+    const { user } = setup();
+    const right = () => side(1, "Right side");
+    const offset = within(right()).getByLabelText("Bars ago");
+    await user.clear(offset);
+    await user.type(offset, "4");
+    await user.selectOptions(within(row(1)).getByLabelText("Compare with"), "value");
+    await user.selectOptions(within(row(1)).getByLabelText("Compare with"), "ind");
+    expect(within(right()).getByLabelText("Bars ago")).toHaveValue("0");
+    expect((await runScan(user, bodies)).conditions[0].right).toEqual({
+      kind: "ind",
+      ind: "sma",
+      n: 50,
+      offset: 0,
+      mult: 1,
+    });
+  });
+});
+
+describe("RuleBuilder indicator change (decision 9)", () => {
+  it("resets a typed n to 14 on a new windowed indicator, keeping offset and mult", async () => {
+    const bodies = recordScans();
+    const { user } = setup();
+    const left = side(1, "Left side");
+    await user.selectOptions(within(left).getByLabelText("Indicator"), "rsi");
+    const n = within(left).getByLabelText("Window (n)");
+    await user.clear(n);
+    await user.type(n, "21");
+    const offset = within(left).getByLabelText("Bars ago");
+    await user.clear(offset);
+    await user.type(offset, "3");
+    await user.selectOptions(within(left).getByLabelText("Indicator"), "ema");
+    expect(within(left).getByLabelText("Window (n)")).toHaveValue("14");
+    expect((await runScan(user, bodies)).conditions[0].left).toEqual({
+      kind: "ind",
+      ind: "ema",
+      n: 14,
+      offset: 3,
+      mult: 1,
+    });
+  });
+
+  it("sends n null and hides the window for a price field", async () => {
+    const bodies = recordScans();
+    const { user } = setup();
+    const right = side(1, "Right side");
+    expect(within(right).getByLabelText("Window (n)")).toBeInTheDocument();
+    await user.selectOptions(within(right).getByLabelText("Indicator"), "volume");
+    expect(within(right).queryByLabelText("Window (n)")).not.toBeInTheDocument();
+    expect(within(right).getByText("No window for a price field")).toBeInTheDocument();
+    const sent = (await runScan(user, bodies)).conditions[0].right;
+    expect(sent).toMatchObject({ kind: "ind", ind: "volume", n: null });
+  });
+});
+
+describe("RuleBuilder name field (decision 11)", () => {
+  const name = () => screen.getByLabelText("Name");
+
+  it("starts on the template's name and says the length limit", () => {
+    setup();
+    expect(name()).toHaveValue(breakout.rule.name);
+    expect(name()).toHaveAccessibleDescription(expect.stringContaining("1 to 40 characters"));
+  });
+
+  it("sends the trimmed name and leaves what you typed in the field", async () => {
+    const bodies = recordScans();
+    const { user } = setup();
+    await user.clear(name());
+    await user.type(name(), "  Swing idea  ");
+    expect(name()).toHaveValue("  Swing idea  ");
+    expect((await runScan(user, bodies)).name).toBe("Swing idea");
+  });
+
+  it("keeps the space between words while you type them", async () => {
+    const bodies = recordScans();
+    const { user } = setup();
+    await user.clear(name());
+    await user.type(name(), "Two words");
+    expect(name()).toHaveValue("Two words");
+    expect((await runScan(user, bodies)).name).toBe("Two words");
+  });
+
+  it("sends a 40 character name whole", async () => {
+    const bodies = recordScans();
+    const { user } = setup();
+    const forty = "N".repeat(40);
+    await user.clear(name());
+    await user.type(name(), forty);
+    expect((await runScan(user, bodies)).name).toBe(forty);
+  });
+
+  it("shows the server's 422 for a name on the Name field (decision 6)", async () => {
+    server.use(
+      http.post("*/api/v1/scan", () =>
+        HttpResponse.json(
+          {
+            detail: [
+              {
+                type: "string_too_long",
+                loc: ["body", "rule", "name"],
+                msg: "String should have at most 40 characters",
+                input: null,
+              },
+            ],
+          },
+          { status: 422 },
+        ),
+      ),
+    );
+    const { user } = setup();
+    await user.type(name(), "x".repeat(41));
+    await user.click(screen.getByRole("button", { name: "Run scan" }));
+    await waitFor(() => expect(name()).toHaveAttribute("aria-invalid", "true"));
+    expect(name()).toHaveAccessibleDescription(
+      expect.stringContaining("String should have at most 40 characters"),
+    );
+  });
+
+  it("replaces the field with a pasted rule's name", async () => {
+    const { user } = setup();
+    await user.click(screen.getByText("Rule as JSON"));
+    await user.click(screen.getByLabelText("Paste a rule"));
+    await user.paste(JSON.stringify({ ...breakout.rule, name: "From JSON" }));
+    await user.click(screen.getByRole("button", { name: "Load rule" }));
+    expect(name()).toHaveValue("From JSON");
+  });
+});
+
+describe("RuleBuilder JSON panel in place (decision 10)", () => {
+  it("shows the rule's JSON as you edit it", async () => {
+    const { user } = setup();
+    await user.click(screen.getByRole("button", { name: "Add condition" }));
+    const json = JSON.parse(screen.getByLabelText("Rule JSON").textContent!) as Rule;
+    expect(json.conditions).toHaveLength(4);
+  });
+
+  it("leaves rows, name and JSON alone when the paste is Not a rule", async () => {
+    const bodies = recordScans();
+    const { user } = setup();
+    await user.click(screen.getByText("Rule as JSON"));
+    const before = screen.getByLabelText("Rule JSON").textContent;
+    await user.click(screen.getByLabelText("Paste a rule"));
+    await user.paste('{"name": "Hijack", "conditions": []}');
+    await user.click(screen.getByRole("button", { name: "Load rule" }));
+    expect(screen.getByText("Not a rule")).toBeInTheDocument();
+    expect(rows()).toHaveLength(3);
+    expect(screen.getByLabelText("Name")).toHaveValue(breakout.rule.name);
+    expect(screen.getByLabelText("Rule JSON").textContent).toBe(before);
+    expect(await runScan(user, bodies)).toEqual(breakout.rule);
+  });
+});
+
+describe("RuleBuilder stale label (decision 5, AC-8)", () => {
+  it("shows no stale label before the first run, even after an edit", async () => {
+    const { user } = setup();
+    await user.click(screen.getByRole("button", { name: "Add condition" }));
+    expect(screen.queryByText(STALE_TEXT)).not.toBeInTheDocument();
+  });
+
+  it.each([
+    [
+      "renaming",
+      async (user: ReturnType<typeof userEvent.setup>) => {
+        await user.type(screen.getByLabelText("Name"), "!");
+      },
+    ],
+    [
+      "adding a row",
+      async (user: ReturnType<typeof userEvent.setup>) => {
+        await user.click(screen.getByRole("button", { name: "Add condition" }));
+      },
+    ],
+    [
+      "removing a row",
+      async (user: ReturnType<typeof userEvent.setup>) => {
+        await user.click(screen.getByRole("button", { name: "Remove condition 1" }));
+      },
+    ],
+    [
+      "loading pasted JSON",
+      async (user: ReturnType<typeof userEvent.setup>) => {
+        await user.click(screen.getByText("Rule as JSON"));
+        await user.click(screen.getByLabelText("Paste a rule"));
+        await user.paste(JSON.stringify(breakout.rule));
+        await user.click(screen.getByRole("button", { name: "Load rule" }));
+      },
+    ],
+  ])("labels results stale as a status after %s", async (_label, edit) => {
+    const bodies = recordScans();
+    const { user } = setup();
+    await runScan(user, bodies);
+    expect(screen.queryByText(STALE_TEXT)).not.toBeInTheDocument();
+    await edit(user);
+    expect(screen.getByText(STALE_TEXT)).toHaveAttribute("role", "status");
+  });
+
+  it("does not label results stale when a paste fails", async () => {
+    const bodies = recordScans();
+    const { user } = setup();
+    await runScan(user, bodies);
+    await user.click(screen.getByText("Rule as JSON"));
+    await user.click(screen.getByLabelText("Paste a rule"));
+    await user.paste("nope");
+    await user.click(screen.getByRole("button", { name: "Load rule" }));
+    expect(screen.queryByText(STALE_TEXT)).not.toBeInTheDocument();
+  });
+});
+
+describe("RuleBuilder backtest hand off (decision 12)", () => {
+  function Bare({ backtestHref }: { backtestHref?: string }) {
+    const [state, dispatch] = useReducer(builderReducer, breakout.rule, (r) =>
+      initBuilder(r, { template: "breakout_52w" }),
+    );
+    return (
+      <RuleBuilder
+        state={state}
+        dispatch={dispatch}
+        catalog={catalog}
+        backtestHref={backtestHref}
+      />
+    );
+  }
+
+  it("links Backtest this rule to the href it is given", () => {
+    renderWithQuery(<Bare backtestHref="/backtest?r=abc" />);
+    expect(screen.getByRole("link", { name: "Backtest this rule" })).toHaveAttribute(
+      "href",
+      "/backtest?r=abc",
+    );
+  });
+
+  it("shows no link and no Run scan when the caller passes neither", () => {
+    renderWithQuery(<Bare />);
+    expect(screen.queryByRole("link", { name: "Backtest this rule" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Run scan" })).not.toBeInTheDocument();
+  });
+});
+
+describe("RuleBuilder keyboard and axe (AC-10)", () => {
+  it("adds and removes rows from the keyboard alone", async () => {
+    const { user } = setup();
+    screen.getByRole("button", { name: "Add condition" }).focus();
+    await user.keyboard("{Enter}");
+    expect(rows()).toHaveLength(4);
+    screen.getByRole("button", { name: "Remove condition 4" }).focus();
+    await user.keyboard(" ");
+    expect(rows()).toHaveLength(3);
+  });
+
+  it("reaches every control of a row with Tab, in reading order", async () => {
+    const { user } = setup();
+    within(side(1, "Left side")).getByLabelText("Indicator").focus();
+    const order = [
+      within(side(1, "Left side")).getByLabelText("Bars ago"),
+      within(side(1, "Left side")).getByLabelText("Multiplier (×)"),
+      within(row(1)).getByLabelText("Operator"),
+      within(row(1)).getByLabelText("Compare with"),
+      within(side(1, "Right side")).getByLabelText("Indicator"),
+      within(side(1, "Right side")).getByLabelText("Window (n)"),
+      within(side(1, "Right side")).getByLabelText("Bars ago"),
+      within(side(1, "Right side")).getByLabelText("Multiplier (×)"),
+      screen.getByRole("button", { name: "Remove condition 1" }),
+    ];
+    for (const control of order) {
+      await user.tab();
+      expect(control).toHaveFocus();
+    }
+  });
+
+  it("edits a number from the keyboard and runs it with Enter on Run scan", async () => {
+    const bodies = recordScans();
+    const { user } = setup();
+    within(side(3, "Right side")).getByLabelText("Number").focus();
+    await user.keyboard("{Control>}a{/Control}12");
+    screen.getByRole("button", { name: "Run scan" }).focus();
+    await user.keyboard("{Enter}");
+    await waitFor(() => expect(bodies).toHaveLength(1));
+    expect(bodies[0].rule.conditions[2].right).toEqual({ kind: "value", value: 12 });
+  });
+
+  it("has no axe violations at 8 rows with the reason shown and a 422 on a field", async () => {
+    recordScans("422.rule.n_out_of_range");
+    const { user, container } = setup();
+    for (let i = 0; i < 5; i++) {
+      await user.click(screen.getByRole("button", { name: "Add condition" }));
+    }
+    await user.click(screen.getByRole("button", { name: "Run scan" }));
+    await screen.findByText("Must be between 2 and 50");
+    expect(screen.getByText(MAX_ROWS_REASON)).toBeInTheDocument();
+    await expectNoAxeViolations(container);
+  });
+
+  it("has no axe violations on one row with Remove disabled and stale results", async () => {
+    const bodies = recordScans();
+    const { user, container } = setup();
+    await runScan(user, bodies);
+    await user.click(screen.getByRole("button", { name: "Remove condition 1" }));
+    await user.click(screen.getByRole("button", { name: "Remove condition 1" }));
+    expect(screen.getByRole("button", { name: "Remove condition 1" })).toBeDisabled();
+    expect(screen.getByText(STALE_TEXT)).toBeInTheDocument();
+    await expectNoAxeViolations(container);
+  });
+});
