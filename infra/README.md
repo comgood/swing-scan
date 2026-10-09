@@ -69,8 +69,10 @@ aws lambda create-function --function-name swing-scan-api --region ap-southeast-
   --package-type Image --code ImageUri=$REPO:$SHA \
   --role arn:aws:iam::<account-id>:role/swing-scan-api-exec \
   --architectures x86_64 --memory-size 2048 --timeout 30 \
-  --environment 'Variables={DATA_MODE=synthetic,ALLOWED_ORIGINS=https://<your-vercel-domain>,ALLOWED_ORIGIN_REGEX=^https://swing-scan-[a-z0-9-]+\.vercel\.app$}'
+  --environment '{"Variables":{"DATA_MODE":"synthetic","ALLOWED_ORIGINS":"https://<your-vercel-domain>","ALLOWED_ORIGIN_REGEX":"^https://swing-scan-[a-z0-9-]+\\.vercel\\.app$"}}'
 ```
+
+The environment is JSON, not the CLI's `Key=Value` shorthand: the shorthand parser reads the `[` in the regex as a list and fails. The `\\.` becomes the regex's `\.` once the JSON is parsed. If you don't know your Vercel domain yet, use `https://swing-scan.vercel.app` and fix it after step 7 with `aws lambda update-function-configuration` and the same `--environment` value.
 
 Only if step 2 allows it:
 
