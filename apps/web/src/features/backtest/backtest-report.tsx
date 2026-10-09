@@ -2,9 +2,11 @@
 
 // The single config backtest report on `/backtest` (spec 0007, FE tasks 5 and 6). Inputs come
 // from the URL and go back into it on submit; the run starts only when you press "Run
-// backtest", so reloading a shared link never records a trial on its own.
+// backtest", so reloading a shared link never records a trial on its own. A `?r=` link from the
+// rule builder (spec 0008 decision 12) is checked against the indicator catalog; one that does
+// not decode falls back to the template with a notice.
 import type { BacktestRequest } from "@swing-scan/api-client";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Banner } from "@/components/banner";
 import { EmptyState } from "@/components/empty-state";
@@ -12,6 +14,7 @@ import { ErrorState } from "@/components/error-state";
 import { FormErrorSummary } from "@/components/form-error-summary";
 import { Skeleton } from "@/components/ui/skeleton";
 import { WarmupNotice } from "@/components/warmup-notice";
+import { decodeRule } from "@/features/rule-builder";
 import { pickTemplate } from "@/features/scan";
 import type { TrialStores } from "@/features/honesty";
 import { ApiRequestError } from "@/lib/api-error";
@@ -21,8 +24,16 @@ import { BacktestForm } from "./backtest-form";
 import { EquityChart } from "./equity-chart";
 import { inputsFromParams, paramsFromInputs, placeErrors, requestFrom } from "./inputs";
 import { MetricsTable } from "./metrics-table";
-import { useBacktest, useTemplates, ValidationFailed, type PortfolioResult } from "./queries";
+import {
+  useBacktest,
+  useIndicators,
+  useTemplates,
+  ValidationFailed,
+  type PortfolioResult,
+} from "./queries";
 import { TradeList } from "./trade-list";
+
+export const BAD_RULE_LINK = "This link's rule could not be read. Pick a template instead.";
 
 interface BacktestReportProps {
   /** The page's search params at load. */
@@ -32,25 +43,43 @@ interface BacktestReportProps {
 }
 
 export function BacktestReport({ initialParams, stores }: BacktestReportProps) {
+  const [opened] = useState(() => inputsFromParams(initialParams));
   const templates = useTemplates();
+  const indicators = useIndicators(opened.r !== null);
   const backtest = useBacktest();
-  const [inputs, setInputs] = useState(() => inputsFromParams(initialParams));
+  const [inputs, setInputs] = useState(opened);
   const [sent, setSent] = useState(inputs);
+
+  const linkRule = useMemo(
+    () =>
+      opened.r !== null && indicators.data
+        ? decodeRule(
+            opened.r,
+            indicators.data.map((s) => s.name),
+          )
+        : null,
+    [opened.r, indicators.data],
+  );
+  const link = linkRule && opened.r !== null ? { r: opened.r, name: linkRule.name } : null;
+  const badLink = opened.r !== null && indicators.data !== undefined && linkRule === null;
+  const catalogReady = opened.r === null || indicators.data !== undefined;
 
   const run = (body: BacktestRequest) => backtest.mutate(body);
   const submit = () => {
+    const useLink = link !== null && linkRule !== null && inputs.r !== null;
     const template = templates.data && pickTemplate(templates.data, inputs.template);
     if (!template) return;
-    const next = { ...inputs, template: template.id };
+    const next = { ...inputs, template: template.id, r: useLink ? link.r : null };
     setInputs(next);
     setSent(next);
     window.history.replaceState(null, "", `?${paramsFromInputs(next).toString()}`);
-    run(requestFrom(next, template.rule));
+    run(requestFrom(next, useLink ? linkRule : template.rule));
   };
 
   const invalid = backtest.error instanceof ValidationFailed ? backtest.error : null;
   const placed = invalid ? placeErrors(invalid.errors, sent) : { fields: {}, form: [] };
   const failed = backtest.error instanceof ApiRequestError ? backtest.error.apiError : null;
+  const loading = templates.isPending || (opened.r !== null && indicators.isPending);
 
   return (
     <div className="flex min-w-0 flex-col gap-8">
@@ -58,12 +87,23 @@ export function BacktestReport({ initialParams, stores }: BacktestReportProps) {
         <h1 id="backtest-title" className="text-2xl font-semibold">
           Backtest
         </h1>
-        <WarmupNotice pending={templates.isPending || backtest.isPending} />
-        {templates.isPending && <Skeleton className="h-40 w-full" />}
+        <WarmupNotice pending={loading || backtest.isPending} />
+        {badLink && <Banner variant="info">{BAD_RULE_LINK}</Banner>}
+        {loading && (
+          <>
+            <p role="status" className="sr-only">
+              Loading templates…
+            </p>
+            <Skeleton className="h-40 w-full" />
+          </>
+        )}
         {templates.error instanceof ApiRequestError && (
           <ErrorState error={templates.error.apiError} onRetry={() => void templates.refetch()} />
         )}
-        {templates.data && (
+        {indicators.error instanceof ApiRequestError && (
+          <ErrorState error={indicators.error.apiError} onRetry={() => void indicators.refetch()} />
+        )}
+        {templates.data && catalogReady && (
           <BacktestForm
             templates={templates.data}
             inputs={inputs}
@@ -71,6 +111,7 @@ export function BacktestReport({ initialParams, stores }: BacktestReportProps) {
             onSubmit={submit}
             running={backtest.isPending}
             errors={placed.fields}
+            link={link}
           />
         )}
         <FormErrorSummary errors={placed.form} />

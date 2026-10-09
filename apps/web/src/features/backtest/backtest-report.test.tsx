@@ -5,12 +5,13 @@ import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 
 import { memoryStores } from "@/features/honesty/memory-stores";
+import { encodeRule } from "@/features/rule-builder";
 import { backtestHandler, mocks } from "@/mocks/handlers";
 import { server } from "@/mocks/node";
 import { expectNoAxeViolations } from "@/test/axe";
 import { renderWithQuery } from "@/test/render";
 
-import { BacktestReport } from "./backtest-report";
+import { BAD_RULE_LINK, BacktestReport } from "./backtest-report";
 
 function renderReport(query = "") {
   const user = userEvent.setup();
@@ -41,7 +42,7 @@ describe("BacktestReport", () => {
     const bodies = recordBacktests();
     const { user } = renderReport("template=pullback_ema21&max_positions=5");
 
-    expect(await screen.findByLabelText("Template")).toHaveValue("pullback_ema21");
+    expect(await screen.findByLabelText("Rule")).toHaveValue("pullback_ema21");
     expect(screen.getByLabelText("Max positions")).toHaveValue("5");
     expect(bodies).toHaveLength(0);
 
@@ -149,5 +150,71 @@ describe("BacktestReport", () => {
     const headings = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
     expect(headings.slice(-3)).toEqual(["Results", "Equity", "Trades"]);
     await expectNoAxeViolations(container);
+  });
+
+  it("sends the feature 11 exits you fill in, in the contract's order", async () => {
+    const bodies = recordBacktests();
+    const { user } = renderReport();
+    await user.type(await screen.findByLabelText("Trailing stop (%)"), "12");
+    await user.type(screen.getByLabelText("ATR stop (× ATR)"), "2.5");
+    await user.type(screen.getByLabelText("Target (%)"), "20");
+    await user.type(screen.getByLabelText("Close below MA (bars)"), "50");
+    await user.selectOptions(screen.getByLabelText("MA type"), "ema");
+    await runIt(user);
+
+    await screen.findByRole("heading", { name: "Assumptions" });
+    expect(bodies[0]!.configs[0]!.exits).toEqual([
+      { type: "stop_pct", pct: 8 },
+      { type: "stop_atr", k: 2.5, n: 14 },
+      { type: "target", pct: 20 },
+      { type: "trail_pct", pct: 12 },
+      { type: "close_below_ma", n: 50, ma: "ema" },
+      { type: "time", bars: 20 },
+    ]);
+  });
+});
+
+// covers: spec 0008 decision 12 (a `?r=` link from the rule builder is the rule)
+describe("BacktestReport with a ?r= link", () => {
+  const custom = { ...mocks.templates[1]!.rule, name: "My pullback" };
+
+  it("backtests the link's rule and keeps ?r= in the URL", async () => {
+    const bodies = recordBacktests();
+    const { user } = renderReport(`template=breakout_52w&r=${encodeRule(custom)}`);
+
+    const select = await screen.findByLabelText("Rule");
+    expect(within(select).getByRole("option", { selected: true })).toHaveTextContent(
+      "From your link: My pullback",
+    );
+    await runIt(user);
+
+    await screen.findByRole("heading", { name: "Assumptions" });
+    expect(bodies[0]!.rule).toEqual(custom);
+    const params = new URLSearchParams(window.location.search);
+    expect(params.get("r")).toBe(encodeRule(custom));
+    expect(params.has("template")).toBe(false);
+  });
+
+  it("switches to a template and drops ?r= when you pick one", async () => {
+    const bodies = recordBacktests();
+    const { user } = renderReport(`r=${encodeRule(custom)}`);
+    await user.selectOptions(await screen.findByLabelText("Rule"), "breakout_52w");
+    await runIt(user);
+
+    await screen.findByRole("heading", { name: "Assumptions" });
+    expect(bodies[0]!.rule).toEqual(mocks.templates[0]!.rule);
+    expect(new URLSearchParams(window.location.search).has("r")).toBe(false);
+  });
+
+  it("falls back to the template with a notice when the link is unreadable", async () => {
+    const bodies = recordBacktests();
+    const { user, container } = renderReport("template=pullback_ema21&r=not-a-rule");
+
+    expect(await screen.findByText(BAD_RULE_LINK)).toBeInTheDocument();
+    expect(screen.getByLabelText("Rule")).toHaveValue("pullback_ema21");
+    await expectNoAxeViolations(container);
+    await runIt(user);
+    await screen.findByRole("heading", { name: "Assumptions" });
+    expect(bodies[0]!.rule).toEqual(mocks.templates[1]!.rule);
   });
 });
