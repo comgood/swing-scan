@@ -342,7 +342,7 @@ export function Gallery() {
       <GallerySection id="backtest" title="Backtest report">
         <p className="text-sm text-muted-foreground">
           The assumptions header with its trial counter, IS beside OOS metrics, and the trade list
-          in full and truncated (spec 0007). The equity chart arrives later.
+          in full and truncated, and the equity chart against the benchmark (spec 0007).
         </p>
         <BacktestDemo />
       </GallerySection>

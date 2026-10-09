@@ -236,6 +236,18 @@ const sampleSegment = (n: number, cagr: number) => ({
   exposure_pct: 81.5,
 });
 
+/** An invented weekly curve from 100, `drift` a week plus a wave of `swing`. */
+function sampleCurve(drift: number, swing: number, period: number): Schemas["Point"][] {
+  const start = Date.UTC(2021, 0, 4);
+  return Array.from({ length: 260 }, (_, i) => ({
+    date: new Date(start + i * 7 * 86_400_000).toISOString().slice(0, 10),
+    value: 100 * (1 + drift * i + swing * Math.sin(i / period)),
+  }));
+}
+
+export const SAMPLE_EQUITY = sampleCurve(0.002, 0.04, 9);
+export const SAMPLE_BENCHMARK = sampleCurve(0.0015, 0.03, 14);
+
 export const SAMPLE_BACKTEST: Schemas["PortfolioResult"] = {
   mode: "portfolio",
   assumptions: {
@@ -276,8 +288,8 @@ export const SAMPLE_BACKTEST: Schemas["PortfolioResult"] = {
     is: { cagr_pct: 9.1, max_dd_pct: -18.3 },
     oos: { cagr_pct: 4.2, max_dd_pct: -7.7 },
   },
-  equity: [],
-  benchmark: [],
+  equity: SAMPLE_EQUITY,
+  benchmark: SAMPLE_BENCHMARK,
   trades: SAMPLE_TRADES,
   trades_total: SAMPLE_TRADES.length,
   trades_truncated: false,

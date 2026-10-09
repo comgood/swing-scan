@@ -18,6 +18,7 @@ import { ApiRequestError } from "@/lib/api-error";
 
 import { AssumptionsHeader } from "./assumptions-header";
 import { BacktestForm } from "./backtest-form";
+import { EquityChart } from "./equity-chart";
 import { inputsFromParams, paramsFromInputs, placeErrors, requestFrom } from "./inputs";
 import { MetricsTable } from "./metrics-table";
 import { useBacktest, useTemplates, ValidationFailed, type PortfolioResult } from "./queries";
@@ -80,7 +81,21 @@ export function BacktestReport({ initialParams, stores }: BacktestReportProps) {
           />
         )}
       </section>
+      {backtest.isPending && <ReportSkeleton />}
       {backtest.data && <Report result={backtest.data} stores={stores} />}
+    </div>
+  );
+}
+
+function ReportSkeleton() {
+  return (
+    <div className="flex min-w-0 flex-col gap-4">
+      <p role="status" className="sr-only">
+        Running the backtest…
+      </p>
+      <Skeleton className="h-32 w-full" />
+      <Skeleton className="h-48 w-full" />
+      <Skeleton className="h-64 w-full" />
     </div>
   );
 }
@@ -99,27 +114,35 @@ function Report({ result, stores }: { result: PortfolioResult; stores?: TrialSto
       {noEntries ? (
         <EmptyState title="No trades" hint={noEntries.message} />
       ) : (
-        <section aria-labelledby="metrics-title" className="flex min-w-0 flex-col gap-3">
-          <h2 id="metrics-title" className="text-lg font-semibold">
-            Results
-          </h2>
-          <MetricsTable result={result} />
-        </section>
-      )}
-      {/* The equity chart (AC-14) goes here, between the metrics and the trades, once the
-          owner decides on the chart dependency. */}
-      {!noEntries && (
-        <section aria-labelledby="trades-title" className="flex min-w-0 flex-col gap-3">
-          <h2 id="trades-title" className="text-lg font-semibold">
-            Trades
-          </h2>
-          <TradeList
-            trades={result.trades}
-            total={result.trades_total}
-            truncated={result.trades_truncated}
-            oosStart={result.oos_start}
-          />
-        </section>
+        <>
+          <section aria-labelledby="metrics-title" className="flex min-w-0 flex-col gap-3">
+            <h2 id="metrics-title" className="text-lg font-semibold">
+              Results
+            </h2>
+            <MetricsTable result={result} />
+          </section>
+          <section aria-labelledby="equity-title" className="flex min-w-0 flex-col gap-3">
+            <h2 id="equity-title" className="text-lg font-semibold">
+              Equity
+            </h2>
+            <EquityChart
+              equity={result.equity}
+              benchmark={result.benchmark}
+              oosStart={result.oos_start}
+            />
+          </section>
+          <section aria-labelledby="trades-title" className="flex min-w-0 flex-col gap-3">
+            <h2 id="trades-title" className="text-lg font-semibold">
+              Trades
+            </h2>
+            <TradeList
+              trades={result.trades}
+              total={result.trades_total}
+              truncated={result.trades_truncated}
+              oosStart={result.oos_start}
+            />
+          </section>
+        </>
       )}
     </>
   );
