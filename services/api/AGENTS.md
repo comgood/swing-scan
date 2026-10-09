@@ -14,7 +14,7 @@ The `swing-api` package (import name `api`): a thin FastAPI layer over `engine`,
 | `tests/test_health.py` | Health route test |
 | `src/api/state.py` | The one `Market`, read with `read_market()` and warmed at import; `None` (routes answer 501) only when no dataset exists |
 | `src/api/routes/scan.py` | `POST /scan`, and the one JSON `api.scan` log line per successful scan |
-| `src/api/routes/backtest.py` | `POST /backtest`; maps `range_outside_data` to a 422 like the scan route maps `as_of_not_session` |
+| `src/api/routes/backtest.py` | `POST /backtest`; maps `range_outside_data` to a 422 like the scan route maps `as_of_not_session`; any other `ValidationError` (`engine.api.REQUEST_ERRORS` decides) stays a 500 |
 
 ## Commands
 

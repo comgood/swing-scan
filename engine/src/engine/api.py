@@ -238,6 +238,22 @@ def range_outside_data(
     return error_at(("sim", field), error, value.isoformat())
 
 
+def no_session_in_window(start: date, end: date, first: date, last: date) -> ValidationError:
+    """The 422 for a window inside the data that holds no session (a weekend, a holiday)."""
+    error = PydanticCustomError(
+        "range_outside_data",
+        f"no session between start {start.isoformat()} and end {end.isoformat()}; "
+        "the data runs from {min} to {max}",
+        {"min": first.isoformat(), "max": last.isoformat()},
+    )
+    return error_at(("sim", "start"), error, start.isoformat())
+
+
+REQUEST_ERRORS = frozenset({"range_outside_data", "as_of_not_session"})
+"""The `ValidationError` types the use cases raise about the request (422s, spec 0002). Any
+other `ValidationError` out of a use case is an engine bug building the response (a 500)."""
+
+
 def _cut(market: Market, end: date) -> Market:
     """The market with every bar after `end` removed, so nothing later is read (B-10)."""
     return Market(
@@ -251,7 +267,8 @@ def _window(market: Market, start: date | None, end: date | None) -> tuple[Marke
     """The market cut at `end` and the window's sessions (benchmark dates in [start, end]).
 
     Raises `range_outside_data` when `start` or `end` lies outside the data, or the window
-    holds no session. Indicators still warm up on the bars before `start`.
+    holds no session. Indicators still warm up on the bars before `start`. The market is
+    also cut at the last session, so no bar dated after it reaches the loop.
     """
     full = cache_for(market)
     first, last = full.sessions[0], full.sessions[-1]
@@ -264,7 +281,10 @@ def _window(market: Market, start: date | None, end: date | None) -> tuple[Marke
     dates = cache_for(market).bars.filter(pl.col("ticker") == market.meta.benchmark)["date"]
     sessions = [day for day in dates.sort().to_list() if start is None or day >= start]
     if not sessions:
-        raise range_outside_data("start", start or first, first, last)
+        raise no_session_in_window(start or first, end or last, first, last)
+    if market.bars["date"].max() != sessions[-1]:
+        # A bar after the benchmark's last session would never be stepped; cut it like `end`.
+        market = _cut(market, sessions[-1])
     return market, sessions
 
 
