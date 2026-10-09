@@ -44,23 +44,23 @@ B-6: required
 B-7: required
 B-8: required
 B-9: required
-B-10: pending
+B-10: required
 B-11: required
 B-13: required
 B-14: required
-B-15: pending
-B-16: pending
+B-15: required
+B-16: required
 
 # Exit lab
-X-1: pending
+X-1: required
 X-2: required
 X-3: pending
 X-4: pending
-X-5: pending
+X-5: required
 X-7: pending
-X-8: pending
+X-8: required
 X-9: pending
-X-10: pending
+X-10: required
 
 # UI and honesty
 U-1: required
