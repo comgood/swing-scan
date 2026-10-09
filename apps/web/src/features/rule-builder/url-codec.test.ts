@@ -107,4 +107,87 @@ describe("normaliseRule", () => {
     rule.conditions[2].right = { kind: "ind", ind: "rsi", n: 60, offset: 25, mult: 50 };
     expect(normaliseRule(rule, NAMES)).toEqual(rule);
   });
+
+  it("puts keys in contract order, so equal rules encode to the same link", () => {
+    const shuffled = {
+      conditions: [
+        {
+          right: { value: 5, kind: "value" },
+          op: ">",
+          left: { mult: 1, offset: 0, n: null, ind: "close", kind: "ind" },
+        },
+      ],
+      name: "r",
+    };
+    const rule = normaliseRule(shuffled, NAMES)!;
+    expect(JSON.stringify(rule)).toBe(
+      '{"name":"r","conditions":[{"left":{"kind":"ind","ind":"close","n":null,"offset":0,' +
+        '"mult":1},"op":">","right":{"kind":"value","value":5}}]}',
+    );
+  });
+});
+
+describe("the ?r= format (decision 3)", () => {
+  /** Node's own base64url of the compact UTF-8 JSON: the format decision 3 names. */
+  const reference = (rule: Rule) => Buffer.from(JSON.stringify(rule), "utf8").toString("base64url");
+
+  it("is base64url of the compact UTF-8 JSON, byte for byte", () => {
+    expect(encodeRule(EVERY_FIELD)).toBe(reference(EVERY_FIELD));
+    const json = Buffer.from(encodeRule(EVERY_FIELD), "base64url").toString("utf8");
+    expect(json).toBe(JSON.stringify(EVERY_FIELD));
+    expect(json).not.toMatch(/\n|": /);
+  });
+
+  it.each(["r", "ru", "rul", "rule"])("never pads, whatever the length (name %s)", (name) => {
+    const rule = { ...EVERY_FIELD, name };
+    const encoded = encodeRule(rule);
+    expect(encoded).not.toContain("=");
+    expect(encoded).toBe(reference(rule));
+    expect(decodeRule(encoded, NAMES)).toEqual(rule);
+  });
+
+  it.each([
+    ["accents", "Café crème à la carte"],
+    ["CJK", "突破 52 週高値"],
+    ["emoji outside the BMP", "🚀📈🧪"],
+    ["right to left", "قاعدة الاختراق"],
+    ["quotes and slashes", 'say "hi" \\ / <b>'],
+  ])("round trips a name with %s as UTF-8", (_label, name) => {
+    const rule = { ...EVERY_FIELD, name };
+    expect(encodeRule(rule)).toBe(reference(rule));
+    expect(decodeRule(encodeRule(rule), NAMES)?.name).toBe(name);
+  });
+
+  it("decodes a link built by another base64url encoder", () => {
+    const rule = mocks.templates[0].rule;
+    expect(decodeRule(reference(rule), NAMES)).toEqual(rule);
+  });
+
+  it.each([
+    ["padded", () => encodeRaw({ ...EVERY_FIELD, name: "r" }) + "="],
+    ["standard base64 (+ and /)", () => btoa("ûÿ¿")],
+    ["a length that no base64 has", () => "AAAAA"],
+    ["a name that is a number", () => encodeRaw({ ...EVERY_FIELD, name: 7 })],
+    [
+      "a value that is a string",
+      () => {
+        const c = EVERY_FIELD.conditions[1];
+        return encodeRaw({
+          name: "r",
+          conditions: [{ ...c, right: { kind: "value", value: "5" } }],
+        });
+      },
+    ],
+    [
+      "a fractional n",
+      () => {
+        const c = EVERY_FIELD.conditions[0];
+        return encodeRaw({ name: "r", conditions: [{ ...c, left: { ...c.left, n: 2.5 } }] });
+      },
+    ],
+    ["JSON null", () => encodeRaw(null)],
+    ["a JSON array", () => encodeRaw([EVERY_FIELD])],
+  ])("returns null for %s, so the page falls back to Breakout (decision 4)", (_label, make) => {
+    expect(decodeRule(make(), NAMES)).toBeNull();
+  });
 });
