@@ -1,4 +1,4 @@
-"""AC-6: routes validate the full request, answer 501 until built, and serve static data."""
+"""AC-6: routes validate the full request, answer 501 without a market, and serve static data."""
 
 from __future__ import annotations
 
@@ -42,11 +42,13 @@ def _fixture_market(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.mark.parametrize("count", [2, 6])
-def test_trade_mode_is_501_naming_feature_12(count: int, monkeypatch: pytest.MonkeyPatch) -> None:
-    _fixture_market(monkeypatch)
+def test_two_to_six_configs_run_the_exit_lab(count: int, monkeypatch: pytest.MonkeyPatch) -> None:
+    _fixture_market(monkeypatch)  # spec 0009 AC-2: the 501 is gone once the baseline is real
     res = client.post("/api/v1/backtest", json={"rule": RULE, "configs": configs(count)})
-    assert res.status_code == 501
-    assert "feature 12" in res.json()["detail"]
+    assert res.status_code == 200
+    body = res.json()
+    assert body["mode"] == "trade"
+    assert len(body["rows"]) == count
 
 
 def test_a_feature_11_exit_runs(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -18,6 +18,7 @@ import polars as pl
 from pydantic import ValidationError
 from pydantic_core import PydanticCustomError
 
+from .baseline import eligible_pool, sample
 from .contracts import (
     TEMPLATES,
     Assumptions,
@@ -72,7 +73,6 @@ from .rules import COOLDOWN, compile_rule, entry_signals, operand_values
 from .sim import (
     START_EQUITY,
     BarArrays,
-    EntryPoint,
     entry_points,
     make_trade,
     run_portfolio,
@@ -476,11 +476,9 @@ def _split(trades: list[Trade]) -> TradeSplit:
 def _trade_lab(request: BacktestRequest, market: Market) -> TradeLabResult:
     """Trade mode, the exit lab (spec 0009): one entry list for every config, each entry a
     unit notional trade walked through the config's exits by `walk_trade()` up to the
-    horizon, then per trade metrics in IS and OOS columns.
-
-    Not served yet: `backtest()` answers 2 to 6 configs with 501 until the random baseline
-    lands (spec 0009, assumed decision 2). Until then the random list is empty, so random
-    metrics are the empty segment ones and every edge is null.
+    horizon, then per trade metrics in IS and OOS columns. A seeded random entry sample with
+    the strategy's IS and OOS counts walks the same exits; `edge` is strategy minus random
+    (assumed decision 3).
     """
     sim = request.sim
     slip = sim.slippage_bps / 10_000
@@ -494,7 +492,14 @@ def _trade_lab(request: BacktestRequest, market: Market) -> TradeLabResult:
         r for r in _signal_rows(request.rule, cache).tolist() if bars.date[r] in session_set
     ]
     entries = entry_points(signal_rows, bars, slip, oos_start)
-    random_entries: list[EntryPoint] = []  # the seeded random baseline arrives in BE 2
+    is_count = sum(e.segment == "is" for e in entries)
+    drawn = sample(
+        eligible_pool(cache, sessions[0], oos_start),
+        is_count,
+        len(entries) - is_count,
+        sim.seed,
+    )
+    random_entries = entry_points(drawn.tolist(), bars, slip, oos_start)
 
     exit_sets = [build_exits(config, cache.get) for config in request.configs]
     runs = run_trade_mode(
@@ -551,8 +556,8 @@ def _trade_lab(request: BacktestRequest, market: Market) -> TradeLabResult:
         ),
         entries=Entries(
             count=len(entries),
-            is_count=sum(e.segment == "is" for e in entries),
-            oos_count=sum(e.segment == "oos" for e in entries),
+            is_count=is_count,
+            oos_count=len(entries) - is_count,
             distinct_weeks=distinct_weeks([e.entry_date for e in entries]),
             hash=entries_hash((e.ticker, e.entry_date) for e in entries),
             random_is_count=sum(e.segment == "is" for e in random_entries),
@@ -568,9 +573,9 @@ def _trade_lab(request: BacktestRequest, market: Market) -> TradeLabResult:
 
 
 def backtest(request: BacktestRequest, market: Market) -> BacktestResponse:
-    """1 config runs the portfolio day loop (feature 9); 2 to 6 configs are the exit lab,
-    which answers `NotYetImplemented` until feature 12. A `sim.start` or `sim.end` outside
-    the data raises the `range_outside_data` `ValidationError`."""
+    """1 config runs the portfolio day loop (feature 9); 2 to 6 configs run trade mode, the
+    exit lab (feature 12). A `sim.start` or `sim.end` outside the data raises the
+    `range_outside_data` `ValidationError`."""
     if len(request.configs) > 1:
-        raise NotYetImplemented(12, "Trade mode (the exit lab)")
+        return _trade_lab(request, market)
     return _portfolio(request, market)

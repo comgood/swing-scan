@@ -1,8 +1,4 @@
-"""Trade mode, the exit lab's loop, through `engine.api._trade_lab` (spec 0009, BE 1).
-
-`backtest()` still answers 2 to 6 configs with 501 until the random baseline lands, so these
-tests call the unserved use case directly.
-"""
+"""Trade mode, the exit lab, through `engine.api.backtest` with 2 to 6 configs (spec 0009)."""
 
 from __future__ import annotations
 
@@ -45,16 +41,43 @@ def _lab(market: Market, *configs: dict[str, Any], **sim: Any) -> TradeLabResult
             "sim": sim,
         }
     )
-    return api._trade_lab(request, market)
+    result = api.backtest(request, market)
+    assert isinstance(result, TradeLabResult)
+    return result
 
 
-def test_backtest_still_answers_trade_mode_with_501() -> None:
-    request = BacktestRequest.model_validate(
-        {"rule": {"name": "t", "conditions": [CLOSE_ABOVE_5]}, "configs": [TIME_30, TIME_2]}
-    )
-    with pytest.raises(api.NotYetImplemented) as caught:
-        api.backtest(request, _market())
-    assert caught.value.feature == 12
+def test_random_sample_matches_the_strategy_counts_and_edge_is_the_difference() -> None:  # AC-8
+    result = _lab(_market(), TIME_30, TIME_2, STOP_8, horizon_bars=60)
+    entries = result.entries
+    assert (entries.random_is_count, entries.random_oos_count) == (2, 1)
+    for row in result.rows:
+        for seg in ("is_", "oos"):
+            strategy, random = getattr(row.strategy, seg), getattr(row.random, seg)
+            assert random.n_trades == strategy.n_trades
+            for key, value in getattr(row.edge, seg).model_dump().items():
+                s, r = getattr(strategy, key), getattr(random, key)
+                assert value == (None if s is None or r is None else s - r), (row.name, seg, key)
+
+
+def test_random_sample_is_seeded() -> None:  # AC-8
+    a = _lab(_market(), TIME_30, TIME_2, horizon_bars=60, seed=42)
+    assert a.assumptions.seed == 42
+    assert a == _lab(_market(), TIME_30, TIME_2, horizon_bars=60, seed=42)
+    rows = [_lab(_market(), TIME_30, TIME_2, horizon_bars=60, seed=s).rows for s in range(8)]
+    assert len({json.dumps([r.random.model_dump(mode="json") for r in x]) for x in rows}) > 1
+
+
+def test_an_empty_oos_pool_draws_nothing_there() -> None:  # AC-8's exception
+    # AAA stops on bar 3 while the data runs to bar 10, so no OOS session has a pool entry.
+    market = make_market({"AAA": FrameSpec(1, [4.0, 6.0, 6.0])}, end_bar=10)
+    result = _lab(market, TIME_30, TIME_2, horizon_bars=60)
+    assert result.oos_start == bar_date(8)  # floor(0.7 × 10) = index 7
+    assert (result.entries.is_count, result.entries.oos_count) == (1, 0)
+    assert (result.entries.random_is_count, result.entries.random_oos_count) == (1, 0)
+    for row in result.rows:
+        assert row.random.is_.n_trades == 1
+        assert row.random.oos.n_trades == 0
+        assert row.edge.oos.model_dump() == dict.fromkeys(row.edge.oos.model_dump())
 
 
 def test_every_config_walks_the_same_entries_with_overlap_allowed() -> None:  # AC-1
