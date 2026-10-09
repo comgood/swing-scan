@@ -1,7 +1,9 @@
 // Where each 422 issue shows in the builder (spec 0008, "422 path to control"). Paths come from
 // `fieldErrorsFrom422`, e.g. `rule.conditions.2.right.n`. Nothing is dropped: an issue with no
-// field of its own shows above the rows.
-import type { FieldErrors } from "@/lib/field-errors";
+// field of its own shows above the rows. The right side is a union tagged by `kind`, so the API
+// names the tag in its paths (`right.ind.n`, `right.value.value`); `withoutTag` drops it. The
+// left side is `IndOperand` alone and carries no tag: a wrong `kind` there arrives as `left.kind`.
+import { withoutTag, type FieldErrors } from "@/lib/field-errors";
 
 export interface OperandErrors {
   /** A bad `kind` tag on the whole side. */
@@ -28,6 +30,8 @@ export interface BuilderErrors {
 }
 
 const FIELDS = ["ind", "n", "offset", "mult", "value"] as const;
+/** The `kind` tags of the right side's union (`IndOperand | ValueOperand`). */
+const OPERAND_TAGS = ["ind", "value"] as const;
 
 function emptyRow(): RowErrors {
   return { left: {}, right: {} };
@@ -38,7 +42,8 @@ export function builderErrors(errors: FieldErrors | undefined, rowCount: number)
   if (!errors) return out;
   out.top.push(...errors.form);
   for (const [path, message] of Object.entries(errors.fields)) {
-    const parts = path.split(".");
+    const raw = path.split(".");
+    const parts = raw[3] === "right" ? withoutTag(raw, 4, OPERAND_TAGS) : raw;
     if (parts[0] !== "rule") {
       out.top.push(message);
       continue;
@@ -57,7 +62,7 @@ export function builderErrors(errors: FieldErrors | undefined, rowCount: number)
     if ((side === "left" || side === "right") && parts.length <= 5) {
       const target = row[side];
       const key = FIELDS.find((f) => f === field);
-      if (field === undefined) target.group ??= message;
+      if (field === undefined || field === "kind") target.group ??= message;
       else if (key) target[key] ??= message;
       else row.row ??= message;
     } else if (side === "op" && parts.length === 4) {

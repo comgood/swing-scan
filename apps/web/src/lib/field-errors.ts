@@ -54,6 +54,24 @@ export function errorAt(errors: FieldErrors, path: string): string | undefined {
   return Object.hasOwn(errors.fields, path) ? errors.fields[path] : undefined;
 }
 
+/**
+ * A path with a discriminated union's tag segment removed (U-7, owner ruling 2026-10-09).
+ * Pydantic names the matched member's tag in `loc` after the union field, so the real API sends
+ * `rule.conditions.1.right.ind.n` for `rule.conditions.1.right.n`, and
+ * `configs.0.exits.0.stop_pct.pct` for `configs.0.exits.0.pct`. `at` is the index of the segment
+ * after the union field. The tag goes only when a field follows it, so an untagged
+ * `right.ind` (the `ind` field itself) or `right.value` keeps its meaning.
+ */
+export function withoutTag(
+  parts: readonly string[],
+  at: number,
+  tags: readonly string[],
+): string[] {
+  const tag = parts[at];
+  if (parts.length <= at + 1 || tag === undefined || !tags.includes(tag)) return [...parts];
+  return [...parts.slice(0, at), ...parts.slice(at + 1)];
+}
+
 /** Every error at or below `prefix`, for a row that shows its children's errors. */
 export function errorsUnder(errors: FieldErrors, prefix: string): Record<string, string> {
   return Object.fromEntries(
