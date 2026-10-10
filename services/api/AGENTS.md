@@ -36,7 +36,7 @@ make smoke-image               # run the built image, check health and one templ
 
 ## Gotchas
 
-- `DATA_MODE` is `synthetic` only until scope feature 14; live mode must refuse to start on Lambda, in CI, or bound to anything but `127.0.0.1` (D-5).
+- `DATA_MODE` takes `synthetic` or `live` (feature 14, spec 0010). Live mode refuses to start on Lambda, in CI, or bound to anything but `127.0.0.1` (D-5), checked at import in `settings.py`.
 - Function URLs do not compress responses, so `GZipMiddleware` stays on.
 - After any schema change run `make openapi` and `make gen-client` and commit both outputs; CI fails on a diff.
 - `contracts/mocks/` is generated from the running app (`scripts/make_mocks.py`), so changing an error body, such as the 501 detail, changes a mock too. Run `make contracts` and commit the result; `make contracts-check` fails on a stale mock.
