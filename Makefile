@@ -129,10 +129,14 @@ data-check: ## CI: build the seed 42 market twice in a temp folder, same hashes,
 
 UNIVERSE ?= research/sp500.csv
 LIVE_DIR ?= data/live
+# Alpaca feed override for load-live: iex (the default, free plan) or sip (paid). Unset, the
+# loader reads $ALPACA_FEED, else iex.
+FEED ?=
 
 load-live: ## Local only: Alpaca daily bars into data/live (gitignored); keys from env, else .env
 	@if [ -z "$$ALPACA_API_KEY_ID" ] && [ -f .env ]; then set -a; . ./.env; set +a; fi; \
-	uv run python -m engine.live --universe $(UNIVERSE) --out $(LIVE_DIR)
+	uv run python -m engine.live --universe $(UNIVERSE) --out $(LIVE_DIR) \
+	  $(if $(FEED),--feed $(FEED),)
 
 dev-live: ## Local only: run the API in live mode on 127.0.0.1 with the web app (D-5)
 	DATA_MODE=live SYNTHETIC_DATA_DIR=$(LIVE_DIR) $(MAKE) dev

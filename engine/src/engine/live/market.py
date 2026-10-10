@@ -11,7 +11,7 @@ import polars as pl
 
 from engine.contracts import BARS_SCHEMA, SECURITIES_SCHEMA, DataMeta, Market
 
-from .alpaca import LiveLoadError, RawBars
+from .alpaca import DEFAULT_FEED, VOLUME_CAVEAT, LiveLoadError, RawBars
 
 LIVE_START = date(2016, 1, 4)
 BENCHMARK = "SPY"
@@ -35,7 +35,7 @@ def read_universe(path: str | Path) -> pl.DataFrame:
 
 @dataclass
 class LoadSummary:
-    """What `make load-live` prints (D-4): ticker count, bars, missing symbols."""
+    """What `make load-live` prints (D-4): ticker count, bars, feed, missing symbols."""
 
     tickers: int
     bars: int
@@ -43,14 +43,20 @@ class LoadSummary:
     end: date
     missing: list[str] = field(default_factory=list)
     dropped_bars: int = 0
+    feed: str = DEFAULT_FEED
+    data_version: str = ""
 
     def lines(self) -> list[str]:
-        return [
+        lines = [
             f"loaded {self.tickers} tickers plus {BENCHMARK}: {self.bars} bars, "
             f"{self.start} to {self.end}",
+            f"feed {self.feed}, data_version {self.data_version}",
             f"missing symbols ({len(self.missing)}): {', '.join(self.missing) or 'none'}",
             f"dropped {self.dropped_bars} bars that failed the D-2 checks",
         ]
+        if self.feed != "sip":
+            lines.append(VOLUME_CAVEAT)
+        return lines
 
 
 def _sane() -> pl.Expr:
@@ -65,9 +71,12 @@ def _sane() -> pl.Expr:
 
 
 def build_market(
-    universe: pl.DataFrame, raw: RawBars, start: date, end: date
+    universe: pl.DataFrame, raw: RawBars, start: date, end: date, feed: str = DEFAULT_FEED
 ) -> tuple[Market, LoadSummary]:
-    """Bars in `[start, end]` for the universe plus SPY; bars failing D-2 are dropped."""
+    """Bars in `[start, end]` for the universe plus SPY; bars failing D-2 are dropped.
+
+    `feed` only names the source in `meta.data_version`; the bars were already fetched with it.
+    """
     rows = [
         {
             "ticker": symbol.upper(),
@@ -106,10 +115,11 @@ def build_market(
     first_day, last_day = bars["date"].min(), bars["date"].max()
     if not isinstance(first_day, date) or not isinstance(last_day, date):  # pragma: no cover
         raise LiveLoadError("bars have no dates")
+    data_version = f"alpaca-{feed}-all:{last_day.isoformat()}"
     meta = DataMeta(
         data_mode="live",
         seed=None,
-        data_version=f"alpaca-sip-all:{last_day.isoformat()}",
+        data_version=data_version,
         start=first_day,
         end=last_day,
         n_tickers=len(loaded),
@@ -123,5 +133,7 @@ def build_market(
         end=last_day,
         missing=sorted(set(universe["ticker"].to_list()) - loaded),
         dropped_bars=every.height - bars.height,
+        feed=feed,
+        data_version=data_version,
     )
     return Market(bars=bars, securities=securities, meta=meta), summary

@@ -12,7 +12,17 @@ from pathlib import Path
 from engine.contracts import MarketError
 from engine.data import write_market
 
-from .alpaca import LiveLoadError, Transport, fetch_bars, keys_from_env, urllib_transport
+from .alpaca import (
+    DEFAULT_FEED,
+    FEED_ENV,
+    FEEDS,
+    LiveLoadError,
+    Transport,
+    fetch_bars,
+    keys_from_env,
+    resolve_feed,
+    urllib_transport,
+)
 from .market import BENCHMARK, LIVE_START, build_market, read_universe
 
 
@@ -26,14 +36,24 @@ def main(
     parser.add_argument("--out", type=Path, default=Path("data/live"))
     parser.add_argument("--start", type=date.fromisoformat, default=LIVE_START)
     parser.add_argument("--end", type=date.fromisoformat, default=date.today() - timedelta(days=1))
+    parser.add_argument(
+        "--feed",
+        default=None,
+        help=(
+            f"Alpaca data feed, one of {', '.join(FEEDS)} "
+            f"(default {DEFAULT_FEED}, or ${FEED_ENV}); sip needs a paid plan"
+        ),
+    )
     args = parser.parse_args(argv)
+    environ = os.environ if env is None else env
     try:
-        headers = keys_from_env(os.environ if env is None else env)
+        feed = resolve_feed(args.feed, environ)
+        headers = keys_from_env(environ)
         universe = read_universe(args.universe)
         symbols = [*universe["ticker"].to_list(), BENCHMARK]
-        print(f"fetching {len(symbols)} symbols from {args.start} to {args.end} ...")
-        raw = fetch_bars(symbols, args.start, args.end, headers, get)
-        market, summary = build_market(universe, raw, args.start, args.end)
+        print(f"fetching {len(symbols)} symbols from {args.start} to {args.end} (feed {feed}) ...")
+        raw = fetch_bars(symbols, args.start, args.end, headers, get, feed)
+        market, summary = build_market(universe, raw, args.start, args.end, feed)
         write_market(market, args.out)
     except (LiveLoadError, MarketError, FileNotFoundError) as exc:
         print(f"load-live failed: {exc}", file=sys.stderr)
