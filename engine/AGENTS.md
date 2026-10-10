@@ -10,6 +10,7 @@ The `swing-engine` Python package (import name `engine`): all trading logic, mea
 |---|---|
 | `src/engine/__init__.py` | Package root and `__version__` |
 | `tests/test_engine_boundary.py` | Proves the engine imports no web framework |
+| `src/engine/live/` | Local only Alpaca loader (feature 14, spec 0010): `python -m engine.live`, writing the same market schema to `data/live`. The HTTP transport is injected, so tests never call a vendor |
 | `src/engine/synthetic/` | Seeded synthetic market: `generate(seed) -> Market`, CLI `python -m engine.synthetic --seed 42 --out DIR` (spec 0006) |
 | `src/engine/data/store.py` | `read_market()`, `write_market()`, `market_dir()` (reads `SYNTHETIC_DATA_DIR`, default `data/synthetic`) |
 | `src/engine/data/sanity.py` | `check_market()`: `validate_market` plus the D-2 bar checks |
@@ -29,6 +30,8 @@ The `swing-engine` Python package (import name `engine`): all trading logic, mea
 uv run pytest engine/tests     # engine tests only
 make data                      # write the seed 42 market to data/synthetic
 make data-check                # CI: rebuild twice, same hashes, D-1 to D-3 hold
+make load-live                 # local only: Alpaca daily bars into data/live, keys from env
+make dev-live                  # local only: the API in live mode on 127.0.0.1, with the web app
 ```
 
 ## Conventions
@@ -43,6 +46,7 @@ make data-check                # CI: rebuild twice, same hashes, D-1 to D-3 hold
 - Never import `fastapi`, `starlette` or `uvicorn` here; the boundary test fails.
 - Every exit runs through one `step(position, bar)` function shared by both loops. Never special case an exit outside it.
 - The random baseline seed default changes only with an ADR.
+- Alpaca's free Basic plan has no SIP history: `feed=sip` answers 403, so the loader reads the IEX feed. IEX is a small share of real volume, so volume rules (`vol_ratio`, `avg_volume`) are not comparable to a full tape.
 - Rule compilation never uses `eval` or `exec`.
 - Tests for `data/` live in `engine/tests/dataset/`, because `.gitignore` ignores every folder named `data/`.
 

@@ -171,13 +171,13 @@ Spec [0005](../specs/0005-template-scan/index.md)
 Lanes BE and FE. The portfolio simulator with next open fills, % stop and time exit, equal weight, max positions, slippage, delisting exits, IS and OOS split, an equity curve against the benchmark, a trade list with MAE and MFE, and the report page with its assumptions header.
 **Done when:** all approved oracles pass, results are deterministic, the top ranked signals fill free slots, and the report shows IS and OOS side by side with the assumptions header (B-1, B-2, B-7 to B-11, B-13 to B-16, U-3).
 - [x] Design it (spec): `/architect portfolio backtest core` (signed off by the owner 2026-10-08)
-- [ ] Build it: `/develop portfolio backtest core`
+- [x] Build it: `/develop portfolio backtest core`
   - [x] BE thread: `Exit` protocol, one `step()`, `stop_pct`, `time`, delisting, `end_of_test`, `walk_trade()`, the day loop and a minimal `PortfolioResult` behind `/backtest` (AC-1 to AC-3, AC-8, AC-11)
   - [x] BE portfolio rules and metrics: ranking, slots, sizing, window cut, IS and OOS, metrics, curves, truncation, `trial`, `assumptions`, the 3 s and 6 MB budget (AC-4 to AC-7, AC-9, AC-10); B-9 and B-10 portfolio turn green with feature 11's exits
-  - [ ] FE report page: `/backtest` with the exit form, assumptions header, IS and OOS metrics, equity chart, trade list, trial counter and every state, on mocks first (AC-12 to AC-17)
+  - [x] FE report page: `/backtest` with the exit form, assumptions header, IS and OOS metrics, equity chart, trade list, trial counter and every state, on mocks first (AC-12 to AC-17)
 - [ ] Verify it: `/check verify portfolio backtest core`
 - [ ] Test it: `/test portfolio backtest core`
-- [ ] Review it (fresh model): `/check review portfolio backtest core`
+- [x] Review it (fresh model): `/check review portfolio backtest core` ([findings](../reviews/2026-10-09-review-9-backtest-engine.md); the two major findings are fixed)
 - [ ] Document it: `/document portfolio backtest core`
 Spec [0007](../specs/0007-portfolio-backtest-core/index.md)
 
@@ -193,7 +193,7 @@ Lanes BE and FE. Build your own entry rules: a flat AND list of up to 8 conditio
   - [x] FE finish: 375 px and 320 px, keyboard, axe, `/ui` gallery, mounted in feature 8's workspace, real API at G3 (AC-10)
   - [x] BE tests after feature 8's evaluator merges: R-3, R-4, R-5, R-7 on custom rules, every R-6 case through `/scan` (AC-11, AC-12; AC-13 is already met by spec 0002)
 - [ ] Verify it: `/check verify rule builder`
-- [ ] Test it: `/test rule builder`
+- [x] Test it: `/test rule builder`
 Spec [0008](../specs/0008-rule-builder/index.md)
 
 ## Slice 3: Exit research
