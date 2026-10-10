@@ -35,7 +35,7 @@ answer; all six match what was built, so no code change follows from ratifying.
 4. **When a run completes.** When a 200 backtest response (portfolio or exit lab) is on screen.
    An exit lab run with k configs records up to k pairs. Recording is idempotent. Runner up:
    count on request send (rejected, a failed or cancelled run is not a trial you looked at).
-5. **Display.** "Test N of this rule shape · M tests this session" in a polite live region; the
+5. **Display.** "Trial #N for this rule structure · M this session" in a polite live region; the
    U-4 warning word for word in a `warning` `Banner` at `N ≥ 10` and whenever storage is
    unavailable; the U-8 note as one line of body text with an info icon, never fine print.
 6. **U-2.** The existing `DataModeBanner` in the app shell (spec 0003 AC-4) covers the live badge
@@ -54,16 +54,17 @@ answer; all six match what was built, so no code change follows from ratifying.
   count toward the same `N` (U-4, R-9).
 - **AC-2**: Re running an identical pair adds nothing to `N` or `M` (U-4).
 - **AC-3**: `M` counts distinct pairs across every structure key this session (U-4).
-- **AC-4**: The line reads "Test N of this rule shape · M tests this session" (U-4).
-- **AC-5**: At `N ≥ 10` the overfit warning shows word for word (U-4): "You have tried many
-  versions of this rule. The best result in the test period is probably luck. Look at the later
-  period once, and treat it as a guess, not a finding." `N` counts distinct pairs, so an exit lab
-  run with k new configs advances it by k (its first run reads "Test k of this rule shape").
+- **AC-4**: The line reads "Trial #N for this rule structure · M this session" (U-4).
+- **AC-5**: At `N ≥ 10` the overfit warning shows word for word (U-4): "You've tested many
+  variants of this rule structure; the best IS result is likely overfit. Read OOS once and treat
+  the result as a hypothesis." `N` counts distinct pairs, so an exit lab run with k new configs
+  advances it by k (its first run reads "Trial #k").
 - **AC-6**: With storage unavailable, the counters are hidden and the static warning shows (U-4).
   The static warning is the same AC-5 sentence, shown regardless of `N`.
-- **AC-7**: The procedure note renders word for word (U-8): "This compares exits on identical
-  entries, so the exit is the only thing that changed. Pick one using the test period, look at the
-  later period once, then confirm it with a single full backtest."
+- **AC-7**: The procedure note renders word for word (U-8): "Trade mode isolates the exit
+  effect: every config trades identical entries, so the exit is the only difference. Pick the
+  exit on in sample (IS), read out of sample (OOS) once, then confirm with a single portfolio
+  backtest."
 - **AC-8**: The live badge shows on every page in live mode (U-2), covered by the shell.
 - **AC-9**: Every state is in the `/ui` gallery, keyboard usable, axe clean, and holds at 375 px.
 
@@ -172,8 +173,8 @@ All tasks are built (feature 13, commit d63b458); listed so each AC traces to co
 - Two tabs recording at the same moment can race (read, modify, write) and drop one pair.
   Accepted for a nudge.
 - A response with an empty `pair_keys` records nothing and just shows the current totals (or
-  "Test 0 of this rule shape" for a new structure). Spec 0002 sends one key per config, so a valid
-  response never does this; no extra guard is added.
+  "Trial #0" for a new structure). Spec 0002 sends one key per config, so a valid response never
+  does this; no extra guard is added.
 - No cap: a heavy researcher's sets grow without bound (about 66 bytes per pair, so thousands of
   trials stay far below the usual 5 MB quota).
 
