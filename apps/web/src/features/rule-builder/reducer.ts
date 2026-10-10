@@ -75,6 +75,11 @@ export function initBuilder(rule: Rule, source: RuleSource): BuilderState {
   };
 }
 
+/** The id `add` gives the next row, so the caller can open that row for editing. */
+export function nextRowId(state: BuilderState): string {
+  return `r${state.nextId}`;
+}
+
 function editRow(state: BuilderState, index: number, row: Partial<Condition>): BuilderState {
   if (index < 0 || index >= state.rule.conditions.length) return state;
   const conditions = state.rule.conditions.map((c, i) => (i === index ? { ...c, ...row } : c));
@@ -90,7 +95,7 @@ export function builderReducer(state: BuilderState, action: BuilderAction): Buil
       return {
         ...state,
         rule: { ...state.rule, conditions: [...state.rule.conditions, newCondition()] },
-        rowIds: [...state.rowIds, `r${state.nextId}`],
+        rowIds: [...state.rowIds, nextRowId(state)],
         nextId: state.nextId + 1,
         source: "custom",
         dirty: true,

@@ -119,14 +119,15 @@ function numberIn(scope: HTMLElement, label: string | RegExp): number {
 }
 
 function readOperand(group: HTMLElement): Operand {
-  const indicator = within(group).queryByLabelText("Indicator") as HTMLSelectElement | null;
-  if (!indicator) return { kind: "value", value: numberIn(group, "Number") };
+  const indicator = within(group).getByLabelText("Field") as HTMLSelectElement;
+  // One list per side holds the indicators and "a number you type", so the kind is its value.
+  if (indicator.value === "__number") return { kind: "value", value: numberIn(group, "Number") };
   const window = within(group).queryByLabelText("Window (n)") as HTMLInputElement | null;
   return {
     kind: "ind",
     ind: indicator.value,
     n: window ? Number(window.value) : null,
-    offset: numberIn(group, "Bars ago"),
+    offset: numberIn(group, "Bars back"),
     mult: numberIn(group, "Multiplier (×)"),
   } as Operand;
 }
@@ -206,15 +207,15 @@ describe("R-8 the scan request matches the builder rows", () => {
       const user = userEvent.setup();
       // Row 1: operator and the left side's bars ago.
       await choose(row(1), "Operator", ">=");
-      await setNumber(side(1, "Left"), "Bars ago", "2");
+      await setNumber(side(1, "Left"), "Bars back", "2");
       // Row 2: the right side's window and multiplier.
       await setNumber(side(2, "Right"), "Window (n)", "20");
       await setNumber(side(2, "Right"), "Multiplier (×)", "2");
       // A new row (spec 0008 decision 8: close > sma(50)), then edited to rsi(14) > 70.
       await user.click(screen.getByRole("button", { name: "Add condition" }));
       expect(conditionRows()).toHaveLength(4);
-      await choose(side(4, "Left"), "Indicator", "rsi");
-      await choose(row(4), "Compare with", "value");
+      await choose(side(4, "Left"), "Field", "rsi");
+      await choose(side(4, "Right"), "Field", "__number");
       await setNumber(side(4, "Right"), "Number", "70");
       // Remove row 3 (close > 5); row 4 becomes row 3.
       await user.click(screen.getByRole("button", { name: "Remove condition 3" }));
@@ -280,7 +281,7 @@ describe("R-1 the link reproduces the rule after a reload", () => {
       await opened();
       expect(window.location.search).toBe(""); // an unedited Breakout carries no parameter
 
-      await setNumber(side(1, "Left"), "Bars ago", "1");
+      await setNumber(side(1, "Left"), "Bars back", "1");
       await setNumber(side(2, "Right"), "Multiplier (×)", "2.5");
       await choose(row(3), "Operator", "crosses_above");
       const name = screen.getByLabelText("Name");
@@ -395,7 +396,7 @@ describe("U-7 a 422 shows on the offending builder row", () => {
     recordScans();
     openAt();
     await opened();
-    await setNumber(side(2, "Left"), "Bars ago", "30");
+    await setNumber(side(2, "Left"), "Bars back", "30");
     server.use(
       http.post("*/api/v1/scan", async ({ request }) => {
         scanBodies.push((await request.json()) as { rule: Rule });
@@ -412,11 +413,11 @@ describe("U-7 a 422 shows on the offending builder row", () => {
     );
     await runScan();
 
-    const field = within(side(2, "Left")).getByLabelText("Bars ago");
+    const field = within(side(2, "Left")).getByLabelText("Bars back");
     await waitFor(() => expect(field).toHaveAttribute("aria-invalid", "true"));
     expect(field).toHaveAccessibleDescription(/between 0 and 20/i);
     for (const i of [1, 3]) {
-      expect(within(side(i, "Left")).getByLabelText("Bars ago")).not.toHaveAttribute(
+      expect(within(side(i, "Left")).getByLabelText("Bars back")).not.toHaveAttribute(
         "aria-invalid",
         "true",
       );
