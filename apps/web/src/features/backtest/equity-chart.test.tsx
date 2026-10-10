@@ -1,5 +1,5 @@
 import { render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, onTestFinished } from "vitest";
 
 import { mocks } from "@/mocks/handlers";
 import { expectNoAxeViolations } from "@/test/axe";
@@ -54,5 +54,74 @@ describe("EquityChart", () => {
     expect(screen.getByRole("img")).toHaveAccessibleName("No equity curve to draw.");
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(charts).toHaveLength(0);
+  });
+});
+
+/** Replaces `matchMedia` with one whose "change" listeners a test can fire. */
+function watchColourScheme() {
+  const listeners: (() => void)[] = [];
+  const original = window.matchMedia;
+  window.matchMedia = ((query: string) =>
+    ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener() {},
+      removeListener() {},
+      addEventListener: (_: string, listener: () => void) => listeners.push(listener),
+      removeEventListener: (_: string, listener: () => void) => {
+        listeners.splice(listeners.indexOf(listener), 1);
+      },
+      dispatchEvent: () => false,
+    }) as unknown as MediaQueryList) as typeof window.matchMedia;
+  onTestFinished(() => {
+    window.matchMedia = original;
+    for (const name of TOKENS) document.documentElement.style.removeProperty(`--${name}`);
+  });
+  return { flip: () => listeners.forEach((listener) => listener()), listeners };
+}
+
+const TOKENS = ["chart-equity", "chart-benchmark", "chart-oos", "background", "muted-foreground"];
+
+function setTokens(suffix: string) {
+  for (const name of TOKENS)
+    document.documentElement.style.setProperty(`--${name}`, `${name}-${suffix}`);
+}
+
+// covers: AC-14 (colours come from the design.md tokens, re-read when the scheme flips)
+describe("EquityChart colours", () => {
+  it("paints the lines and the marker from the CSS variables", async () => {
+    const scheme = watchColourScheme();
+    setTokens("light");
+    renderChart();
+
+    await waitFor(() => expect(charts[0]?.series[0]?.markers).toHaveLength(1));
+    const [strategy, benchmark] = charts[0]!.series;
+    expect(strategy!.options.color).toBe("chart-equity-light");
+    expect(benchmark!.options.color).toBe("chart-benchmark-light");
+    expect(strategy!.markers[0]!.color).toBe("chart-oos-light");
+    expect(charts[0]!.options.layout).toMatchObject({
+      background: { color: "background-light" },
+      textColor: "muted-foreground-light",
+    });
+    expect(scheme.listeners).toHaveLength(1);
+  });
+
+  it("repaints when the colour scheme flips, and stops listening on unmount", async () => {
+    const scheme = watchColourScheme();
+    setTokens("light");
+    const { unmount } = renderChart();
+    await waitFor(() => expect(charts[0]?.series[0]?.markers).toHaveLength(1));
+
+    setTokens("dark");
+    scheme.flip();
+    const [strategy, benchmark] = charts[0]!.series;
+    expect(strategy!.options.color).toBe("chart-equity-dark");
+    expect(benchmark!.options.color).toBe("chart-benchmark-dark");
+    expect(strategy!.markers[0]!.color).toBe("chart-oos-dark");
+    expect(charts[0]!.series[0]!.data).toHaveLength(result.equity.length); // the data is untouched
+
+    unmount();
+    expect(scheme.listeners).toHaveLength(0);
   });
 });
