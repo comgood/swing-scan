@@ -25,6 +25,7 @@ import {
   type BuilderState,
 } from "@/features/rule-builder";
 import { ApiRequestError, type ApiError } from "@/lib/api-error";
+import { errorAt, type FieldErrors } from "@/lib/field-errors";
 import { formatDate } from "@/lib/format";
 
 import { operandColumns } from "./operands";
@@ -39,6 +40,9 @@ export const DEFAULT_TEMPLATE_ID = "breakout_52w";
 export const LINK_DEBOUNCE_MS = 300;
 
 export const REJECTED_TEXT = "The rule was rejected. Fix the marked fields and run the scan again.";
+
+/** One plain line under the title, so a first visit knows what the page does (UAT). */
+export const SUBTITLE = "Find stocks that match your filters today.";
 
 /** The requested template, else Breakout, else the first one the API lists. */
 export function pickTemplate(
@@ -88,6 +92,13 @@ export function openLink(
   const wanted = templateLink(template.id);
   const fix = wanted.template === link.template && link.r === null ? null : wanted;
   return { state: initBuilder(template.rule, { template: template.id }), fix, badLink: !!link.r };
+}
+
+/** The part of a 422 that is still true after a row was added or removed, or nothing. */
+function unindexed(errors: FieldErrors): FieldErrors | undefined {
+  const name = errorAt(errors, "rule.name");
+  if (name === undefined && errors.form.length === 0) return undefined;
+  return { fields: name === undefined ? {} : { "rule.name": name }, form: errors.form };
 }
 
 function apiErrorOf(error: Error): ApiError {
@@ -169,11 +180,13 @@ function Editor({
   };
 
   const rejected = scan.error instanceof RuleRejectedError ? scan.error : null;
-  // A 422 names rows by index, so it only marks rows while the row count still matches.
-  const fieldErrors =
-    rejected && ranRule.conditions.length === state.rule.conditions.length
+  // A 422 names rows by index, so it only marks rows while the row count still matches. The name
+  // and the form level issues do not move with the rows, so they survive an added row (UAT).
+  const fieldErrors = !rejected
+    ? undefined
+    : ranRule.conditions.length === state.rule.conditions.length
       ? rejected.fieldErrors
-      : undefined;
+      : unindexed(rejected.fieldErrors);
   const stale = shown !== null && (state.dirty || hashKey([shown.rule]) !== hashKey([ranRule]));
   const template =
     typeof source === "object" ? templates.find((t) => t.id === source.template) : undefined;
@@ -276,7 +289,8 @@ function Workspace() {
 export function ScanWorkspace() {
   return (
     <div className="flex min-w-0 flex-col gap-4">
-      <h1 className="text-2xl font-semibold">Template scan</h1>
+      <h1 className="text-3xl font-semibold sm:text-4xl">Template scan</h1>
+      <p className="text-muted-foreground">{SUBTITLE}</p>
       <Suspense fallback={<WorkspaceSkeleton />}>
         <Workspace />
       </Suspense>

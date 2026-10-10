@@ -442,7 +442,9 @@ describe("RuleBuilder name field (decision 11)", () => {
       ),
     );
     const { user } = setup();
-    await user.type(name(), "x".repeat(41));
+    // A name the client check passes, so the request reaches the server and its 422 comes back.
+    await user.clear(name());
+    await user.type(name(), "Server says no");
     await user.click(screen.getByRole("button", { name: "Run scan" }));
     await waitFor(() => expect(name()).toHaveAttribute("aria-invalid", "true"));
     expect(name()).toHaveAccessibleDescription(
