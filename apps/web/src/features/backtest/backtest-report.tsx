@@ -89,7 +89,7 @@ export function BacktestReport({ initialParams, stores }: BacktestReportProps) {
   return (
     <div className="flex min-w-0 flex-col gap-8">
       <section aria-labelledby="backtest-title" className="flex min-w-0 flex-col gap-4">
-        <h1 id="backtest-title" className="text-2xl font-semibold">
+        <h1 id="backtest-title" className="text-3xl font-semibold sm:text-4xl">
           Backtest
         </h1>
         <WarmupNotice pending={loading || backtest.isPending} />
