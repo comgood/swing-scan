@@ -11,6 +11,8 @@ import { ApiRequestError, toApiError } from "@/lib/api-error";
 import { fieldErrorsFrom422, type FieldErrors } from "@/lib/field-errors";
 
 export type PortfolioResult = Schemas["PortfolioResult"];
+export type TradeLabResult = Schemas["TradeLabResult"];
+export type BacktestResult = PortfolioResult | TradeLabResult;
 
 /** A 422: the fields to mark, not a page error. */
 export class ValidationFailed extends Error {
@@ -31,7 +33,7 @@ async function fetchTemplates({ signal }: { signal: AbortSignal }): Promise<Temp
   return result.data;
 }
 
-async function runBacktest(body: BacktestRequest): Promise<PortfolioResult> {
+async function runBacktest(body: BacktestRequest): Promise<BacktestResult> {
   let result;
   try {
     result = await api.POST("/api/v1/backtest", { body });
@@ -40,8 +42,9 @@ async function runBacktest(body: BacktestRequest): Promise<PortfolioResult> {
   }
   if (result.response.status === 422) throw new ValidationFailed(fieldErrorsFrom422(result.error));
   if (!result.data) throw new ApiRequestError(toApiError(result));
-  // One config always answers in portfolio mode (spec 0002); anything else is a contract bug.
-  if (result.data.mode !== "portfolio") {
+  // One config answers in portfolio mode, 2 to 6 in trade mode (spec 0002); else a contract bug.
+  const mode = body.configs.length === 1 ? "portfolio" : "trade";
+  if (result.data.mode !== mode) {
     throw new ApiRequestError({ kind: "http", status: 500, detail: "Unexpected result mode" });
   }
   return result.data;
