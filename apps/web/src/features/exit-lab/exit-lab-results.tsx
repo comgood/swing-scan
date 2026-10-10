@@ -28,29 +28,33 @@ export function ExitLabFootnotes({ result }: { result: TradeLabResult }) {
       {noStop.length > 0 ? (
         <li>
           * R needs a stop. {new Intl.ListFormat("en-US").format(noStop.map((n) => `"${n}"`))}{" "}
-          {noStop.length === 1 ? "has" : "have"} no stop, ATR stop or trailing stop, so{" "}
-          {noStop.length === 1 ? "its" : "their"} R values read n/a; compare{" "}
-          {noStop.length === 1 ? "it" : "them"} on expectancy in %.
+          {noStop.length === 1 ? "has" : "have"} no stop, no ATR stop and no trailing stop, so R
+          cannot be measured for {noStop.length === 1 ? "it" : "them"} and every R cell in{" "}
+          {noStop.length === 1 ? "that row" : "those rows"} reads n/a. Compare{" "}
+          {noStop.length === 1 ? "it" : "them"} on Expectancy (%) instead.
         </li>
       ) : null}
       <li>
-        Best IS marks the best in sample value of each metric. Out of sample, random and edge values
-        are never ranked, so pick on IS and read OOS once.
+        The &ldquo;Best IS&rdquo; mark sits on the best in sample (IS) value of each metric. Out of
+        sample (OOS), random and edge values are never marked, because ranking them would invite you
+        to pick on them. Choose a config on IS, then read its OOS numbers once.
       </li>
       <li>
         Every config trades the same {formatInt(entries.count)} entries (
-        {formatInt(entries.is_count)} IS, {formatInt(entries.oos_count)} OOS), one unit notional
-        trade each, and same ticker trades may overlap. A trade still open after{" "}
+        {formatInt(entries.is_count)} IS and {formatInt(entries.oos_count)} OOS), and each entry is
+        one trade of one unit notional, so the exit is the only difference between the rows. Two
+        trades on the same ticker may overlap. A trade still open after{" "}
         {assumptions.horizon_bars === null
           ? "the horizon"
           : `${formatInt(assumptions.horizon_bars)} bars`}{" "}
-        exits at that close.
+        is closed at that bar&rsquo;s close.
       </li>
       <li>
-        Edge vs random is the strategy value minus the random entries value under the same config
-        and segment; the win rate edge is in percentage points. Random entries are drawn with seed{" "}
-        {assumptions.seed === null ? "n/a" : String(assumptions.seed)} in the same market and go
-        through the same exits.
+        Edge vs random is this config&rsquo;s value minus the value the same config scored on random
+        entries, in the same segment. For Win rate (pts) that difference is in percentage points.
+        The random entries are drawn with seed{" "}
+        {assumptions.seed === null ? "n/a" : String(assumptions.seed)} from the same market and run
+        through the same exits, so they differ from the strategy only in where they entered.
       </li>
     </ul>
   );

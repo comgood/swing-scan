@@ -86,7 +86,7 @@ export function BacktestForm({
     <Field invalid={Boolean(errors[key])}>
       <FieldLabel>{label}</FieldLabel>
       <Input type="date" value={inputs[key]} onChange={(e) => set(key, e.target.value)} />
-      <FieldDescription>Blank uses the whole history.</FieldDescription>
+      <FieldDescription>Leave this blank to use the whole history.</FieldDescription>
       <FieldError>{errors[key]}</FieldError>
     </Field>
   );
@@ -155,7 +155,7 @@ export function BacktestForm({
             integer
             min={5}
             max={252}
-            hint="A trade still open on this bar exits at its close"
+            hint="A trade still open after this many bars is closed at that bar's close."
             error={errors.horizonBars}
           />
         ) : (
@@ -167,6 +167,7 @@ export function BacktestForm({
             min={1}
             max={20}
             error={errors.maxPositions}
+            hint="How many trades the portfolio may hold at the same time."
           />
         )}
         <NumberInput
@@ -174,6 +175,7 @@ export function BacktestForm({
           value={inputs.slippageBps}
           onValueChange={(v) => set("slippageBps", v)}
           error={errors.slippageBps}
+          hint="Assumed trading cost per side. 10 bps is 0.1%."
         />
         {dateField("start", "Start")}
         {dateField("end", "End")}

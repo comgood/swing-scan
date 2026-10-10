@@ -28,8 +28,9 @@ const CONFIGS = LAB.assumptions.configs;
 
 /** Doc 01 U-8, word for word. */
 const PROCEDURE_NOTE =
-  "Trade mode isolates the exit effect. Pick the exit on IS, read OOS once, then confirm with " +
-  "a single portfolio backtest.";
+  "Trade mode isolates the exit effect: every config trades identical entries, so the exit " +
+  "is the only difference. Pick the exit on in sample (IS), read out of sample (OOS) once, " +
+  "then confirm with a single portfolio backtest.";
 
 /** Spec 0009 AC-19: a null trade mode field reads this. */
 const NOT_USED = "not used in trade mode";

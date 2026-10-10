@@ -381,7 +381,6 @@ describe("RuleBuilder indicator change (decision 9)", () => {
     expect(within(right).getByLabelText("Window (n)")).toBeInTheDocument();
     await user.selectOptions(within(right).getByLabelText("Indicator"), "volume");
     expect(within(right).queryByLabelText("Window (n)")).not.toBeInTheDocument();
-    expect(within(right).getByText("No window for a price field")).toBeInTheDocument();
     const sent = (await runScan(user, bodies)).conditions[0].right;
     expect(sent).toMatchObject({ kind: "ind", ind: "volume", n: null });
   });

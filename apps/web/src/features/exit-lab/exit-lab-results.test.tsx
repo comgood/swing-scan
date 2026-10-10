@@ -61,6 +61,27 @@ describe("exit lab table on the trade lab mock", () => {
     expect(within(table()).queryByText(/CAGR|Sharpe|drawdown/i)).not.toBeInTheDocument();
   });
 
+  // covers: doc 01 section 6.8, every term keeps its label and gains one plain line
+  it("explains each metric term without renaming it, on hover and for a screen reader", async () => {
+    const result = await fetchLab();
+    render(<ExitLabResults result={result} />);
+    // Twice: once under "Per trade metrics" and once under "Edge vs random".
+    const headers = screen.getAllByRole("columnheader", { name: /^Expectancy \(R\)\. The same/ });
+    expect(headers).toHaveLength(2);
+    for (const header of headers) {
+      const abbr = within(header).getByTitle(/multiples of the risk you took/);
+      expect(abbr.textContent).toBe("Expectancy (R)");
+    }
+    // Spelled out once above the IS | OOS pairs, so the pair is learnable, not guessable.
+    expect(
+      screen.getByRole("columnheader", {
+        name: "Per trade metrics, in sample (IS) and out of sample (OOS)",
+      }),
+    ).toBeInTheDocument();
+    // The leaf headers the acceptance suite indexes by aria-label are untouched.
+    expect(screen.getByRole("columnheader", { name: "Average MAE IS" })).toBeInTheDocument();
+  });
+
   it("marks exactly the best_is cells, in IS columns only, with a text label (AC-13)", async () => {
     const result = await fetchLab();
     render(<ExitLabResults result={result} />);
@@ -111,7 +132,7 @@ describe("exit lab table on the trade lab mock", () => {
     const user = userEvent.setup();
     const result = await fetchLab();
     render(<ExitLabResults result={result} />);
-    expect(screen.getByRole("columnheader", { name: "Edge vs random" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: /^Edge vs random\b/ })).toBeInTheDocument();
     const baseline = rowOf("Baseline");
     if (!baseline) throw new Error("no baseline row");
     expect(cell(baseline, "edge_expectancy_pct", "is")).toHaveTextContent("+1.50%");

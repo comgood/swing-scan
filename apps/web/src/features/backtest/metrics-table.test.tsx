@@ -28,9 +28,12 @@ const allNull: Metrics = {
   exposure_pct: null,
 };
 
-/** The value cells of one metric row; a row's accessible name starts with its label. */
+/**
+ * The value cells of one metric row; a row's accessible name starts with its label, which an
+ * explained term follows with its one plain line (doc 01 section 6.8).
+ */
 function cellsOf(label: string): (string | null)[] {
-  const name = new RegExp(`^${label.replace(/[()]/g, "\\$&")} `);
+  const name = new RegExp(`^${label.replace(/[()]/g, "\\$&")}[.\\s]`);
   const row = within(screen.getByRole("table")).getByRole("row", { name });
   return within(row)
     .getAllByRole("cell")
@@ -76,6 +79,18 @@ describe("MetricsTable", () => {
       .filter((text) => text !== "0"); // only the trade counts are defined
     expect(new Set(values)).toEqual(new Set([NOT_AVAILABLE]));
     await expectNoAxeViolations(container);
+  });
+
+  // covers: doc 01 section 6.8, every term keeps its label and gains one plain line
+  it("explains each metric term without renaming it, on hover and for a screen reader", () => {
+    render(<MetricsTable result={result} />);
+    const sharpe = within(screen.getByRole("table")).getByRole("rowheader", { name: /^Sharpe\./ });
+    expect(within(sharpe).getByTitle(/higher is steadier/).textContent).toBe("Sharpe");
+    expect(sharpe).toHaveTextContent("Return divided by how much it bounced around");
+    // The abbreviations are spelled out where they first appear (job 2).
+    expect(screen.getByRole("columnheader", { name: "In sample (IS)" })).toBeVisible();
+    expect(screen.getByRole("columnheader", { name: "Out of sample (OOS)" })).toBeVisible();
+    expect(screen.getByRole("columnheader", { name: "Benchmark IS" })).toBeVisible();
   });
 
   it("scrolls by keyboard, so the five columns are reachable at 375 px", () => {
