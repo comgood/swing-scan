@@ -4,6 +4,10 @@ Mocks are real contract models filled from a seeded generator (seed 42), never f
 data, so they are safe to commit (D-6). Counts and rates agree with the trades they
 summarise. Each 422 and 501 mock is a real response from the app through `TestClient`.
 Every float is rounded to 6 places so the output is byte identical on macOS and Linux.
+
+The numbers are the generator's, but every decision a consumer can see is the engine's own:
+warnings, which trades a truncated list keeps and what `exposure_pct` measures all come from
+`engine.api`, so a mock can never prove the opposite of production.
 """
 
 from __future__ import annotations
@@ -22,6 +26,11 @@ from typing import Any
 from fastapi.testclient import TestClient
 from pydantic import BaseModel, TypeAdapter
 
+from engine.api import (  # the engine's own warnings and caps, never a second copy of them
+    MAX_TRADES,
+    _lab_warnings,
+    _warnings,
+)
 from engine.contracts import (
     CONTRACT_VERSION,
     INDICATOR_SPECS,
@@ -49,7 +58,6 @@ from engine.contracts import (
     TradeLabResult,
     TradeSplit,
     Trial,
-    Warning,
     entries_hash,
     pair_key,
     scan_columns,
@@ -59,6 +67,7 @@ from engine.metrics import (
     best_is,
     edge,
     even_spread,
+    exposure_pct,
     guides_is,
     trade_metrics,
     trade_stats,
@@ -69,7 +78,7 @@ SEED = 42
 OOS_FRACTION = 0.3
 SLIPPAGE_BPS = 10.0
 HORIZON = 60
-TRADE_CAP = 2000
+MAX_POSITIONS = 10
 POINT_CAP = 500
 
 BENCHMARK = "SYN-INDEX"
@@ -251,12 +260,15 @@ def curve_metrics(values: list[float], start: int, end: int) -> tuple[float, flo
     return cagr, max_dd, sharpe
 
 
-def exposure_pct(trades: Sequence[Trade], start: int, end: int) -> float:
+def invested_share(trades: Sequence[Trade], start: int, end: int) -> list[float]:
+    """Share of equity held in positions at each close, what the engine's `exposure_pct`
+    averages: equal weight over `MAX_POSITIONS` slots, not the share of sessions held."""
     index = {d: i for i, d in enumerate(SESSIONS)}
-    held: set[int] = set()
+    open_count = [0] * len(SESSIONS)
     for t in trades:
-        held.update(range(index[t.entry_date], index[t.exit_date] + 1))
-    return len(held & set(range(start, end))) / (end - start) * 100
+        for i in range(index[t.entry_date], index[t.exit_date] + 1):
+            open_count[i] += 1
+    return [min(c, MAX_POSITIONS) / MAX_POSITIONS for c in open_count[start:end]]
 
 
 # ---- Shared response parts -------------------------------------------------------------
@@ -268,7 +280,7 @@ def assumptions(configs: list[ExitConfig], portfolio: bool) -> Assumptions:
         slippage_bps=SLIPPAGE_BPS,
         commission_bps=0,
         sizing="equal_weight" if portfolio else "unit_notional",
-        max_positions=10 if portfolio else None,
+        max_positions=MAX_POSITIONS if portfolio else None,
         entry_rising_edge=True,
         cooldown_bars=10,
         cooldown_basis="signal",
@@ -345,7 +357,7 @@ def portfolio_metrics(
         expectancy_r=s.expectancy_r,
         profit_factor=s.profit_factor,
         avg_bars_held=s.avg_bars_held,
-        exposure_pct=exposure_pct(trades, start, end),
+        exposure_pct=exposure_pct(invested_share(trades, start, end)),
     )
 
 
@@ -366,36 +378,13 @@ def portfolio_result(rng: random.Random, rule: Rule, n_trades: int) -> Portfolio
     equity = random_walk(rng, 0.0004, 0.009) if trades else [100.0] * len(SESSIONS)
     is_trades, oos_trades = split(trades)
     benchmark, benchmark_metrics = benchmark_parts(rng)
-    shown = even_spread(trades, TRADE_CAP)
-    warnings = []
-    if not trades:
-        warnings.append(
-            Warning(
-                code="no_entries",
-                config_index=None,
-                message=(
-                    "No entries: the rule never produced a signal in this window, so there "
-                    "are no trades to show."
-                ),
-            )
-        )
-    if len(shown) < len(trades):
-        warnings.append(
-            Warning(
-                code="trades_truncated",
-                config_index=0,
-                message=(
-                    f"Showing {len(shown)} trades of {len(trades)}. "
-                    "The metrics above use every trade."
-                ),
-            )
-        )
+    shown = trades[-MAX_TRADES:]  # the latest, as `_portfolio()` keeps them
     return PortfolioResult(
         mode="portfolio",
         assumptions=assumptions([config], portfolio=True),
         oos_start=OOS_START,
         trial=trial(rule, [config]),
-        warnings=warnings,
+        warnings=_warnings(len(trades)),
         metrics=PortfolioSplit(
             is_=portfolio_metrics(is_trades, equity, 0, OOS_INDEX),
             oos=portfolio_metrics(oos_trades, equity, OOS_INDEX, len(SESSIONS)),
@@ -457,9 +446,8 @@ def trade_lab_result(rng: random.Random, rule: Rule) -> TradeLabResult:
         for _ in range(oos_count)
     ]
     rows: list[ConfigRow] = []
-    baseline_trades: list[Trade] = []
-    warnings: list[Warning] = []
-    for i, config in enumerate(configs):
+    strategies: list[list[Trade]] = []
+    for config in configs:
         strategy = by_entry([make_trade(rng, m, config, HORIZON) for m in moves])
         random_ = by_entry([make_trade(rng, m, config, HORIZON) for m in random_moves])
         s_is, s_oos = (trade_metrics(part) for part in split(strategy))
@@ -472,27 +460,15 @@ def trade_lab_result(rng: random.Random, rule: Rule) -> TradeLabResult:
                 edge=EdgeSplit(is_=edge(s_is, r_is), oos=edge(s_oos, r_oos)),
             )
         )
-        if i == 0:
-            baseline_trades = strategy
-        if any((m.horizon_exit_pct or 0) > 10 for m in (s_is, s_oos)):
-            warnings.append(
-                Warning(
-                    code="horizon_exits_over_10pct",
-                    config_index=i,
-                    message=(
-                        f"{config.name}: more than 10% of these trades were still open "
-                        f"at the {HORIZON} bar horizon, so they were closed early and the "
-                        "results are cut short."
-                    ),
-                )
-            )
-    shown = even_spread(baseline_trades, TRADE_CAP)
+        strategies.append(strategy)
+    baseline_trades = strategies[0]
+    shown = even_spread(baseline_trades, MAX_TRADES)
     return TradeLabResult(
         mode="trade",
         assumptions=assumptions(configs, portfolio=False),
         oos_start=OOS_START,
         trial=trial(rule, configs),
-        warnings=warnings,
+        warnings=_lab_warnings([c.name for c in configs], strategies, len(moves), HORIZON),
         entries=Entries(
             count=len(moves),
             is_count=is_count,
@@ -649,12 +625,12 @@ def main() -> None:
     write("scan.empty.json", ScanResponse(as_of=SESSIONS[-1], columns=scan_columns(rule), rows=[]))
     write("backtest.portfolio.json", portfolio_result(rng, rule, 150))
     # shortcut: the truncation mock keeps 120 of its 2,000 trades, where the API would send all
-    # 2,000; it saves 36k committed lines and nothing reads the count. Restore the full slice if a
-    # consumer ever needs a realistic full page.
+    # 2,000, so its warning message still quotes production's 2,000; it saves 36k committed lines
+    # and nothing reads the count. Restore the full slice if a consumer needs a realistic page.
     truncated = portfolio_result(rng, rule, 2600)
     write(
         "backtest.portfolio.truncated.json",
-        truncated.model_copy(update={"trades": truncated.trades[:120]}),
+        truncated.model_copy(update={"trades": truncated.trades[-120:]}),
     )
     write("backtest.trade_lab.json", trade_lab_result(rng, rule))
     write("backtest.no_entries.json", portfolio_result(rng, rule, 0))

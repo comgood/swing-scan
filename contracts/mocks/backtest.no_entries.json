@@ -46,8 +46,8 @@
   "warnings": [
     {
       "code": "no_entries",
-      "config_index": null,
-      "message": "No entries: the rule never produced a signal in this window, so there are no trades to show."
+      "config_index": 0,
+      "message": "No entries: the rule never produced a signal that could be filled in this window, so there are no trades and no metrics to show."
     }
   ],
   "metrics": {

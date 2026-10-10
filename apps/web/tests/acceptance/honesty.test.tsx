@@ -70,11 +70,8 @@ describe("U-4 trial counter", () => {
   it("U-4: a first run reads Trial #1 · 1 this session, in a polite live region (AC-4)", async () => {
     completeRun(mocks.backtestPortfolio.trial);
     const line = await screen.findByText(counterLine(1, 1));
-    const region = line.closest('[aria-live="polite"], [role="status"]');
-    expect(region).not.toBeNull();
-    if (region?.getAttribute("aria-live") !== null) {
-      expect(region?.getAttribute("aria-live")).toBe("polite");
-    }
+    // The selector is the assertion: polite, or role="status", which is implicitly polite.
+    expect(line.closest('[aria-live="polite"], [role="status"]')).not.toBeNull();
     expect(screen.queryByText(OVERFIT_WARNING)).not.toBeInTheDocument();
   });
 

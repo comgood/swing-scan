@@ -24,5 +24,12 @@ if [[ "$status" != "200" ]]; then
   head -c 2000 "$out" >&2
   exit 1
 fi
+# A deploy with no data answers 200 with no rows, and one with dead indicator columns answers
+# 200 with null operands: both must fail the smoke test, not pass it.
+if ! jq -e '(.rows | length) > 0 and all(.rows[].operands[]; type == "number")' "$out" >/dev/null; then
+  echo "scan on template $template_id answered 200 with no usable rows:" >&2
+  head -c 2000 "$out" >&2
+  exit 1
+fi
 echo "scan $template_id: 200, as_of $(jq -r '.as_of' "$out"), $(jq '.rows | length' "$out") rows"
 echo "smoke test passed"

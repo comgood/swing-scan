@@ -137,7 +137,9 @@ def fetch_bars(
             page = get(f"{BARS_URL}?{urllib.parse.urlencode(query)}", headers)
             for symbol, bars in (page.get("bars") or {}).items():
                 out.setdefault(symbol, []).extend(bars)
-            token = page.get("next_page_token")
+            previous, token = token, page.get("next_page_token")
             if not token:
                 break
+            if token == previous:  # the same page again: paging would never end
+                raise LiveLoadError(f"Alpaca repeated page token {token}")
     return out
