@@ -28,7 +28,10 @@ def backtest(request: BacktestRequest) -> BacktestResponse:
         return use_cases.backtest(request, state.market)
     except ValidationError as exc:
         # `range_outside_data`: the same 422 body as any other request error, under `body`.
+        # Any other `ValidationError` is a bug building the response, so it stays a 500.
         errors = exc.errors(include_url=False)
+        if not all(error["type"] in use_cases.REQUEST_ERRORS for error in errors):
+            raise
         raise RequestValidationError(
             [{**error, "loc": ("body", *error["loc"])} for error in errors]
         ) from exc

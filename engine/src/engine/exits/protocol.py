@@ -15,9 +15,11 @@ ExitKind = Literal["stop", "target", "time", "ma"]
 FillAt = Literal["open", "intraday_stop", "intraday_target", "close"]
 
 
-@dataclass(frozen=True)
+@dataclass(slots=True)
 class BarView:
-    """One bar of a held position, as `step()` sees it."""
+    """One bar of a held position, as `step()` sees it. Read only by convention: it is not
+    frozen because the loops build one per held bar, millions per exit lab run, and a frozen
+    dataclass costs about four times as much to build (spec 0009, AC-11)."""
 
     open: float
     high: float
@@ -43,7 +45,7 @@ class EntryContext:
     """Row of the signal bar in `market.bars`."""
 
 
-@dataclass
+@dataclass(slots=True)
 class Position:
     """One open position. Prices are the slipped entry fill, as every level is."""
 

@@ -45,6 +45,8 @@ make dev-live                  # local only: the API in live mode on 127.0.0.1, 
 
 - Never import `fastapi`, `starlette` or `uvicorn` here; the boundary test fails.
 - Every exit runs through one `step(position, bar)` function shared by both loops. Never special case an exit outside it.
+- The portfolio loop aligns on session dates, never `row + 1`: a ticker with no bar on a session is not stepped (marked at its last close) and cannot be entered that day. Entries spend only the cash at the previous close; no exit on day d funds an entry on d.
+- A ticker whose bars stop early without a `delisted_on` exits `end_of_test` on its last bar, mid window. A live loader must set `delisted_on` for real delistings.
 - The random baseline seed default changes only with an ADR.
 - Alpaca's free Basic plan has no SIP history: `feed=sip` answers 403, so the loader reads the IEX feed. IEX is a small share of real volume, so volume rules (`vol_ratio`, `avg_volume`) are not comparable to a full tape.
 - Rule compilation never uses `eval` or `exec`.
