@@ -22,6 +22,8 @@ interface RequiredNumberProps {
   min?: number;
   max?: number;
   error?: string;
+  /** One plain line under the field, which a beginner cannot guess (doc 01 section 6.8). */
+  hint?: string;
 }
 
 /** A number the rule always needs: an empty entry keeps the last value and asks for one. */
@@ -48,9 +50,14 @@ interface OperandFieldsProps {
 
 export function OperandFields({ operand, catalog, onChange, errors = {} }: OperandFieldsProps) {
   const spec = catalog.find((s) => s.name === operand.ind);
+  // A price field has no window, so the slot goes away entirely rather than leaving a hint with
+  // nothing above it. A 422 on `n` then has no field of its own, so it lands on the indicator
+  // that chose the price field (U-7).
+  const windowed = spec?.windowed ?? false;
+  const indError = errors.ind ?? (windowed ? undefined : errors.n);
   return (
     <div className="grid min-w-0 grid-cols-1 gap-3 *:min-w-0 sm:grid-cols-4">
-      <Field invalid={Boolean(errors.ind)}>
+      <Field invalid={Boolean(indError)}>
         <FieldLabel>Indicator</FieldLabel>
         <NativeSelect
           value={operand.ind}
@@ -64,26 +71,23 @@ export function OperandFields({ operand, catalog, onChange, errors = {} }: Opera
             </NativeSelectOption>
           ))}
         </NativeSelect>
-        <FieldError>{errors.ind}</FieldError>
+        <FieldError>{indError}</FieldError>
       </Field>
-      {spec?.windowed ? (
+      {windowed && (
         <RequiredNumber
           label="Window (n)"
+          hint="How many bars the indicator averages or looks back over."
           integer
           value={operand.n ?? null}
-          min={spec.n_min ?? undefined}
-          max={spec.n_max ?? undefined}
+          min={spec?.n_min ?? undefined}
+          max={spec?.n_max ?? undefined}
           error={errors.n}
           onChange={(n) => onChange({ ...operand, n })}
         />
-      ) : (
-        <p className="self-end pb-2 text-xs text-muted-foreground">
-          No window for a price field
-          {errors.n && <span className="block text-sm text-destructive">{errors.n}</span>}
-        </p>
       )}
       <RequiredNumber
         label="Bars ago"
+        hint="0 is today's bar, 1 is the bar before it."
         integer
         value={operand.offset}
         min={0}
@@ -93,6 +97,7 @@ export function OperandFields({ operand, catalog, onChange, errors = {} }: Opera
       />
       <RequiredNumber
         label="Multiplier (×)"
+        hint="Scales the value. 1 leaves it unchanged."
         value={operand.mult}
         min={0.1}
         max={10}
