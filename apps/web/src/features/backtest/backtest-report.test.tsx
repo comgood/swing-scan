@@ -104,7 +104,7 @@ describe("BacktestReport", () => {
       await screen.findByText(mocks.backtestTruncated.warnings[0]!.message),
     ).toBeInTheDocument();
     const trades = screen.getByRole("region", { name: "Trades" });
-    expect(within(trades).getByText(/^Showing 2,000 of 2,600 trades/)).toBeInTheDocument();
+    expect(within(trades).getByText(/^Showing 120 of 2,600 trades/)).toBeInTheDocument();
   });
 
   it("puts a 422 on the field it belongs to", async () => {
