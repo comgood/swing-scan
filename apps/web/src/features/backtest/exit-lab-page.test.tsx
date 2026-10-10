@@ -53,7 +53,9 @@ function headerPairs(): Record<string, string> {
 }
 
 // covers: spec 0009 AC-18 (counter half), AC-19, AC-20 against the frozen mocks
-describe("exit lab on /backtest", () => {
+// Each test renders the whole lab form and table; the CI runner takes about 5 s for the
+// heaviest, past Vitest's 5 s default, so this file gets the gallery's 20 s budget.
+describe("exit lab on /backtest", { timeout: 20_000 }, () => {
   it("opens with the five default configs, config 1 the baseline", async () => {
     const { user, container } = renderReport();
     await openLab(user);
