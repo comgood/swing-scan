@@ -14,10 +14,10 @@ import { Input } from "@/components/ui/input";
 import type { FieldErrors } from "@/lib/field-errors";
 
 import { ConditionRow } from "./condition-row";
-import { builderErrors } from "./errors";
+import { builderErrors, rowHasError } from "./errors";
 import { MAX_CONDITIONS } from "./is-rule";
 import { JsonPanel } from "./json-panel";
-import { DEFAULT_NAME, type BuilderAction, type BuilderState } from "./reducer";
+import { DEFAULT_NAME, nextRowId, type BuilderAction, type BuilderState } from "./reducer";
 
 export const MAX_ROWS_REASON = "A rule has at most 8 conditions.";
 export const STALE_TEXT = "Results are for the previous rule. Run scan to update.";
@@ -104,6 +104,9 @@ export function RuleBuilder({
   const names = catalog.map((s) => s.name);
   const titleId = useId();
   const maxId = useId();
+  // A loaded rule reads as a list of bubbles; one row at a time opens into the editor, so a long
+  // rule stays short on screen. A row you add opens straight away.
+  const [openId, setOpenId] = useState<string | null>(null);
   // Once "Run scan" has been pressed the name is checked live, so fixing it clears the error.
   const [checked, setChecked] = useState(false);
   const localName = checked ? nameError(rule.name) : undefined;
@@ -118,6 +121,16 @@ export function RuleBuilder({
   useEffect(() => {
     if (summaryKey) summaryRef.current?.focus();
   }, [summaryKey]);
+
+  // A 422 on a row would be hidden inside a closed bubble, so a new one opens that row (U-7).
+  // Adjusted during render rather than in an effect, as `NameField` does with a loaded name.
+  const badRow = rowIds[shown.rows.findIndex(rowHasError)] ?? null;
+  // Starts at null, so a rule that arrives already rejected opens its row on the first render.
+  const [lastBadRow, setLastBadRow] = useState<string | null>(null);
+  if (badRow !== lastBadRow) {
+    setLastBadRow(badRow);
+    if (badRow !== null) setOpenId(badRow);
+  }
 
   return (
     <div role="group" aria-labelledby={titleId} className="flex min-w-0 flex-col gap-4">
@@ -143,6 +156,14 @@ export function RuleBuilder({
             dispatch={dispatch}
             canRemove={rule.conditions.length > 1}
             errors={shown.rows[index]}
+            open={openId === rowIds[index]}
+            onOpenChange={(isOpen) =>
+              setOpenId((current) => {
+                const id = rowIds[index];
+                if (isOpen) return id ?? null;
+                return current === id ? null : current;
+              })
+            }
           />
         ))}
       </div>
@@ -151,7 +172,10 @@ export function RuleBuilder({
           variant="outline"
           disabled={atMax}
           aria-describedby={atMax ? maxId : undefined}
-          onClick={() => dispatch({ type: "add" })}
+          onClick={() => {
+            setOpenId(nextRowId(state));
+            dispatch({ type: "add" });
+          }}
         >
           Add condition
         </Button>

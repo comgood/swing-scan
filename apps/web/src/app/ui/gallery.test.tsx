@@ -109,8 +109,8 @@ describe("/ui gallery (AC-15, AC-16)", () => {
       }),
     ).toBeDisabled();
     expect(
-      state("Number and indicator right sides").getAllByRole("combobox", { name: "Compare with" }),
-    ).toHaveLength(2);
+      state("Number and indicator right sides").getAllByRole("combobox", { name: "Field" }),
+    ).toHaveLength(4);
     expect(
       state("Eight rows (add disabled)").getByRole("button", { name: "Add condition" }),
     ).toBeDisabled();

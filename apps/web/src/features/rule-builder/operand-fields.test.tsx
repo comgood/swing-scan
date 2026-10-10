@@ -25,7 +25,7 @@ describe("OperandFields", () => {
     expect(screen.getByLabelText("Window (n)")).toHaveAccessibleDescription(
       expect.stringContaining("How many bars the indicator averages or looks back over."),
     );
-    expect(screen.getByLabelText("Bars ago")).toHaveAccessibleDescription(
+    expect(screen.getByLabelText("Bars back")).toHaveAccessibleDescription(
       expect.stringContaining("0 is today's bar, 1 is the bar before it."),
     );
     expect(screen.getByLabelText("Multiplier (×)")).toHaveAccessibleDescription(
@@ -41,14 +41,14 @@ describe("OperandFields", () => {
 
   it("shows a 422 on n beside the indicator when the window has no field (U-7)", () => {
     setup(priceField.name, { n: "Must be between 2 and 50" });
-    expect(screen.getByLabelText("Indicator")).toHaveAccessibleDescription(
+    expect(screen.getByLabelText("Field")).toHaveAccessibleDescription(
       expect.stringContaining("Must be between 2 and 50"),
     );
   });
 
   it("keeps a 422 on the indicator itself when both arrive", () => {
     setup(priceField.name, { ind: "Unknown indicator", n: "Must be between 2 and 50" });
-    expect(screen.getByLabelText("Indicator")).toHaveAccessibleDescription(
+    expect(screen.getByLabelText("Field")).toHaveAccessibleDescription(
       expect.stringContaining("Unknown indicator"),
     );
   });

@@ -14,6 +14,7 @@ import { server } from "@/mocks/node";
 import { expectNoAxeViolations } from "@/test/axe";
 import { renderWithQuery } from "@/test/render";
 
+import { DONE_LABEL } from "./condition-row";
 import { builderReducer, initBuilder } from "./reducer";
 import { MAX_ROWS_REASON, RuleBuilder, STALE_TEXT } from "./rule-builder";
 
@@ -74,7 +75,7 @@ describe("RuleBuilder", () => {
     setup();
     expect(screen.getAllByRole("group", { name: /^Condition \d$/ })).toHaveLength(3);
     const third = row(3);
-    expect(within(side(3, "Left side")).getByLabelText("Indicator")).toHaveValue("close");
+    expect(within(side(3, "Left side")).getByLabelText("Field")).toHaveValue("close");
     expect(within(third).getByLabelText("Operator")).toHaveValue(">");
     expect(within(side(3, "Right side")).getByLabelText("Number")).toHaveValue("5");
   });
@@ -85,15 +86,15 @@ describe("RuleBuilder", () => {
 
     await user.click(screen.getByRole("button", { name: "Add condition" }));
     const left4 = side(4, "Left side");
-    await user.selectOptions(within(left4).getByLabelText("Indicator"), "rsi");
+    await user.selectOptions(within(left4).getByLabelText("Field"), "rsi");
     const n = within(left4).getByLabelText("Window (n)");
     await user.clear(n);
     await user.type(n, "21");
-    const offset = within(left4).getByLabelText("Bars ago");
+    const offset = within(left4).getByLabelText("Bars back");
     await user.clear(offset);
     await user.type(offset, "2");
     await user.selectOptions(within(row(4)).getByLabelText("Operator"), "crosses_below");
-    await user.selectOptions(within(row(4)).getByLabelText("Compare with"), "value");
+    await user.selectOptions(within(side(4, "Right side")).getByLabelText("Field"), "__number");
     const value = within(side(4, "Right side")).getByLabelText("Number");
     await user.clear(value);
     await user.type(value, "30.5");
@@ -162,11 +163,11 @@ describe("RuleBuilder", () => {
     const { user } = setup();
     const left = side(1, "Left side");
     expect(within(left).queryByLabelText("Window (n)")).not.toBeInTheDocument();
-    await user.selectOptions(within(left).getByLabelText("Indicator"), "rsi");
+    await user.selectOptions(within(left).getByLabelText("Field"), "rsi");
     const n = within(left).getByLabelText("Window (n)");
     expect(n).toHaveValue("14");
     expect(n).toHaveAccessibleDescription(expect.stringContaining("Allowed: 2 to 50"));
-    await user.selectOptions(within(left).getByLabelText("Indicator"), "rs");
+    await user.selectOptions(within(left).getByLabelText("Field"), "rs");
     expect(within(left).getByLabelText("Window (n)")).toHaveValue("126");
   });
 
@@ -190,7 +191,7 @@ describe("RuleBuilder", () => {
     await waitFor(() =>
       expect(within(left).getByText("Must be between 2 and 50")).toBeInTheDocument(),
     );
-    expect(within(left).getByLabelText("Indicator")).toHaveValue("close");
+    expect(within(left).getByLabelText("Field")).toHaveValue("close");
     expect(within(side(1, "Right side")).queryByText(/Must be/)).not.toBeInTheDocument();
   });
 
@@ -255,7 +256,7 @@ describe("RuleBuilder", () => {
     const { user } = setup();
     await user.click(screen.getByRole("button", { name: "Run scan" }));
     await expectOnField(
-      within(side(1, "Right side")).getByLabelText("Indicator"),
+      within(side(1, "Right side")).getByLabelText("Field"),
       "Input should be 'open'",
     );
   });
@@ -306,27 +307,74 @@ async function runScan(user: ReturnType<typeof userEvent.setup>, bodies: ScanReq
   return bodies[before].rule;
 }
 
+describe("RuleBuilder condition bubbles", () => {
+  const bubble = (n: number) => row(n).querySelector("summary")!;
+  const editor = (n: number) => row(n).querySelector("details")!;
+
+  it("opens a loaded rule as bubbles, and a bubble opens the editor until Done", async () => {
+    const { user } = setup();
+    expect(editor(1).open).toBe(false);
+    expect(bubble(1)).toHaveTextContent("close > highest(252)[1]");
+
+    await user.click(bubble(1));
+    expect(editor(1).open).toBe(true);
+    // One at a time: opening another row closes the first.
+    await user.click(bubble(2));
+    expect([editor(1).open, editor(2).open]).toEqual([false, true]);
+
+    await user.click(within(row(2)).getByRole("button", { name: DONE_LABEL }));
+    expect(editor(2).open).toBe(false);
+  });
+
+  it("opens the row you add, and the row a 422 lands on", async () => {
+    server.use(
+      http.post("*/api/v1/scan", () =>
+        HttpResponse.json(
+          {
+            detail: [
+              {
+                type: "x",
+                loc: ["body", "rule", "conditions", 1, "right", "ind", "n"],
+                msg: "must be between 2 and 252",
+                input: null,
+              },
+            ],
+          },
+          { status: 422 },
+        ),
+      ),
+    );
+    const { user } = setup();
+    await user.click(screen.getByRole("button", { name: "Add condition" }));
+    expect(editor(4).open).toBe(true);
+
+    await user.click(screen.getByRole("button", { name: "Run scan" }));
+    await waitFor(() => expect(editor(2).open).toBe(true));
+    expect(within(side(2, "Right side")).getByLabelText("Window (n)")).toBeVisible();
+  });
+});
+
 describe("RuleBuilder right side switch (decision 9)", () => {
-  it("starts an Indicator right side at sma(50) and a Number at 0, keeping nothing", async () => {
+  it("starts an indicator right side at that indicator's own n, and a Number at 0", async () => {
     const bodies = recordScans();
     const { user } = setup();
-    const compare = within(row(3)).getByLabelText("Compare with");
+    const compare = () => within(side(3, "Right side")).getByLabelText("Field");
 
-    await user.selectOptions(compare, "ind");
+    await user.selectOptions(compare(), "sma");
     const right = side(3, "Right side");
-    expect(within(right).getByLabelText("Indicator")).toHaveValue("sma");
-    expect(within(right).getByLabelText("Window (n)")).toHaveValue("50");
-    expect(within(right).getByLabelText("Bars ago")).toHaveValue("0");
+    expect(within(right).getByLabelText("Field")).toHaveValue("sma");
+    expect(within(right).getByLabelText("Window (n)")).toHaveValue("14");
+    expect(within(right).getByLabelText("Bars back")).toHaveValue("0");
     expect(within(right).getByLabelText("Multiplier (×)")).toHaveValue("1");
     expect((await runScan(user, bodies)).conditions[2].right).toEqual({
       kind: "ind",
       ind: "sma",
-      n: 50,
+      n: 14,
       offset: 0,
       mult: 1,
     });
 
-    await user.selectOptions(compare, "value");
+    await user.selectOptions(compare(), "__number");
     expect(within(side(3, "Right side")).getByLabelText("Number")).toHaveValue("0");
     expect((await runScan(user, bodies)).conditions[2].right).toEqual({ kind: "value", value: 0 });
   });
@@ -335,16 +383,16 @@ describe("RuleBuilder right side switch (decision 9)", () => {
     const bodies = recordScans();
     const { user } = setup();
     const right = () => side(1, "Right side");
-    const offset = within(right()).getByLabelText("Bars ago");
+    const offset = within(right()).getByLabelText("Bars back");
     await user.clear(offset);
     await user.type(offset, "4");
-    await user.selectOptions(within(row(1)).getByLabelText("Compare with"), "value");
-    await user.selectOptions(within(row(1)).getByLabelText("Compare with"), "ind");
-    expect(within(right()).getByLabelText("Bars ago")).toHaveValue("0");
+    await user.selectOptions(within(right()).getByLabelText("Field"), "__number");
+    await user.selectOptions(within(right()).getByLabelText("Field"), "sma");
+    expect(within(right()).getByLabelText("Bars back")).toHaveValue("0");
     expect((await runScan(user, bodies)).conditions[0].right).toEqual({
       kind: "ind",
       ind: "sma",
-      n: 50,
+      n: 14,
       offset: 0,
       mult: 1,
     });
@@ -356,14 +404,14 @@ describe("RuleBuilder indicator change (decision 9)", () => {
     const bodies = recordScans();
     const { user } = setup();
     const left = side(1, "Left side");
-    await user.selectOptions(within(left).getByLabelText("Indicator"), "rsi");
+    await user.selectOptions(within(left).getByLabelText("Field"), "rsi");
     const n = within(left).getByLabelText("Window (n)");
     await user.clear(n);
     await user.type(n, "21");
-    const offset = within(left).getByLabelText("Bars ago");
+    const offset = within(left).getByLabelText("Bars back");
     await user.clear(offset);
     await user.type(offset, "3");
-    await user.selectOptions(within(left).getByLabelText("Indicator"), "ema");
+    await user.selectOptions(within(left).getByLabelText("Field"), "ema");
     expect(within(left).getByLabelText("Window (n)")).toHaveValue("14");
     expect((await runScan(user, bodies)).conditions[0].left).toEqual({
       kind: "ind",
@@ -379,7 +427,7 @@ describe("RuleBuilder indicator change (decision 9)", () => {
     const { user } = setup();
     const right = side(1, "Right side");
     expect(within(right).getByLabelText("Window (n)")).toBeInTheDocument();
-    await user.selectOptions(within(right).getByLabelText("Indicator"), "volume");
+    await user.selectOptions(within(right).getByLabelText("Field"), "volume");
     expect(within(right).queryByLabelText("Window (n)")).not.toBeInTheDocument();
     const sent = (await runScan(user, bodies)).conditions[0].right;
     expect(sent).toMatchObject({ kind: "ind", ind: "volume", n: null });
@@ -584,16 +632,16 @@ describe("RuleBuilder keyboard and axe (AC-10)", () => {
 
   it("reaches every control of a row with Tab, in reading order", async () => {
     const { user } = setup();
-    within(side(1, "Left side")).getByLabelText("Indicator").focus();
+    within(side(1, "Left side")).getByLabelText("Field").focus();
     const order = [
-      within(side(1, "Left side")).getByLabelText("Bars ago"),
+      within(side(1, "Left side")).getByLabelText("Bars back"),
       within(side(1, "Left side")).getByLabelText("Multiplier (×)"),
       within(row(1)).getByLabelText("Operator"),
-      within(row(1)).getByLabelText("Compare with"),
-      within(side(1, "Right side")).getByLabelText("Indicator"),
+      within(side(1, "Right side")).getByLabelText("Field"),
       within(side(1, "Right side")).getByLabelText("Window (n)"),
-      within(side(1, "Right side")).getByLabelText("Bars ago"),
+      within(side(1, "Right side")).getByLabelText("Bars back"),
       within(side(1, "Right side")).getByLabelText("Multiplier (×)"),
+      within(row(1)).getByRole("button", { name: DONE_LABEL }),
       screen.getByRole("button", { name: "Remove condition 1" }),
     ];
     for (const control of order) {

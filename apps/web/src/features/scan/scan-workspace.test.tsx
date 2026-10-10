@@ -31,7 +31,8 @@ const NAMES = mocks.indicators.map((s) => s.name);
 
 /** The builder's condition rows (spec 0008), each with its one line text. */
 const conditionRows = () => screen.getAllByRole("group", { name: /^Condition \d$/ });
-const rowText = (row: HTMLElement) => row.querySelector("p.font-mono")?.textContent;
+/** The condition as its bubble reads it: the summary's one line, screen reader copy. */
+const rowText = (row: HTMLElement) => row.querySelector("summary > span")?.textContent;
 const side = (n: number, name: "Left side" | "Right side") =>
   within(screen.getByRole("group", { name: `Condition ${n}` })).getByRole("group", { name });
 
