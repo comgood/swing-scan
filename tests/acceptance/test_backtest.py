@@ -393,6 +393,7 @@ def test_seed_42_full_history_run_is_deterministic_under_3_seconds_and_6_mb(
 
 
 @pytest.mark.ac("B-13")
+@pytest.mark.slow
 def test_500_ticker_random_walk_run_is_under_3_seconds_and_6_mb() -> None:
     exits = [{"type": "stop_pct", "pct": 8}, {"type": "time", "bars": 10}]
     portfolio(VOLUME_SPIKE, exits, build_market({"AAA": spiked(10, 3)}))  # fail fast on a stub

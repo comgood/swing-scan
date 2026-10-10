@@ -27,6 +27,11 @@ dev = [
 [tool.pytest.ini_options]
 testpaths = ["services/api/tests", "engine/tests", "tests/golden", "tests/acceptance"]
 addopts = "-ra"
+markers = [
+    # `make test` runs these; CI runs them in its own job on main, a dispatch or a `run-slow`
+    # label (`make test-slow`), and drops them from the per PR jobs with -m "not slow".
+    "slow: a timing or budget test on a full seed 42 market, minutes long (X-7, B-13, AC-11)",
+]
 
 [tool.ruff]
 line-length = 100
