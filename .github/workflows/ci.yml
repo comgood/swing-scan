@@ -82,6 +82,8 @@ jobs:
             # after the merge, on main.
             timing:
               - *shared
+              - 'engine/src/engine/api.py'
+              - 'engine/src/engine/contracts/**'
               - 'engine/src/engine/indicators/**'
               - 'engine/src/engine/rules/**'
               - 'engine/src/engine/sim/**'
