@@ -5,10 +5,10 @@
 // request is `state.rule` and nothing else holds a copy (R-8). 422s map to their fields (U-7).
 import type { IndicatorSpec } from "@swing-scan/api-client";
 import Link from "next/link";
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import { FormErrorSummary } from "@/components/form-error-summary";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import type { FieldErrors } from "@/lib/field-errors";
@@ -17,11 +17,24 @@ import { ConditionRow } from "./condition-row";
 import { builderErrors } from "./errors";
 import { MAX_CONDITIONS } from "./is-rule";
 import { JsonPanel } from "./json-panel";
-import type { BuilderAction, BuilderState } from "./reducer";
+import { DEFAULT_NAME, type BuilderAction, type BuilderState } from "./reducer";
 
 export const MAX_ROWS_REASON = "A rule has at most 8 conditions.";
 export const STALE_TEXT = "Results are for the previous rule. Run scan to update.";
 export const NAME_MAX = 40;
+export const NAME_EMPTY = "Give the rule a name before you run it.";
+export const NAME_TOO_LONG = `Shorten the name to ${NAME_MAX} characters or fewer.`;
+
+/**
+ * The server's name rule (1 to 40 characters once trimmed), checked here first so a rejected
+ * name is visible instead of a run that silently does nothing (UAT).
+ */
+export function nameError(name: string): string | undefined {
+  const trimmed = name.trim();
+  if (trimmed.length === 0) return NAME_EMPTY;
+  if (trimmed.length > NAME_MAX) return NAME_TOO_LONG;
+  return undefined;
+}
 
 function NameField({
   name,
@@ -91,6 +104,20 @@ export function RuleBuilder({
   const names = catalog.map((s) => s.name);
   const titleId = useId();
   const maxId = useId();
+  // Once "Run scan" has been pressed the name is checked live, so fixing it clears the error.
+  const [checked, setChecked] = useState(false);
+  const localName = checked ? nameError(rule.name) : undefined;
+  const nameMessage = shown.name ?? localName;
+  // The name error also goes in the summary: an inline FieldError alone was missed (UAT).
+  const summary = nameMessage ? [nameMessage, ...shown.top] : shown.top;
+  const summaryKey = summary.join("\n");
+  const summaryRef = useRef<HTMLDivElement>(null);
+  const rejected = Boolean(errors) || localName !== undefined;
+
+  // A rejected run must do something visible: focus the summary it just filled.
+  useEffect(() => {
+    if (summaryKey) summaryRef.current?.focus();
+  }, [summaryKey]);
 
   return (
     <div role="group" aria-labelledby={titleId} className="flex min-w-0 flex-col gap-4">
@@ -99,11 +126,13 @@ export function RuleBuilder({
       </h2>
       <NameField
         name={rule.name}
-        error={shown.name}
+        error={nameMessage}
         onChange={(name) => dispatch({ type: "setName", name })}
       />
       <p className="text-sm text-muted-foreground">A ticker is a hit when all of these hold.</p>
-      <FormErrorSummary errors={shown.top} />
+      <div ref={summaryRef} tabIndex={-1}>
+        <FormErrorSummary errors={summary} />
+      </div>
       <div className="flex min-w-0 flex-col gap-3">
         {rule.conditions.map((condition, index) => (
           <ConditionRow
@@ -132,14 +161,36 @@ export function RuleBuilder({
           </span>
         )}
         {onRun && (
-          <Button onClick={onRun} disabled={running}>
+          <Button
+            onClick={() => {
+              setChecked(true);
+              if (!nameError(rule.name)) onRun();
+            }}
+            disabled={running}
+          >
             Run scan
           </Button>
         )}
         {backtestHref && (
-          <Link href={backtestHref} className={buttonVariants({ variant: "outline" })}>
+          // A rejected rule would travel into `?r=`, so the hand off waits for a valid one.
+          <Button disabled={rejected} render={rejected ? undefined : <Link href={backtestHref} />}>
             Backtest this rule
-          </Link>
+          </Button>
+        )}
+        {state.source !== "custom" && (
+          <Button
+            variant="secondary"
+            onClick={() =>
+              dispatch({
+                type: "load",
+                rule: { ...rule, name: DEFAULT_NAME },
+                source: "custom",
+                dirty: true,
+              })
+            }
+          >
+            Create my own rule
+          </Button>
         )}
       </div>
       {stale && (
