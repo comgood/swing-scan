@@ -128,3 +128,10 @@ def test_thinning_keeps_the_first_and_last_point_and_at_most_500(n: int) -> None
 def test_thinning_takes_every_kth_session() -> None:
     assert thin(1260)[:4] == [0, 3, 6, 9]  # k = ceil(1260 / 500) = 3
     assert thin(0) == []
+
+
+def test_thinning_drops_the_step_point_before_the_last_when_it_would_be_501() -> None:
+    # n = 1000, k = 2: 0, 2, … 998 is already 500 points, so adding the last drops 998.
+    picked = thin(1000)
+    assert len(picked) == 500
+    assert picked[-3:] == [994, 996, 999]
