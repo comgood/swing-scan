@@ -1,6 +1,7 @@
 # Checks on every PR and on main. Steps call only `make` targets so agents and CI behave
 # the same (spec 0001). `contracts-check` reruns OpenAPI, client and mock generation and
-# fails on any diff (spec 0002). Deploy and oracle first ordering arrive with later features.
+# fails on any diff (spec 0002). deploy.yml deploys after this passes on main; oracle first
+# ordering arrives with a later feature.
 name: CI
 
 on:
@@ -44,7 +45,7 @@ jobs:
     # The real linux/amd64 Lambda image, built on an x86 runner because Polars segfaults
     # under emulation on Apple Silicon. Build and local smoke only: no push, no AWS, no secrets.
     # On main and on a manual run it also keeps the smoked image as an artifact, which the
-    # owner downloads and pushes to ECR by hand until feature 15's OIDC deploy.
+    # Deploy API workflow pushes to ECR (infra/README.md; step 4 is the manual fallback).
     name: api image (build, smoke)
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -63,7 +64,7 @@ jobs:
       - name: Save the image
         if: github.event_name != 'pull_request'
         run: docker save swing-scan-api | gzip > api-image.tar.gz
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: github.event_name != 'pull_request'
         with:
           name: api-image-${{ github.sha }}
