@@ -63,6 +63,7 @@ def _timed(request: BacktestRequest, market: Market) -> tuple[float, TradeLabRes
     return time.perf_counter() - started, result, body
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("template", TEMPLATES, ids=lambda t: t.id)
 def test_six_configs_and_the_baseline_answer_warm_within_budget(
     template: Any, seed_42: Market

@@ -28,7 +28,7 @@ _Steps derived from the scope feature 2 Done when line. `/check verify` runs the
 - [ ] Stage any file under `tests/oracle/` and commit → blocked by the oracle guard; `ORACLE_EDIT_OK=1 git commit` passes → oracle protection
 
 ## GitHub (after the first push)
-- [ ] Open a PR → the `lint, typecheck, test, build` and `guards` jobs both pass → Done when: CI on every PR
+- [ ] Open a PR → the `CI complete` check passes (it gates `lint, typecheck`, `python tests, contracts, data`, `acceptance, golden`, `web tests, build`, `api image` and `guards`) → Done when: CI on every PR
 - [ ] A PR touching `tests/oracle/` without the `oracle-approved` label → the guards job fails; adding the label reruns it green
 - [ ] Replace `@OWNER` in `.github/CODEOWNERS` with your GitHub username
 

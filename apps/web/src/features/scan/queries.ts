@@ -58,13 +58,15 @@ async function fetchScan(rule: Rule, signal: AbortSignal): Promise<ScanResponse>
   return result.data;
 }
 
-/** The indicator catalog never changes while the app is open. */
-export function useIndicators() {
+/** The indicator catalog never changes while the app is open. The report page passes `enabled`,
+ * since it only needs the catalog to check a `?r=` rule. */
+export function useIndicators(enabled = true) {
   return useQuery({
     queryKey: ["indicators"],
     queryFn: fetchIndicators,
     staleTime: Infinity,
     retry: false,
+    enabled,
   });
 }
 
