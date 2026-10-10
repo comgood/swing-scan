@@ -26,7 +26,10 @@ permissions:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # Pull requests only. Every push to main shares one ref, so cancelling there killed the run of
+  # the previous merge: no slow test result and no image artefact for that commit, which is the
+  # one infra/README.md step 4 downloads to deploy.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   changes:
@@ -40,7 +43,7 @@ jobs:
       python: ${{ github.event.pull_request.draft != true && (github.event_name != 'pull_request' || steps.filter.outputs.python == 'true') }}
       web: ${{ github.event.pull_request.draft != true && (github.event_name != 'pull_request' || steps.filter.outputs.web == 'true') }}
       image: ${{ github.event.pull_request.draft != true && (github.event_name != 'pull_request' || steps.filter.outputs.image == 'true') }}
-      slow: ${{ github.event_name != 'pull_request' || (github.event.pull_request.draft != true && contains(github.event.pull_request.labels.*.name, 'run-slow')) }}
+      slow: ${{ github.event_name != 'pull_request' || (github.event.pull_request.draft != true && (steps.filter.outputs.timing == 'true' || contains(github.event.pull_request.labels.*.name, 'run-slow'))) }}
     steps:
       - uses: actions/checkout@v7
       - uses: dorny/paths-filter@v3
@@ -74,6 +77,17 @@ jobs:
               - 'services/api/**'
               - '.dockerignore'
               - '.python-version'
+            # The code whose speed S-4, B-13 and X-7 measure. A pull request that touches it runs
+            # the slow job too, because those IDs are `required` and would otherwise only fail
+            # after the merge, on main.
+            timing:
+              - *shared
+              - 'engine/src/engine/indicators/**'
+              - 'engine/src/engine/rules/**'
+              - 'engine/src/engine/sim/**'
+              - 'engine/src/engine/exits/**'
+              - 'engine/src/engine/metrics/**'
+              - 'engine/src/engine/baseline/**'
 
   lint-typecheck:
     name: lint, typecheck
