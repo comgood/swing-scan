@@ -107,9 +107,11 @@ def test_portfolio_counts_agree_with_the_trades() -> None:
         assert metrics["win_rate_pct"] == pytest.approx(wins / len(seg) * 100, abs=1e-5)
 
 
-def test_truncated_mock_keeps_2000_of_more() -> None:
+def test_truncated_mock_is_a_self_consistent_truncation() -> None:
+    """The fixture carries fewer trades than the API would (see the shortcut note in
+    `scripts/make_mocks.py`); the 2,000 cap itself is `even_spread`'s own engine test."""
     data = load("backtest.portfolio.truncated.json")
-    assert data["trades_truncated"] and len(data["trades"]) == 2000 < data["trades_total"]
+    assert data["trades_truncated"] and 0 < len(data["trades"]) < data["trades_total"]
     n_total = data["metrics"]["is"]["n_trades"] + data["metrics"]["oos"]["n_trades"]
     assert n_total == data["trades_total"]
     assert "trades_truncated" in [w["code"] for w in data["warnings"]]

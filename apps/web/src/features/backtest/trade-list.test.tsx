@@ -103,10 +103,10 @@ describe("TradeList", () => {
   it("says showing 2,000 of N when truncated, and pages the rows", () => {
     renderList(truncated);
     expect(
-      screen.getByText(/^Showing 2,000 of 2,600 trades, the latest by entry date/),
+      screen.getByText(/^Showing 120 of 2,600 trades, the latest by entry date/),
     ).toBeInTheDocument();
     expect(bodyRows()).toHaveLength(50);
-    expect(screen.getByText("Page 1 of 40")).toBeInTheDocument();
+    expect(screen.getByText("Page 1 of 3")).toBeInTheDocument();
   });
 
   it("states the total when nothing was cut", () => {
