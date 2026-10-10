@@ -95,7 +95,7 @@ Prices are 2026 list prices from review sites, about ±20%. The full v1 research
 > "I built a swing-strategy research workbench in a week with AI agents, for $0. You compose an entry rule, see today's hits in a table, then compare up to six exit strategies on the exact same entries, each against random entries run through the same exit. Stops, targets, trailing and MA exits each have a hand-computed oracle test. IS and OOS sit side by side, but only IS is highlighted, so you pick on IS. A trial counter keyed on the rule's structure warns when parameter-tweaking piles up. The public demo runs on a synthetic market with planted delistings, so tests can prove survivorship and look-ahead handling. My real research runs locally on free data, and I'm explicit that it's survivors-only, so findings are hypotheses."
 
 ### 4.1 Definition of "portfolio-ready" (release v1.0)
-- [ ] The public URL loads with a **"Synthetic market: not real prices"** banner, no sign-up. A template rule → scan → exit-lab run works end to end. Cold start ≤ 10 s; warm backtest < 3 s; warm 6-config exit lab with random baseline < 10 s.
+- [ ] The public URL loads with a **"Made up market: not real prices"** banner, no sign-up. A template rule → scan → exit-lab run works end to end. Cold start ≤ 10 s; warm backtest < 3 s; warm 6-config exit lab with random baseline < 10 s.
 - [ ] Every MUST acceptance criterion in §6 passes in CI (badge in README).
 - [ ] Oracle tests for **every MUST exit type** plus the poisoned-future test pass.
 - [ ] The README has: a **GIF** of the demo flow, the demo script (§7), an architecture diagram, ADRs, an agent log, an honest tech list, "$0/month" with how, the data-licence statement, and a **"Limits of the research"** section (copied from §8.1).
@@ -388,14 +388,14 @@ The table shows a **"Random entries" row** (baseline config) plus the per-config
 
 | ID | Given / When / Then |
 |---|---|
-| U-1 | **Given** a first visit to the public URL, **then** the builder opens with the Breakout template loaded and its scan results shown, under a visible **"Synthetic market: not real prices"** banner. No sign-up. |
+| U-1 | **Given** a first visit to the public URL, **then** the builder opens with the Breakout template loaded and its scan results shown, under a visible **"Made up market: not real prices"** banner. No sign-up. |
 | U-2 | **Given** live mode on localhost, **then** every page shows the survivors-only / current-S&P warning badge. |
 | U-3 | **Given** any backtest or exit-lab report, **then** an assumptions header lists: fill model, slippage, sizing, max positions, entry rule (rising edge, cooldown 10, no last-bar entry), exit rules per config, `horizon_bars` (trade mode), random seed, delisting rule, OOS split date, data mode and data version or seed. |
-| U-4 *(trial counter)* | **Given** a run completes, **then** each **distinct (exact rule + exit config) pair** not seen before is added to the count for the rule's **structure key** (§6.2), stored in localStorage. Re-running an identical pair doesn't add. A **global session total** across all rules is kept in sessionStorage. The report shows "Trial #N for this rule structure · M this session". At **N ≥ 10** it shows: *"You've tested many variants of this rule structure; the best IS result is likely overfit. Read OOS once and treat the result as a hypothesis."* With storage unavailable, the counter is hidden and the static warning is shown. |
-| U-5 | **Given** the API is cold, **when** a request is pending > 1.5 s, **then** a "warming up the engine…" state shows. |
+| U-4 *(trial counter)* | **Given** a run completes, **then** each **distinct (exact rule + exit config) pair** not seen before is added to the count for the rule's **structure key** (§6.2), stored in localStorage. Re-running an identical pair doesn't add. A **global session total** across all rules is kept in sessionStorage. The report shows "Test N of this rule shape · M tests this session". At **N ≥ 10** it shows: *"You have tried many versions of this rule. The best result in the test period is probably luck. Look at the later period once, and treat it as a guess, not a finding."* With storage unavailable, the counter is hidden and the static warning is shown. |
+| U-5 | **Given** the API is cold, **when** a request is pending > 1.5 s, **then** a "Starting the engine, this takes a few seconds" state shows. |
 | U-6 | **Given** a 375 px viewport, **then** builder rows stack, tables scroll inside their containers, and the page has no horizontal scroll. |
 | U-7 | **Given** a 422 from the API, **then** the offending builder row or exit field shows the inline error. |
-| U-8 | **Given** an exit-lab report, **then** a one-line note under the table reads: *"Trade mode isolates the exit effect. Pick the exit on IS, read OOS once, then confirm with a single portfolio backtest."* |
+| U-8 | **Given** an exit-lab report, **then** a note under the table reads: *"This compares exits on identical entries, so the exit is the only thing that changed. Pick one using the test period, look at the later period once, then confirm it with a single full backtest."* |
 
 ### 6.7 Settled defaults (single source of truth; lead rulings, `02` aligned)
 | Setting | Value |
@@ -418,6 +418,53 @@ The table shows a **"Random entries" row** (baseline config) plus the per-config
 | Prices | Adjusted only |
 | Benchmark | `DEMO-INDEX` (synthetic) / SPY (live) |
 
+### 6.8 Plain language vocabulary (what the UI calls things)
+
+The reader is a curious beginner, not a programmer or a professional trader (§2). The product's own
+vocabulary is a usability feature, so the words on screen are specified here rather than left to
+each builder. This table is the single source of truth: the UI, the UI acceptance tests and the
+engine's user facing warning messages all use the right hand column.
+
+Rule: a beginner who has never screened a stock should understand a label without a glossary. Where
+a technical term has to survive because the user will meet it elsewhere (R, ATR, SMA, EMA), the
+plain words come first and the term follows in brackets, e.g. "Average result per unit of risk (R)".
+
+| Internal term | On screen |
+|---|---|
+| Scan (the page and the action) | Screener · "Find matches" |
+| Hit | Match |
+| Condition | Filter |
+| Backtest (the page) | Testing |
+| In sample (IS) | Test period |
+| Out of sample (OOS) | Later period |
+| `offset`, "bars ago" | Days earlier (0 means today) |
+| `n`, "window" | Days looked back |
+| `mult`, "multiplier" | Multiply by (1 leaves it unchanged) |
+| Bar | Day (the data is daily) |
+| Expectancy (%) | Average result per trade |
+| Expectancy (R) | Average result per unit of risk (R) |
+| Expectancy per bar | Average result per day held |
+| Edge vs random | Better than random entries |
+| MAE | Worst dip while held |
+| MFE | Best rise while held |
+| Exited by horizon | Still open at the cut off |
+| `horizon_bars` | Give up after (days) |
+| Distinct entry weeks | Separate weeks traded |
+| Profit factor | Winnings divided by losses |
+| Win rate edge (pts) | Win rate, percentage points better |
+| Slippage (bps) | Trading cost (hundredths of a percent) |
+| CAGR | Yearly growth rate |
+| Max drawdown | Worst fall from a peak |
+| Sharpe | Return per unit of wobble |
+| Exposure | Share of time invested |
+| Best IS | Best in the test period |
+| Synthetic market | Made up market |
+| Warm up (the cold API) | Starting the engine |
+
+Unchanged, deliberately: every number format, and the footer "Portfolio project. Not investment
+advice." The honesty statements in U-2, U-4 and U-8 keep their full meaning, including every
+qualification, when reworded.
+
 ---
 
 ## 7. Demo script (2–3 min; recorded as a GIF on the synthetic market, and used live in interviews)
@@ -431,7 +478,7 @@ The table shows a **"Random entries" row** (baseline config) plus the per-config
    - Read **expectancy per bar** next to plain expectancy: the trailing stop looks best per trade but not per bar held.
    - Only IS is highlighted. Glance at the OOS beside it, once.
    - Read the MAE/MFE guide row (IS trades only): "90% of winning trades never went below −6%, so an 8% stop is loose."
-   - Tweak the breakout `n` 252 → 100 and re-run: the trial counter moves to **"Trial #10 for this rule structure"** and the overfitting warning appears.
+   - Tweak the breakout `n` 252 → 100 and re-run: the trial counter moves to **"Test 10 of this rule shape"** and the overfitting warning appears.
 6. **2:10–2:35.** Repo: the oracle tests for each exit type, the poisoned-future test, CI → Lambda via OIDC.
 7. **2:35–3:00.** README:
    - "Limits of the research" (§8.1);

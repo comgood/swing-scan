@@ -296,7 +296,7 @@ For each config, with IS | OOS columns:
 - avg MAE / MFE;
 - **% exited by horizon**, with a warning above 10% (X-9).
 
-The response contains **no CAGR, max DD or Sharpe** in trade mode (X-8). A one-line note under the table gives the procedure (U-8): *"Trade mode isolates the exit effect. Pick the exit on IS, read OOS once, then confirm with a single portfolio backtest."*
+The response contains **no CAGR, max DD or Sharpe** in trade mode (X-8). A one-line note under the table gives the procedure (U-8): *"This compares exits on identical entries, so the exit is the only thing that changed. Pick one using the test period, look at the later period once, then confirm it with a single full backtest."*
 
 **Random-entry baseline (X-10, lead ruling 7):**
 - **Sampling:** for each run, sample the **same number of entries** as the strategy, **stratified into IS and OOS counts**. Draws are uniform from (ticker, t) pairs that are alive and not on the ticker's last bar. **Seed** = `sim.seed` (default 42), shown in the assumptions.
@@ -317,7 +317,7 @@ The response contains **no CAGR, max DD or Sharpe** in trade mode (X-8). A one-l
   - **Key** = `sha256(structure(rule))`, where the structure is the ordered list of `(left.ind, op, right.ind | "value")` plus the condition count, with **every number stripped** (n, offset, mult, value). Parameter tweaks therefore accumulate on the same counter.
   - **Increment (U-4):** each **distinct (exact rule + exit config) pair** not seen before adds 1. The seen-pair hashes are stored per structure key in localStorage, so re-running an identical pair adds nothing.
   - **Session total:** a separate **global session counter** (sessionStorage).
-  - **Display and warning:** the report shows "Trial #N for this rule structure · M this session". **At ≥ 10** it shows the overfitting warning.
+  - **Display and warning:** the report shows "Test N of this rule shape · M tests this session". **At ≥ 10** it shows the overfitting warning.
   - **Fallback:** if storage is unavailable, the counters are hidden and the static warning shows.
 - **README "Limits of the research":**
   - survivorship, index-selection look-ahead, and OOS ≈ 2023–2026 bull regime (live);
