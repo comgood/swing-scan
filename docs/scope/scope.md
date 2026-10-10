@@ -25,7 +25,7 @@ _Source of truth: acceptance criteria IDs (D, R, S, B, X, U) and settled default
 | 10 | Rule builder | Slice 2 | in-progress |
 | 11 | Exit types | Slice 3 | done |
 | 12 | Exit lab | Slice 3 | in-progress |
-| 13 | Research honesty guards | Slice 3 | in-progress |
+| 13 | Research honesty guards | Slice 3 | done |
 | 14 | Live research mode (local) | Slice 4 | in-progress |
 | 15 | Deploy hardening & demo readiness | Slice 5 | planned |
 | 16 | README, research note & GIF | Slice 5 | planned |
@@ -214,13 +214,14 @@ Lanes BE and FE. Hold one entry rule fixed and compare 2 to 6 exit setups on ide
   - [x] BE budget: 6 configs plus baseline under 10 s and 6 MB on seed 42 (AC-11, `engine/tests/sim/test_lab_budget.py`; the hot loop moved to plain lists and slotted dataclasses)
   - [x] FE exit lab table on the mock: IS and OOS pairs, best IS highlight, R n/a footnote, horizon badge, edge and random rows, `ProcedureNote` directly under, guide row (AC-13 to AC-18)
   - [x] FE page wiring on `/backtest` after feature 9's report page: 2 to 6 config form, assumptions, trial counter, states, 375 px (AC-19, AC-20; `lab-configs.tsx`, `exit-fields.tsx`, the `mode` switch in `backtest-report.tsx`)
+  - [ ] BE enforcement split (amended AC-11, measured 2026-10-11): the fixed size market becomes the hard CI gate, the seed 42 pair reports its numbers and fails at 2x, `x-compute-ms` and `x-cache` headers let smoke prove a warm call, and feature 15's smoke owns the deployed 20 s budget
 - [ ] Verify it: `/check verify exit lab`
-- [ ] Test it: `/test exit lab`
+- [x] Test it: `/test exit lab`
 - [x] Review it (fresh model): `/check review exit lab` ([findings](../reviews/2026-10-09-review-11-12-exits-and-lab.md), shared with feature 11; both majors fixed in PR #75)
 - [ ] Document it: `/document exit lab`
 Spec [0009](../specs/0009-exit-lab/index.md)
 
-### 13. Research honesty guards · in-progress
+### 13. Research honesty guards · done
 Lanes FE and BE. The things that stop you fooling yourself: the structure keyed trial counter with a session total and a warning at 10, the procedure note under the exit lab table, and the data banners.
 **Done when:** tweaking only numbers still counts toward the same rule's trials, the warning shows at 10, the procedure note renders, and the synthetic and survivors only banners appear in the right modes (U-2, U-4, U-8).
 - [x] Design it (spec): `/architect research honesty guards` (signed off by the owner 2026-10-08)

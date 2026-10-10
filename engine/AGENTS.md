@@ -49,6 +49,7 @@ make dev-live                  # local only: the API in live mode on 127.0.0.1, 
 - A ticker whose bars stop early without a `delisted_on` exits `end_of_test` on its last bar, mid window. A live loader must set `delisted_on` for real delistings.
 - The per bar path is on a clock (spec 0009 AC-11: 6 configs plus the baseline under 10 s). `BarArrays` holds plain Python lists, `BarView` and `Position` are `slots=True` and deliberately not frozen, and `step()` uses plain comparisons rather than `min()` and `max()`. Keep it that way; `engine/tests/sim/test_lab_budget.py` is the check.
 - The random baseline seed default changes only with an ADR.
+- Change a `SyntheticConfig` default and bump `GENERATOR_VERSION` with it: `engine/tests/synthetic/test_generator.py` pins the defaults by digest, so it fails until both move. Otherwise every published number shifts under the same `data_version`.
 - Alpaca's free Basic plan has no SIP history: `feed=sip` answers 403, so the loader reads the IEX feed. IEX is a small share of real volume, so volume rules (`vol_ratio`, `avg_volume`) are not comparable to a full tape.
 - Rule compilation never uses `eval` or `exec`.
 - Tests for `data/` live in `engine/tests/dataset/`, because `.gitignore` ignores every folder named `data/`.
