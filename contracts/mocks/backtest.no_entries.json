@@ -47,7 +47,7 @@
     {
       "code": "no_entries",
       "config_index": null,
-      "message": "The rule produced no entries."
+      "message": "No entries: the rule never produced a signal in this window, so there are no trades to show."
     }
   ],
   "metrics": {

@@ -133,4 +133,6 @@ def test_warnings_come_in_order_with_the_spec_messages() -> None:
     assert (no_entries.code, no_entries.config_index) == ("no_entries", 0)
     (truncated,) = api._warnings(2600)
     assert (truncated.code, truncated.config_index) == ("trades_truncated", None)
-    assert truncated.message == "Showing the latest 2,000 of 2,600 trades; metrics use all of them."
+    assert truncated.message == (
+        "Showing the latest 2,000 trades of 2,600. The metrics above use all of them."
+    )

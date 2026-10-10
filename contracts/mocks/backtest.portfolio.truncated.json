@@ -47,7 +47,7 @@
     {
       "code": "trades_truncated",
       "config_index": 0,
-      "message": "Showing 2000 of 2600 trades; metrics use every trade."
+      "message": "Showing 2000 trades of 2600. The metrics above use every trade."
     }
   ],
   "metrics": {
