@@ -24,7 +24,7 @@ from acceptance.support import (
     random_walk_frames,
     run_backtest,
     trade_lab,
-    ui_owed,
+    ui_covered_by,
 )
 from engine.contracts import (
     TEMPLATES,
@@ -155,7 +155,9 @@ def test_every_metric_has_is_and_oos_and_only_is_is_ranked() -> None:
 
 @pytest.mark.ac("X-3")
 def test_report_highlights_best_is_and_never_oos() -> None:
-    ui_owed("X-3 (highlight rendering)")
+    # The lab table on `/backtest`: one IS and one OOS column per metric, the "Best IS" marker in
+    # the IS cell `best_is` names and nowhere else (spec 0009 AC-13).
+    ui_covered_by("X-3", "exit-lab-report.test.tsx")
 
 
 # ---------------------------------------------------------------- X-4 no stop means no R
@@ -176,7 +178,9 @@ def test_config_without_a_stop_reports_percent_and_null_r() -> None:
 
 @pytest.mark.ac("X-4")
 def test_r_columns_show_na_with_a_footnote() -> None:
-    ui_owed("X-4 (n/a cells and footnote)")
+    # The stopless configs read "n/a" in every R cell, keep their % expectancy, and the footnote
+    # explains that R needs a stop (spec 0009 AC-14).
+    ui_covered_by("X-4", "exit-lab-report.test.tsx")
 
 
 # ---------------------------------------------------------------- X-5 IS only guides
@@ -351,7 +355,8 @@ def test_open_trade_exits_at_the_horizon_and_warns() -> None:
 
 @pytest.mark.ac("X-9")
 def test_horizon_warning_badge_renders() -> None:
-    ui_owed("X-9 (warning badge on the config row)")
+    # The warned config's row carries the badge and the message; no other row does (AC-15).
+    ui_covered_by("X-9", "exit-lab-report.test.tsx")
 
 
 # ---------------------------------------------------------------- X-10 random baseline

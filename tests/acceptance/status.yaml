@@ -54,20 +54,20 @@ B-16: required
 # Exit lab
 X-1: required
 X-2: required
-X-3: pending
-X-4: pending
+X-3: required
+X-4: required
 X-5: required
 X-7: pending
 X-8: required
-X-9: pending
+X-9: required
 X-10: required
 
 # UI and honesty
 U-1: required
 U-2: required
-U-3: pending
-U-4: pending
+U-3: required
+U-4: required
 U-5: required
 U-6: pending
-U-7: pending
-U-8: pending
+U-7: required
+U-8: required
