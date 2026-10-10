@@ -85,10 +85,14 @@ the runner up is in [rationale.md](rationale.md).
     | `breakout_52w` | 2,780 + 2,780 | 2.05 s | 717 KB |
     | `pullback_ema21` | 18,566 + 18,566 | 11.39 s | 716 KB |
 
-    Cost is linear in entries, about 0.6 ms per entry across the 7 walks (6 configs plus the
-    baseline), so roughly 0.09 ms per trade walk. `pullback_ema21` misses 10 s by 14%; nothing
-    regressed, the template simply produces 6.7 times the entries. The same job measured the
-    fixed size market (the 500 ticker, 1,260 bar random walk) inside 10 s.
+    Cost is linear in entries: fitting the two points gives about 0.4 s of fixed cost plus
+    0.59 ms per strategy entry. One strategy entry means **12 trade walks**, not 7, because
+    `run_trade_mode()` sends both entry lists through every config (`sim/trade_mode.py`), so
+    `pullback_ema21` walks 2 × 18,566 × 6 = 222,792 trades at roughly **0.05 ms each**.
+    `pullback_ema21` misses 10 s by 14%; nothing
+    regressed, the template simply produces 6.7 times the entries. The same job also ran the
+    fixed size market (the 500 ticker, 1,260 bar random walk) inside 10 s, though it printed no
+    number, so that gate's own measurement is still owed.
 
     Three things follow, and they replace the single 10 s number:
 
@@ -104,6 +108,49 @@ the runner up is in [rationale.md](rationale.md).
       with its numbers printed, as this item already specified. The deployed number comes from
       smoke. QA can then flip X-7 to `required` against the stable half instead of waiting on a
       runner, which is the second path `docs/qa/ac-questions.md#X-7-margin` offers.
+    - **How the number is measured**, so the criterion is implementable rather than merely
+      stated (a cross check on 2026-10-11 found each of these unnamed):
+      1. **Warm, on a deployed function, is the second of two back to back requests with an
+         identical body**, and warmth is proven rather than assumed: a second call can land in
+         another container, whose market and indicator cache are cold. The API answers with
+         `x-compute-ms` (server compute) and `x-cache` (`hit` or `miss`); smoke fails when the
+         second call reports `miss`, because it timed a cold container.
+      2. **Smoke sends the slowest case**: `pullback_ema21` with the 6 configs. They are
+         `SIX_CONFIGS` in `engine/tests/sim/test_lab_budget.py` today, so they move to one
+         committed JSON fixture that both pytest and `scripts/smoke.sh` read, rather than being
+         retyped in bash.
+      3. **The 20 s is client wall time** (`curl -w '%{time_total}'`), because that is what a
+         user waits and it includes transferring a body that may approach 6 MB. `x-compute-ms`
+         prints beside it, so a failure separates compute from network. Smoke runs from a
+         developer machine against `ap-southeast-1`; the gap between the two numbers is that
+         network path.
+      4. **A missing or unusable number is a hard fail**: a non 200, the 502 or 504 that the
+         function's 30 s timeout produces, or a body that does not parse. `curl --max-time 35`
+         so the timeout is observed as a 502 instead of curl giving up first; the present 60 s
+         is longer than the ceiling it is meant to catch.
+      5. **The cold call is reported, not gated**, and must come in under 30 s. Cold init plus
+         the indicator build plus the walks is the one path that can hit the function timeout,
+         and nothing tests it today.
+      6. **The published number lives somewhere committed.** Smoke prints one fixed format line,
+         `X-7 warm <seconds>s budget 20s sha <sha>`, and it is recorded in this spec's
+         measurement table with its date and commit. It cannot live in `research/`, which the
+         repo never commits (root `AGENTS.md`).
+      7. **The fixed size gate is a measured multiple, not an inherited number.** Record what the
+         500 ticker, 1,260 bar market actually costs beside the two figures above, then gate at
+         twice it, and keep the existing `result.entries.count > 0` assertion so the gate cannot
+         pass on a market that never trades.
+      8. **One timing gate, in the engine test.** `engine/tests/sim/test_lab_budget.py` owns every
+         timing assertion; `tests/acceptance/test_exit_lab.py` keeps body size and byte equality.
+         Two tests timing the same thing on the same runner is how 11.39 s passed one and missed
+         the other.
+      9. **`status.yaml` gets a note with the flip**: `required` covers the in process fixed size
+         half only. The deployed 20 s is smoke's, and `make test-acceptance` never runs it, so
+         the enforced number and the published number are deliberately different things.
+      10. **Seed 42 still fails on a real regression.** It is report only against 20 s but a hard
+         failure at twice its published figure (about 25 s for `pullback_ema21`). No shared runner
+         is 2x noisy, so this stays quiet in normal use while a genuine slowdown in the loop turns
+         CI red. Without it the split would leave a 30% regression invisible, which is the same
+         "a check that cannot fail" shape this amendment exists to remove.
     - **The remedy order drops its first rung.** doc 02 §"X-7 misses" starts with raising memory
       from 2,048 MB to 3,008 MB "for more vCPU". That does nothing measurable here: the per trade
       loop is single threaded Python, Lambda already gives a full vCPU at 1,769 MB, and the extra
@@ -158,8 +205,10 @@ Engine and API (BE):
   identical requests give identical bodies. The time budget is **20 s on the deployed API**,
   measured by feature 15's smoke and published with the number (the function's own timeout is
   30 s). In process, CI hard gates the **fixed size market** (500 tickers, 1,260 bars) at 10 s;
-  the seed 42 pair reports its numbers without failing CI, because the runner is shared. Measured
-  2026-10-11: `breakout_52w` 2.05 s, `pullback_ema21` 11.39 s (design item 11 has the table).
+  the seed 42 pair reports its numbers without failing CI, because the runner is shared, but still
+  fails hard at twice its published figure so a real regression is not invisible. Measured
+  2026-10-11: `breakout_52w` 2.05 s, `pullback_ema21` 11.39 s (design item 11 has the table, and
+  the ten rules that make "warm", the request, the clock and the failure cases unambiguous).
 - **AC-12** [U-3]: `assumptions` in trade mode: `sizing="unit_notional"`,
   `same_ticker_overlap=true`, `max_positions=null`, `horizon_bars=sim.horizon_bars`,
   `seed=sim.seed`, every config, `baseline_config_index=0`, and the other fields as in spec 0007.
@@ -339,10 +388,14 @@ Tracer Bullet, thickening spec 0007's thread. FE runs now on the mocks; BE start
 3. Budget: the X-7 test on seed 42; profile; ADR-016 vectorized windows only if it misses, and a
    miss is reported in the PR, never hidden. Satisfies **AC-11**
 3a. Enforcement split (after the 2026-10-11 measurement): the fixed size market becomes the hard
-   CI gate at 10 s, the seed 42 pair stays report only with its numbers printed, and feature 15's
-   smoke measures the deployed warm number against 20 s. No engine change; the work is in
-   `engine/tests/sim/test_lab_budget.py`, `tests/acceptance/test_exit_lab.py` and feature 15's
-   smoke script. Satisfies the amended **AC-11**
+   CI gate at twice its measured cost, the seed 42 pair stays report only with its numbers printed
+   and a hard failure at 2x its published figure, and feature 15's smoke measures the deployed warm
+   number against 20 s. The engine gains one thing, the `x-compute-ms` and `x-cache` response
+   headers that let smoke prove the second call was warm (headers only, so the response body and
+   the OpenAPI schema do not change). The rest is `engine/tests/sim/test_lab_budget.py` (every
+   timing assertion), `tests/acceptance/test_exit_lab.py` (body size and byte equality only), the
+   shared `SIX_CONFIGS` JSON fixture, and feature 15's smoke script. Satisfies the amended
+   **AC-11**
 
 **FE lane (`apps/web/src/features/exit-lab/`)**
 4. Table thread against the mock: `ExitLabTable` (IS | OOS pairs, best IS highlight with a non

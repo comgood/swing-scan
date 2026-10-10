@@ -214,7 +214,7 @@ Lanes BE and FE. Hold one entry rule fixed and compare 2 to 6 exit setups on ide
   - [x] BE budget: 6 configs plus baseline under 10 s and 6 MB on seed 42 (AC-11, `engine/tests/sim/test_lab_budget.py`; the hot loop moved to plain lists and slotted dataclasses)
   - [x] FE exit lab table on the mock: IS and OOS pairs, best IS highlight, R n/a footnote, horizon badge, edge and random rows, `ProcedureNote` directly under, guide row (AC-13 to AC-18)
   - [x] FE page wiring on `/backtest` after feature 9's report page: 2 to 6 config form, assumptions, trial counter, states, 375 px (AC-19, AC-20; `lab-configs.tsx`, `exit-fields.tsx`, the `mode` switch in `backtest-report.tsx`)
-  - [ ] BE enforcement split (amended AC-11, measured 2026-10-11): the fixed size market becomes the hard CI gate, the seed 42 pair reports its numbers, feature 15's smoke owns the deployed 20 s budget
+  - [ ] BE enforcement split (amended AC-11, measured 2026-10-11): the fixed size market becomes the hard CI gate, the seed 42 pair reports its numbers and fails at 2x, `x-compute-ms` and `x-cache` headers let smoke prove a warm call, and feature 15's smoke owns the deployed 20 s budget
 - [ ] Verify it: `/check verify exit lab`
 - [x] Test it: `/test exit lab`
 - [x] Review it (fresh model): `/check review exit lab` ([findings](../reviews/2026-10-09-review-11-12-exits-and-lab.md), shared with feature 11; both majors fixed in PR #75)
