@@ -11,7 +11,7 @@ Repo level test suites that check the engine and API from the outside: owner app
 | `oracle/` | Owner written correctness oracles (protected, owner only) |
 | `acceptance/` | QA tests written from criteria IDs and contracts; `status.yaml` marks each ID `pending` or `required` |
 | `golden/` | QA's naive loop based reference implementations (R-2, B-14 to B-16, S-3) |
-| `../apps/web/tests/acceptance/` | QA's Vitest UI acceptance tests (U-1, U-2, U-5 to U-7), run by the web suite |
+| `../apps/web/tests/acceptance/` | QA's Vitest UI acceptance tests (R-1, R-8, R-10, S-1, X-3, X-4, X-9, U-1 to U-8), run by the web suite |
 
 ## Commands
 

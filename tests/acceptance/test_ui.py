@@ -1,10 +1,10 @@
 """UI and honesty criteria U-1 to U-8 (doc 01 section 6.6).
 
 The rendering half of each criterion belongs in `apps/web/tests/acceptance/` (Vitest against
-the mocks, doc 02 section 15.4). The shell parts are written there (U-1 banner, U-2, U-5, U-6
-structure, U-7 helpers), and so are the honesty components (U-4 counter, U-8 note; see
-docs/qa/ac-questions.md#ui-tests); the rest waits for the pages.
-Each ID keeps a pending placeholder here until every part of it is covered. Where a criterion
+the mocks, doc 02 section 15.4): the shell parts (U-1 banner, U-2, U-5, U-6 structure, U-7
+helpers), the honesty components (U-4 counter, U-8 note) and the two reports (U-3, U-4, U-7 and
+U-8 on `/backtest`; see docs/qa/ac-questions.md#ui-tests). Each ID keeps a pointer here, or a
+pending placeholder while a part of it is still owed (U-6 needs a browser). Where a criterion
 also depends on the contract (the data the page renders), that half is checked here through the
 API and the OpenAPI document.
 """
@@ -22,7 +22,6 @@ from acceptance.support import (
     GeneratedApi,
     build_market,
     config,
-    owed,
     random_walk_frames,
     trade_lab,
     ui_covered_by,
@@ -107,10 +106,9 @@ def test_assumptions_carry_every_header_field() -> None:
 
 @pytest.mark.ac("U-3")
 def test_report_renders_the_assumptions_header() -> None:
-    # The portfolio report (feature 9, spec 0007 AC-12) is covered in Vitest; "any backtest or
-    # exit-lab report" also needs the exit lab report's header (feature 12, spec 0009 AC-19).
-    ui_covered_by("U-3", "backtest-report.test.tsx")
-    ui_owed("U-3 (assumptions header on the exit lab report, feature 12)")
+    # Both reports: the portfolio one (feature 9, spec 0007 AC-12) and the exit lab's, with the
+    # horizon, the seed, the overlap rule and one exit line per config (feature 12, AC-19).
+    ui_covered_by("U-3", "backtest-report.test.tsx", "exit-lab-report.test.tsx")
 
 
 # ---------------------------------------------------------------- U-4 trial counter
@@ -145,8 +143,9 @@ def test_backtest_returns_the_trial_keys_for_the_counter() -> None:
 @pytest.mark.ac("U-4")
 def test_counter_counts_new_pairs_and_warns_at_ten() -> None:
     # Counting, storage layout, the warning at 10 and the fallback are covered in Vitest
-    # (`honesty.test.tsx`, spec 0004 AC-1 to AC-6); the counter inside the reports is owed.
-    ui_owed("U-4 (counter in the portfolio and exit lab reports, features 9 and 12)")
+    # (`honesty.test.tsx`, spec 0004 AC-1 to AC-6); the counter inside each report, one pair per
+    # config and no count on a failed run, in the two page files.
+    ui_covered_by("U-4", "honesty.test.tsx", "backtest-report.test.tsx", "exit-lab-report.test.tsx")
 
 
 # ---------------------------------------------------------------- U-5 to U-8
@@ -188,14 +187,15 @@ def test_422_paths_point_at_the_row_or_exit_field(client: TestClient) -> None:
 
 @pytest.mark.ac("U-7")
 def test_inline_error_shows_on_the_offending_row() -> None:
-    # Written in Vitest (`rule-builder.test.tsx`): a left side error and the exit form's stop
-    # error land on their fields; a right side error, sent by the API as `right.ind.n`, lands as
-    # a row message instead of on the field (spec 0008 AC-7). Pending until the ruling.
-    owed("U-7-loc", "U-7 right side 422 on its field (rule-builder.test.tsx)")
+    # Written in Vitest: the builder rows and the one config exit form (`rule-builder.test.tsx`,
+    # left and tagged right side paths after the U-7-loc ruling (a)), the shared helpers
+    # (`errors-422.test.tsx`), and the exit lab's config editor, where a 422 lands on the config
+    # and the exit field its `loc` names (`exit-lab-report.test.tsx`, spec 0009 AC-20).
+    ui_covered_by("U-7", "rule-builder.test.tsx", "errors-422.test.tsx", "exit-lab-report.test.tsx")
 
 
 @pytest.mark.ac("U-8")
 def test_procedure_note_renders_under_the_exit_lab_table() -> None:
     # The note's words are covered in Vitest (`honesty.test.tsx`, spec 0004 AC-7); its place
-    # under the exit lab table is owed.
-    ui_owed("U-8 (note directly under the exit lab table, feature 12)")
+    # directly under the exit lab table in `exit-lab-report.test.tsx` (spec 0009 AC-18).
+    ui_covered_by("U-8", "honesty.test.tsx", "exit-lab-report.test.tsx")

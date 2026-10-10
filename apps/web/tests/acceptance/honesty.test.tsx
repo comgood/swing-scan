@@ -4,9 +4,9 @@
 // storage layout spec 0004 fixes, the `trial` block of the backtest mocks, and the /ui gallery.
 // U-2 (spec 0004 AC-8) is the shell banner, covered in data-mode-banner.test.tsx.
 //
-// Not covered yet (the pages do not exist, so these stay `it.todo` and the IDs stay pending):
-// the counter inside the portfolio report (feature 9) and the exit lab report (feature 12), and
-// the procedure note directly under the exit lab table (feature 12).
+// The halves that need a whole report are driven through the pages instead: the counter in the
+// portfolio report in `backtest-report.test.tsx`, and the counter, the no count on a failed run
+// and the note's place under the exit lab table in `exit-lab-report.test.tsx`.
 import type { Schemas } from "@swing-scan/api-client";
 import { render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -190,11 +190,8 @@ describe("U-4 trial counter", () => {
     },
   );
 
-  it.todo(
-    "U-4: the portfolio report shows the counter once a 200 backtest is on screen (feature 9)",
-  );
-  it.todo("U-4: the exit lab report shows the counter near the assumptions header (feature 12)");
-  it.todo("U-4: a failed or 422 backtest never adds to the counter (features 9, 12)");
+  // The counter inside a report, and the no count on a failed run, are driven through the pages:
+  // `backtest-report.test.tsx` (portfolio) and `exit-lab-report.test.tsx` (exit lab).
 });
 
 describe("U-8 procedure note", () => {
@@ -207,7 +204,7 @@ describe("U-8 procedure note", () => {
     expect(note.textContent).not.toMatch(/\n/);
   });
 
-  it.todo("U-8: the note sits directly under the exit lab table (feature 12)");
+  // Its place directly under the exit lab table is in `exit-lab-report.test.tsx`.
 });
 
 describe("U-4 and U-8 in the /ui gallery (spec 0004 AC-9)", () => {
