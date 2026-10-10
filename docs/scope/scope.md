@@ -176,7 +176,7 @@ Lanes BE and FE. The portfolio simulator with next open fills, % stop and time e
   - [x] BE portfolio rules and metrics: ranking, slots, sizing, window cut, IS and OOS, metrics, curves, truncation, `trial`, `assumptions`, the 3 s and 6 MB budget (AC-4 to AC-7, AC-9, AC-10); B-9 and B-10 portfolio turn green with feature 11's exits
   - [x] FE report page: `/backtest` with the exit form, assumptions header, IS and OOS metrics, equity chart, trade list, trial counter and every state, on mocks first (AC-12 to AC-17)
 - [ ] Verify it: `/check verify portfolio backtest core`
-- [ ] Test it: `/test portfolio backtest core`
+- [x] Test it: `/test portfolio backtest core` (engine response assembly, metric nulls, thinning and ranking gaps in PR #83; report page states, metrics table, exit form and chart in PR #85; no bugs found)
 - [x] Review it (fresh model): `/check review portfolio backtest core` ([findings](../reviews/2026-10-09-review-9-backtest-engine.md); the two major findings are fixed)
 - [ ] Document it: `/document portfolio backtest core`
 Spec [0007](../specs/0007-portfolio-backtest-core/index.md)
@@ -208,15 +208,15 @@ Spec [0007](../specs/0007-portfolio-backtest-core/index.md) · code in `engine/s
 Lanes BE and FE. Hold one entry rule fixed and compare 2 to 6 exit setups on identical entries, trade by trade, with a random entry baseline run through the same exits.
 **Done when:** entries are identical across configs, metrics are per trade only with IS and OOS columns, the best IS config is highlighted, MAE and MFE guides use IS trades only, expectancy per bar, distinct entry weeks and horizon exits show, edge versus random is reported, and six configs finish within the time budget (X-1 to X-5, X-7 to X-10).
 - [x] Design it (spec): `/architect exit lab` (signed off by the owner 2026-10-08)
-- [ ] Build it: `/develop exit lab`
+- [x] Build it: `/develop exit lab`
   - [x] BE trade mode thread (after G2, PR #31): per trade loop over `walk_trade()` with the horizon, shared entries, per trade metrics, `best_is`, `guides_is`, warnings, still 501 for 2 to 6 configs (AC-1, AC-3 to AC-7, AC-9, AC-12)
   - [x] BE random baseline and edge, then drop the 501; B-10 trade mode and parity (AC-2, AC-8, AC-10)
-  - [ ] BE budget: 6 configs plus baseline under 10 s and 6 MB on seed 42 (AC-11)
+  - [x] BE budget: 6 configs plus baseline under 10 s and 6 MB on seed 42 (AC-11, `engine/tests/sim/test_lab_budget.py`; the hot loop moved to plain lists and slotted dataclasses)
   - [x] FE exit lab table on the mock: IS and OOS pairs, best IS highlight, R n/a footnote, horizon badge, edge and random rows, `ProcedureNote` directly under, guide row (AC-13 to AC-18)
-  - [ ] FE page wiring on `/backtest` after feature 9's report page: 2 to 6 config form, assumptions, trial counter, states, 375 px (AC-19, AC-20)
+  - [x] FE page wiring on `/backtest` after feature 9's report page: 2 to 6 config form, assumptions, trial counter, states, 375 px (AC-19, AC-20; `lab-configs.tsx`, `exit-fields.tsx`, the `mode` switch in `backtest-report.tsx`)
 - [ ] Verify it: `/check verify exit lab`
 - [ ] Test it: `/test exit lab`
-- [ ] Review it (fresh model): `/check review exit lab`
+- [x] Review it (fresh model): `/check review exit lab` ([findings](../reviews/2026-10-09-review-11-12-exits-and-lab.md), shared with feature 11; both majors fixed in PR #75)
 - [ ] Document it: `/document exit lab`
 Spec [0009](../specs/0009-exit-lab/index.md)
 

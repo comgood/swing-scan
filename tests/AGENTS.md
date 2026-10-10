@@ -31,7 +31,8 @@ make test-acceptance   # golden + acceptance, with the gate summary
 - Every acceptance test carries `@pytest.mark.ac("<ID>")`; a missing or unknown ID aborts collection. `test_traceability.py` fails when `status.yaml`, `docs/qa/traceability.md` and the markers fall out of step.
 - Tests that need a real market use the session `generated_api` fixture (`conftest.py`, `GeneratedApi` in `support.py`): the seed 42 market generated in a subprocess, since CI has no `data/`. The plain session `client` has no market loaded.
 - UI acceptance tests emulate `next/navigation` with `apps/web/tests/acceptance/navigation.ts`; a page that reads `useSearchParams` needs it.
-- `oracle/` is not in the default `testpaths`, so the oracles (failing until the engine exists) never turn `make test` red.
+- The timing and budget tests (S-4, B-13, X-7, AC-11) carry `@pytest.mark.slow`, declared in root `pyproject.toml`. `make test` and `make test-acceptance` run them; CI drops them per pull request (`make test-acceptance-fast`, `-m "not slow"`) and runs them in its own job on `main`, a manual dispatch, or a `run-slow` label (`make test-slow`). A required ID behind a slow mark therefore blocks on `main`, not on the pull request.
+- `oracle/` is not in the default `testpaths`, so the oracles never turn `make test` red; run them with `make test-oracle`.
 
 ## Related specs
 
