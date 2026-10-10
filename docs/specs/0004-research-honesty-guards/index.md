@@ -1,7 +1,7 @@
 # 0004. Count trials per rule structure in browser storage, keyed by the backtest response
 
 **Date**: 2026-10-07 (assumed by /develop) · ratified by /architect 2026-10-08
-**Status**: In Progress (owner signed off 2026-10-08)
+**Status**: Accepted (owner signed off 2026-10-08)
 **Authorized by**: Kenneth Wu (owner), through the FE lane brief, during /develop; ratification run
 unattended overnight, every open question took /architect's recommended answer (listed below)
 
