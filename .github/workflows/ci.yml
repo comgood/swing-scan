@@ -1,11 +1,20 @@
 # Checks on every PR and on main. Steps call only `make` targets so agents and CI behave
 # the same (spec 0001). `contracts-check` reruns OpenAPI, client and mock generation and
 # fails on any diff (spec 0002). Deploy and oracle first ordering arrive with later features.
+#
+# The work runs in parallel jobs, each with the caches it needs, so a pull request waits for
+# the slowest job rather than the sum. The `changed paths` job decides which heavy jobs run:
+# a docs only PR runs lint, typecheck and guards, a web only PR skips the Python suite and the
+# image, an engine or API only PR skips the web suite and build. A skipped job reports as
+# skipped, which GitHub counts as success, and the `CI complete` job is the single check to
+# require in branch protection: it fails if any job it needs failed or was cancelled.
+# The slow timing and budget tests (X-7, B-13, AC-11) run on main, on a manual run, or on a
+# PR labelled `run-slow`, not on every PR (spec 0009 assumed decision 11).
 name: CI
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, labeled, unlabeled]
+    types: [opened, synchronize, reopened, labeled, unlabeled, ready_for_review]
   push:
     branches: [main]
   # Manual run on any branch, for an image artifact to deploy (infra/README.md step 4).
@@ -13,15 +22,65 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read # dorny/paths-filter lists a pull request's changed files
 
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  checks:
-    name: lint, typecheck, test, build
+  changes:
+    # One cheap job the others gate on. Every output is "true" or "false": false for a draft
+    # pull request, true for anything that is not a pull request (push to main, manual run).
+    name: changed paths
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      any: ${{ github.event.pull_request.draft != true }}
+      python: ${{ github.event.pull_request.draft != true && (github.event_name != 'pull_request' || steps.filter.outputs.python == 'true') }}
+      web: ${{ github.event.pull_request.draft != true && (github.event_name != 'pull_request' || steps.filter.outputs.web == 'true') }}
+      image: ${{ github.event.pull_request.draft != true && (github.event_name != 'pull_request' || steps.filter.outputs.image == 'true') }}
+      slow: ${{ github.event_name != 'pull_request' || (github.event.pull_request.draft != true && contains(github.event.pull_request.labels.*.name, 'run-slow')) }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dorny/paths-filter@v3
+        id: filter
+        if: github.event_name == 'pull_request'
+        with:
+          filters: |
+            shared: &shared
+              - '.github/workflows/ci.yml'
+              - 'Makefile'
+              - 'pyproject.toml'
+              - 'uv.lock'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'contracts/**'
+              - 'packages/api-client/**'
+              - 'scripts/**'
+            python:
+              - *shared
+              - 'engine/**'
+              - 'services/api/**'
+              - 'tests/**'
+            web:
+              - *shared
+              - 'apps/web/**'
+              - '.nvmrc'
+            image:
+              - *shared
+              - 'engine/**'
+              - 'services/api/**'
+              - '.dockerignore'
+              - '.python-version'
+
+  lint-typecheck:
+    name: lint, typecheck
+    needs: changes
+    if: needs.changes.outputs.any == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -35,10 +94,77 @@ jobs:
       - run: make setup
       - run: make lint
       - run: make typecheck
-      - run: make test
+
+  python:
+    # The Python unit suites plus the generated artefact checks, which need both toolchains
+    # because `contracts-check` regenerates the TypeScript client.
+    name: python tests, contracts, data
+    needs: changes
+    if: needs.changes.outputs.python == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - run: make setup
+      - run: make test-py-fast
       - run: make contracts-check
       - run: make data-check
+
+  acceptance:
+    name: acceptance, golden
+    needs: changes
+    if: needs.changes.outputs.python == 'true' || needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - run: make setup-py
+      - run: make test-acceptance-fast
+
+  web:
+    name: web tests, build
+    needs: changes
+    if: needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: make setup-web
+      - run: make test-web
       - run: make build-web
+
+  slow:
+    # The timing and budget tests: minutes on a full seed 42 market, and noisy on a shared
+    # runner. Not on the per PR path; the printed `X-7` and `B-13` lines are the numbers QA
+    # reads before flipping those IDs to required.
+    name: slow timing tests (main, dispatch, run-slow label)
+    needs: changes
+    if: needs.changes.outputs.slow == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - run: make setup-py
+      - run: make test-slow
 
   api-image:
     # The real linux/amd64 Lambda image, built on an x86 runner because Polars segfaults
@@ -46,6 +172,8 @@ jobs:
     # On main and on a manual run it also keeps the smoked image as an artifact, which the
     # owner downloads and pushes to ECR by hand until feature 15's OIDC deploy.
     name: api image (build, smoke)
+    needs: changes
+    if: needs.changes.outputs.image == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -73,7 +201,10 @@ jobs:
 
   guards:
     name: guards (gitleaks, D-6, oracle)
+    needs: changes
+    if: needs.changes.outputs.any == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
         with:
@@ -81,7 +212,7 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
-      - run: uv sync --frozen
+      - run: make setup-py
       - run: make guards
       - name: Oracle changes need the oracle-approved label
         if: github.event_name == 'pull_request'
@@ -96,3 +227,20 @@ jobs:
             echo "The owner must add the oracle-approved label."
             exit 1
           fi
+
+  ci-complete:
+    # The one check to require in branch protection: green when every job that ran passed,
+    # red when any failed or was cancelled. Skipped jobs (path filtered, or a draft PR) are
+    # fine by design, so they are not failures here.
+    name: CI complete
+    needs: [changes, lint-typecheck, python, acceptance, web, slow, api-image, guards]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Report the jobs
+        run: |
+          echo '${{ toJSON(needs) }}'
+      - name: Fail if any job failed or was cancelled
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1

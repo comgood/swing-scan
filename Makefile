@@ -8,12 +8,17 @@ API_IMAGE ?= swing-scan-api
 API_PLATFORM ?= linux/amd64
 API_BUILD_FLAGS ?=
 
-.PHONY: setup dev dev-api dev-web lint format typecheck test test-acceptance hooks guards build-web \
+.PHONY: setup setup-py setup-web dev dev-api dev-web lint format typecheck test test-fast test-py test-py-fast \
+        test-web test-acceptance test-acceptance-fast test-slow hooks guards build-web \
         build-api build-api-local smoke smoke-image test-oracle openapi gen-client mocks contracts contracts-check data data-check load-live dev-live ci
 
-setup: ## Install all JS and Python dependencies from the lockfiles
-	pnpm install --frozen-lockfile
+setup: setup-web setup-py ## Install all JS and Python dependencies from the lockfiles
+
+setup-py: ## Install the Python environment from uv.lock (CI: jobs that need no JS)
 	uv sync --frozen
+
+setup-web: ## Install the JS workspace from pnpm-lock.yaml (CI: jobs that need no Python)
+	pnpm install --frozen-lockfile
 
 dev: ## Run the API on 127.0.0.1:8000 and the web app on :3000 together
 	$(MAKE) -j2 dev-api dev-web
@@ -40,12 +45,33 @@ typecheck: ## Typecheck the web app and API client (tsc) and Python (mypy strict
 	pnpm --filter web typecheck
 	uv run mypy
 
-test: ## Run the Python suite, then the web Vitest suite (MSW on by default)
-	uv run pytest
+# The Python suite in two halves so CI can run them in parallel jobs; `-m "not slow"` drops
+# the timing and budget tests, which CI runs on main instead (spec 0009 assumed decision 11).
+UNIT_TESTS := engine/tests services/api/tests
+QA_TESTS := tests/golden tests/acceptance
+NOT_SLOW := -m "not slow"
+
+test: test-py test-acceptance test-web ## The whole suite: Python unit, QA golden and acceptance, then web
+
+test-fast: test-py-fast test-acceptance-fast test-web ## Every test CI runs on a pull request (no slow timing tests)
+
+test-py: ## The Python unit suites (engine and API), slow timing tests included
+	uv run pytest $(UNIT_TESTS)
+
+test-py-fast: ## The Python unit suites without the slow timing tests (CI, per pull request)
+	uv run pytest $(UNIT_TESTS) $(NOT_SLOW)
+
+test-web: ## The web Vitest suite (MSW on by default)
 	pnpm --filter web test
 
 test-acceptance: ## QA acceptance and golden suites; only IDs marked required in status.yaml can fail
-	uv run pytest tests/golden tests/acceptance -rfEX
+	uv run pytest $(QA_TESTS) -rfEX
+
+test-acceptance-fast: ## The same, without the slow timing tests (CI, per pull request)
+	uv run pytest $(QA_TESTS) -rfEX $(NOT_SLOW)
+
+test-slow: ## Only the slow timing and budget tests, with every duration and the printed numbers
+	uv run pytest -m slow -rA -s --durations=0
 
 openapi: ## Write contracts/openapi.json from the FastAPI app (spec 0002)
 	uv run python scripts/export_openapi.py

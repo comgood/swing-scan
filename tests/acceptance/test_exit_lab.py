@@ -223,6 +223,7 @@ def test_guides_use_baseline_is_trades_only() -> None:
 
 
 @pytest.mark.ac("X-7")
+@pytest.mark.slow
 def test_six_configs_and_baseline_finish_under_10_seconds_and_6_mb() -> None:
     """In process on a 500 ticker, 5 year market. The deployed number is a verify step."""
     tiny = build_market(random_walk_frames(n_tickers=3, n_bars=60, seed=1))
@@ -243,6 +244,7 @@ def _seed_42() -> Market:
 
 
 @pytest.mark.ac("X-7")
+@pytest.mark.slow
 @pytest.mark.parametrize("template", TEMPLATES, ids=lambda t: t.id)
 def test_seed_42_six_configs_run_twice_equal_under_10_seconds_and_6_mb(
     template: TemplateOut,
