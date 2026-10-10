@@ -16,7 +16,7 @@ Repo level test suites that check the engine and API from the outside: owner app
 ## Commands
 
 ```bash
-make test-oracle   # placeholder until the DI lane wires it; meanwhile `uv run pytest tests/oracle -x` (all 26 pass since features 9, 11 and 12 landed)
+make test-oracle   # the 26 owner approved oracles; all pass since features 9, 11 and 12 landed
 uv run pytest tests/acceptance
 make test-acceptance   # golden + acceptance, with the gate summary
 ```

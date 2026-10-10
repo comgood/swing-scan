@@ -111,5 +111,5 @@ load-live: ## Local only: Alpaca daily bars into data/live (gitignored); keys fr
 dev-live: ## Local only: run the API in live mode on 127.0.0.1 with the web app (D-5)
 	DATA_MODE=live SYNTHETIC_DATA_DIR=$(LIVE_DIR) $(MAKE) dev
 
-test-oracle:
-	@echo "make $@ is not implemented yet (see docs/scope/scope.md, feature 6)"; exit 1
+test-oracle: ## Run the owner approved oracles (not in the default testpaths)
+	uv run pytest tests/oracle
