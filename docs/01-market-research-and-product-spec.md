@@ -395,7 +395,7 @@ The table shows a **"Random entries" row** (baseline config) plus the per-config
 | U-5 | **Given** the API is cold, **when** a request is pending > 1.5 s, **then** a "warming up the engine…" state shows. |
 | U-6 | **Given** a 375 px viewport, **then** builder rows stack, tables scroll inside their containers, and the page has no horizontal scroll. |
 | U-7 | **Given** a 422 from the API, **then** the offending builder row or exit field shows the inline error. |
-| U-8 | **Given** an exit-lab report, **then** a one-line note under the table reads: *"Trade mode isolates the exit effect. Pick the exit on IS, read OOS once, then confirm with a single portfolio backtest."* |
+| U-8 | **Given** an exit-lab report, **then** a note under the table reads: *"Trade mode isolates the exit effect: every config trades identical entries, so the exit is the only difference. Pick the exit on in sample (IS), read out of sample (OOS) once, then confirm with a single portfolio backtest."* |
 
 ### 6.7 Settled defaults (single source of truth; lead rulings, `02` aligned)
 | Setting | Value |
@@ -417,6 +417,64 @@ The table shows a **"Random entries" row** (baseline config) plus the per-config
 | Trial counter | Keyed on rule **structure** (numbers stripped) + global session total; warn at **≥ 10** |
 | Prices | Adjusted only |
 | Benchmark | `DEMO-INDEX` (synthetic) / SPY (live) |
+
+### 6.8 Terms on screen: keep the word, explain it
+
+The reader is a curious beginner, not a programmer or a professional trader (§2), but the terms are
+the data. Renaming `Sharpe` or `MAE` to something friendlier would leave a reader who knows the
+field unable to tell what a column holds, and a reader who does not still unable to look it up. So
+**the label keeps the real term, and the UI explains it in one plain line next to it.**
+
+Three rules for every builder:
+
+1. **Never substitute a term that names a real quantity.** Expectancy, R, MAE, MFE, profit factor,
+   CAGR, max drawdown, Sharpe, exposure, win rate, slippage, horizon, bars, IS, OOS: all keep their
+   names.
+2. **Explain it once, where it appears.** A form field uses its existing description slot; a table
+   header carries a short `title` on an `abbr` (plus a readable tooltip) and the group header spells
+   an abbreviation out in full the first time, "In sample (IS)". No new machinery, no glossary page
+   the reader has to go and find.
+3. **Rename only a label that names nothing.** "Bars ago", "Window (n)" and "Multiplier (×)"
+   describe form inputs, not quantities, and a beginner cannot guess them. They keep their wording
+   and gain an explanation; the gap they leave behind when hidden is removed.
+
+The explanations, as the UI should word them:
+
+| Term (keeps its label) | The one line beside it |
+|---|---|
+| Expectancy (%) | What one average trade made or lost, in percent. |
+| Expectancy (R) | The same, counted in multiples of the risk you took (R = the distance to your stop). |
+| Expectancy per bar | Expectancy divided by how long the trade was held, so quick trades and slow ones compare. |
+| Profit factor | Everything the winners made divided by everything the losers lost. Above 1 is a profit. |
+| Win rate | The share of trades that ended in profit. |
+| MAE (worst adverse move) | The deepest a trade went against you before it closed. |
+| MFE (best favourable move) | The furthest a trade went in your favour before it closed. |
+| Distinct entry weeks | How many separate weeks the trades started in. A high count means the result is not one lucky week. |
+| Exited by horizon | The share of trades still open at the horizon, which were closed at that bar's close rather than by a real exit. |
+| Horizon (bars) | A trade still open after this many bars is closed at that bar's close. |
+| Bars ago | 0 is today's bar, 1 is the bar before it. |
+| Window (n) | How many bars the indicator averages or looks back over. |
+| Multiplier (×) | Scales the value. 1 leaves it unchanged. |
+| Slippage (bps) | Assumed trading cost per side. 10 bps is 0.1%. |
+| CAGR | The yearly growth rate the equity curve works out to. |
+| Max drawdown | The worst fall from a previous peak in equity. |
+| Sharpe | Return divided by how much it bounced around; higher is steadier. |
+| Exposure | The share of the test period with money in the market. |
+| IS / OOS | In sample, the stretch you choose on, and out of sample, the later stretch you read once. |
+| Edge vs random | This config's value minus the same config run on random entries. |
+| Best IS | The best in sample value of that metric across the configs. Out of sample is never marked. |
+
+Changed wording, the short list. Everything else on screen keeps the words it has:
+
+- `/backtest` is called **Testing** in the navigation, because the page runs the backtest and the
+  exit lab, and "Backtest" named only half of it.
+- The "Compare with" select disappears; picking a plain number becomes an option in the right side
+  dropdown (§6.2, builder usability).
+- Form hints become full sentences, and the engine's warning messages become full sentences that
+  say the consequence. Terms and numbers inside them do not change.
+
+Unchanged, deliberately: every number format, every honesty statement, and the footer "Portfolio
+project. Not investment advice."
 
 ---
 

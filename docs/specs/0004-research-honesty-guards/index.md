@@ -62,7 +62,9 @@ answer; all six match what was built, so no code change follows from ratifying.
 - **AC-6**: With storage unavailable, the counters are hidden and the static warning shows (U-4).
   The static warning is the same AC-5 sentence, shown regardless of `N`.
 - **AC-7**: The procedure note renders word for word (U-8): "Trade mode isolates the exit
-  effect. Pick the exit on IS, read OOS once, then confirm with a single portfolio backtest."
+  effect: every config trades identical entries, so the exit is the only difference. Pick the
+  exit on in sample (IS), read out of sample (OOS) once, then confirm with a single portfolio
+  backtest."
 - **AC-8**: The live badge shows on every page in live mode (U-2), covered by the shell.
 - **AC-9**: Every state is in the `/ui` gallery, keyboard usable, axe clean, and holds at 375 px.
 
