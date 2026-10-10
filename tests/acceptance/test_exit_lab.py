@@ -192,10 +192,12 @@ def _percentile(xs: list[float], q: float) -> float:
 
 
 def _guides(trades: list[Trade]) -> tuple[float, float, float]:
-    winners = [t.mae_pct for t in trades if t.return_pct > 0]
+    """Spec 0002 `guides_is` (owner ruling 2026-10-09): winner percentiles on adverse
+    depth (`-mae_pct`), reported back as signed `mae_pct`, so p90 <= p75 <= 0."""
+    depth = [-t.mae_pct for t in trades if t.return_pct > 0]
     return (
-        _percentile(winners, 0.75),
-        _percentile(winners, 0.90),
+        -_percentile(depth, 0.75),
+        -_percentile(depth, 0.90),
         statistics.median(t.mfe_pct for t in trades),
     )
 
@@ -210,6 +212,8 @@ def test_guides_use_baseline_is_trades_only() -> None:
     with_oos = _guides(lab.baseline_trades)
     assert expected != with_oos, "fixture must be one where OOS trades would move the guides"
     got = lab.guides_is
+    assert got.winner_mae_p90_pct is not None and got.winner_mae_p75_pct is not None
+    assert got.winner_mae_p90_pct <= got.winner_mae_p75_pct <= 0
     assert got.winner_mae_p75_pct == pytest.approx(expected[0], abs=1e-6)
     assert got.winner_mae_p90_pct == pytest.approx(expected[1], abs=1e-6)
     assert got.mfe_median_pct == pytest.approx(expected[2], abs=1e-6)
