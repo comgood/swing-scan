@@ -167,7 +167,11 @@ def test_horizon_warning_names_only_the_config_over_10pct() -> None:  # AC-9
     result = _lab(_market(), TIME_30, TIME_2, horizon_bars=5)
     horizon = [w for w in result.warnings if w.code == "horizon_exits_over_10pct"]
     assert [(w.config_index, w.message) for w in horizon] == [
-        (0, "time 30: more than 10% of trades hit the 5 bar horizon, so its results are cut short.")
+        (
+            0,
+            "time 30: more than 10% of these trades were still open at the 5 bar horizon, "
+            "so they were closed early and the results are cut short.",
+        )
     ]
 
 

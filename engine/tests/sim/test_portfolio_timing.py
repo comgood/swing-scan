@@ -186,5 +186,5 @@ def test_truncation_keeps_the_latest_2000_trades_and_metrics_use_all(
     )
     assert [w.code for w in result.warnings] == ["trades_truncated"]
     assert result.warnings[0].message == (
-        f"Showing the latest 2,000 of {total:,} trades; metrics use all of them."
+        f"Showing the latest 2,000 trades of {total:,}. The metrics above use all of them."
     )

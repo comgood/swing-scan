@@ -101,7 +101,7 @@
     {
       "code": "horizon_exits_over_10pct",
       "config_index": 4,
-      "message": "Wide target, no stop: more than 10% of trades hit the 60 bar horizon, so its results are cut short."
+      "message": "Wide target, no stop: more than 10% of these trades were still open at the 60 bar horizon, so they were closed early and the results are cut short."
     }
   ],
   "entries": {

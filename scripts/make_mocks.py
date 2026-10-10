@@ -370,14 +370,24 @@ def portfolio_result(rng: random.Random, rule: Rule, n_trades: int) -> Portfolio
     warnings = []
     if not trades:
         warnings.append(
-            Warning(code="no_entries", config_index=None, message="The rule produced no entries.")
+            Warning(
+                code="no_entries",
+                config_index=None,
+                message=(
+                    "No entries: the rule never produced a signal in this window, so there "
+                    "are no trades to show."
+                ),
+            )
         )
     if len(shown) < len(trades):
         warnings.append(
             Warning(
                 code="trades_truncated",
                 config_index=0,
-                message=f"Showing {len(shown)} of {len(trades)} trades; metrics use every trade.",
+                message=(
+                    f"Showing {len(shown)} trades of {len(trades)}. "
+                    "The metrics above use every trade."
+                ),
             )
         )
     return PortfolioResult(
@@ -470,8 +480,9 @@ def trade_lab_result(rng: random.Random, rule: Rule) -> TradeLabResult:
                     code="horizon_exits_over_10pct",
                     config_index=i,
                     message=(
-                        f"{config.name}: more than 10% of trades hit the {HORIZON} bar "
-                        "horizon, so its results are cut short."
+                        f"{config.name}: more than 10% of these trades were still open "
+                        f"at the {HORIZON} bar horizon, so they were closed early and the "
+                        "results are cut short."
                     ),
                 )
             )

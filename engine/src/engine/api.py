@@ -338,7 +338,7 @@ def _warnings(n_trades: int) -> list[ResultWarning]:
                 config_index=0,
                 message=(
                     "No entries: the rule never produced a signal that could be filled in "
-                    "this window."
+                    "this window, so there are no trades and no metrics to show."
                 ),
             )
         )
@@ -348,7 +348,8 @@ def _warnings(n_trades: int) -> list[ResultWarning]:
                 code="trades_truncated",
                 config_index=None,
                 message=(
-                    f"Showing the latest 2,000 of {n_trades:,} trades; metrics use all of them."
+                    f"Showing the latest 2,000 trades of {n_trades:,}. "
+                    "The metrics above use all of them."
                 ),
             )
         )
@@ -457,7 +458,10 @@ def _lab_warnings(
             ResultWarning(
                 code="no_entries",
                 config_index=None,
-                message="No entries: the rule never produced a signal in this window.",
+                message=(
+                    "No entries: the rule never produced a signal in this window, so there "
+                    "are no trades to compare."
+                ),
             )
         )
     warnings += [
@@ -465,8 +469,9 @@ def _lab_warnings(
             code="horizon_exits_over_10pct",
             config_index=i,
             message=(
-                f"{names[i]}: more than 10% of trades hit the {horizon} bar horizon, "
-                "so its results are cut short."
+                f"{names[i]}: more than 10% of these trades were still open at the "
+                f"{horizon} bar horizon, so they were closed early and the results are "
+                "cut short."
             ),
         )
         for i, trades in enumerate(strategy)
@@ -479,7 +484,8 @@ def _lab_warnings(
                 code="trades_truncated",
                 config_index=None,
                 message=(
-                    f"Showing 2,000 of {baseline_total:,} baseline trades; metrics use all of them."
+                    f"Showing 2,000 of the {baseline_total:,} baseline trades. "
+                    "The metrics above use all of them."
                 ),
             )
         )
