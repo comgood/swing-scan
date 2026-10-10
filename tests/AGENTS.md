@@ -16,7 +16,7 @@ Repo level test suites that check the engine and API from the outside: owner app
 ## Commands
 
 ```bash
-make test-oracle   # placeholder until the DI lane wires it; meanwhile `uv run pytest tests/oracle -x` (fails until feature 9 builds the simulator)
+make test-oracle   # placeholder until the DI lane wires it; meanwhile `uv run pytest tests/oracle -x` (all 26 pass since features 9, 11 and 12 landed)
 uv run pytest tests/acceptance
 make test-acceptance   # golden + acceptance, with the gate summary
 ```
@@ -29,6 +29,8 @@ make test-acceptance   # golden + acceptance, with the gate summary
 - CI blocks only on `required` IDs. QA flips an ID to `required` once it passes on `main`; builders never edit QA files.
 - A disputed criterion goes to `docs/qa/ac-questions.md#<ID>`; the test stays `pending` until the ruling.
 - Every acceptance test carries `@pytest.mark.ac("<ID>")`; a missing or unknown ID aborts collection. `test_traceability.py` fails when `status.yaml`, `docs/qa/traceability.md` and the markers fall out of step.
+- Tests that need a real market use the session `generated_api` fixture (`conftest.py`, `GeneratedApi` in `support.py`): the seed 42 market generated in a subprocess, since CI has no `data/`. The plain session `client` has no market loaded.
+- UI acceptance tests emulate `next/navigation` with `apps/web/tests/acceptance/navigation.ts`; a page that reads `useSearchParams` needs it.
 - `oracle/` is not in the default `testpaths`, so the oracles (failing until the engine exists) never turn `make test` red.
 
 ## Related specs

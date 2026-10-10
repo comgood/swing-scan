@@ -11,6 +11,7 @@ volume spike on the signal bar `s` (rule `volume > 1,500,000`), so the entry is 
 
 from __future__ import annotations
 
+import math
 import time
 from functools import cache
 from typing import Any
@@ -263,6 +264,24 @@ def _poison(frames: dict[str, Frame], after_bar: int) -> dict[str, Frame]:
     return out
 
 
+def _assert_same_up_to_float_noise(got: Any, want: Any, where: str) -> None:
+    """Exact on every key, row, ticker, flag and length; floats within 1e-12, absolute or
+    relative (owner ruling, ac-questions#B-10-scan): a rolling window over the whole series may
+    move the last bit, and that is not a look ahead."""
+    if isinstance(want, float) and isinstance(got, float):
+        assert math.isclose(got, want, rel_tol=1e-12, abs_tol=1e-12), (where, got, want)
+    elif isinstance(want, dict) and isinstance(got, dict):
+        assert got.keys() == want.keys(), where
+        for key in want:
+            _assert_same_up_to_float_noise(got[key], want[key], f"{where}.{key}")
+    elif isinstance(want, list) and isinstance(got, list):
+        assert len(got) == len(want), where
+        for i, (g, w) in enumerate(zip(got, want, strict=True)):
+            _assert_same_up_to_float_noise(g, w, f"{where}[{i}]")
+    else:
+        assert type(got) is type(want) and got == want, (where, got, want)
+
+
 @pytest.mark.ac("B-10")
 @pytest.mark.parametrize("template", TEMPLATES, ids=lambda t: t.id)
 def test_a_poisoned_future_changes_nothing_up_to_t(template: Any) -> None:
@@ -283,7 +302,9 @@ def test_a_poisoned_future_changes_nothing_up_to_t(template: Any) -> None:
     assert dirty_t.model_dump() == clean_t.model_dump()  # entries, random baseline and exits
 
     for bar in (cut - 20, cut):
-        assert run_scan(rule, dirty, bar_date(bar)) == run_scan(rule, clean, bar_date(bar))
+        dirty_s = run_scan(rule, dirty, bar_date(bar)).model_dump(mode="json")
+        clean_s = run_scan(rule, clean, bar_date(bar)).model_dump(mode="json")
+        _assert_same_up_to_float_noise(dirty_s, clean_s, f"scan at bar {bar}")
     assert clean_t.entries.count > 0, "the fixture must produce entries to mean anything"
 
 
@@ -390,7 +411,7 @@ def test_500_ticker_random_walk_run_is_under_3_seconds_and_6_mb() -> None:
 
 # Portfolio mode is feature 9 (spec 0007 AC-8); the trade mode halves gate with feature 12. B-14's
 # trade mode check is X-1's (spec 0009 AC-1); B-15's and B-16's trade mode halves are their own,
-# named in both specs' test plans, so those two IDs stay pending until feature 12 lands.
+# named in both specs' test plans, and pass since feature 12's BE milestones 1 and 2 merged.
 
 TIME_3 = [{"type": "time", "bars": 3}]
 TIME_CONFIGS = [
@@ -461,7 +482,7 @@ def test_no_portfolio_entry_on_a_last_bar() -> None:
 
 @pytest.mark.ac("B-15")
 def test_no_entry_on_a_last_bar() -> None:
-    """The trade mode half (spec 0007 and 0009 test plans), green with feature 12."""
+    """The trade mode half (spec 0007 and 0009 test plans)."""
     lab = trade_lab(CLOSE_ABOVE_5, TIME_CONFIGS, _last_bar_market())
     assert lab.entries.count == 0
     assert lab.baseline_trades == []
@@ -477,7 +498,7 @@ def _cooldown_market() -> Market:
 
 @pytest.mark.ac("B-16")
 def test_cooldown_accepts_100_and_112_in_every_config() -> None:
-    """The trade mode half (spec 0007 and 0009 test plans), green with feature 12."""
+    """The trade mode half (spec 0007 and 0009 test plans)."""
     market = _cooldown_market()
     configs = [
         config("time 1", {"type": "time", "bars": 1}),

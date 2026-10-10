@@ -145,7 +145,9 @@ describe("exit lab table on the trade lab mock", () => {
     const guides = screen.getByRole("group", { name: /Stop and target guides/ });
     expect(note?.nextElementSibling).toBe(guides);
     expect(guides).toHaveTextContent(GUIDE_SOURCE);
-    expect(within(guides).getByText("-2.54%")).toBeVisible();
+    // Winner MAE is adverse depth (owner ruling 2026-10-09): p90 is deeper than p75, both <= 0.
+    expect(within(guides).getByText("-5.90%")).toBeVisible();
+    expect(within(guides).getByText("-6.79%")).toBeVisible();
     expect(within(guides).getByText("+7.51%")).toBeVisible();
     await expectNoAxeViolations(container);
   }, 20_000);

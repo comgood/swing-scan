@@ -358,6 +358,39 @@ describe("U-7 a 422 shows on the offending builder row", () => {
     },
   );
 
+  acIt(
+    ["U-7"],
+    "U-7: a 422 on row 3's right Number shows on that field only (path right.value.value)",
+    async () => {
+      recordScans();
+      openAt();
+      await opened();
+      // Breakout's third row is `close > 5`, so its right side is a Number.
+      await setNumber(side(3, "Right"), "Number", "7");
+      // The real API names the union member here too: right.value.value (ac-questions U-7-loc).
+      server.use(
+        http.post("*/api/v1/scan", async ({ request }) => {
+          scanBodies.push((await request.json()) as { rule: Rule });
+          return detail422(
+            ["rule", "conditions", 2, "right", "value", "value"],
+            "must be a finite number",
+            7,
+          );
+        }),
+      );
+      await runScan();
+
+      const field = within(side(3, "Right")).getByLabelText("Number");
+      await waitFor(() => expect(field).toHaveAttribute("aria-invalid", "true"));
+      expect(field).toHaveAccessibleDescription(/finite number/i);
+      for (const i of [1, 2]) {
+        for (const input of within(side(i, "Right")).queryAllByRole("spinbutton")) {
+          expect(input).not.toHaveAttribute("aria-invalid", "true");
+        }
+      }
+    },
+  );
+
   acIt(["U-7"], "U-7: a 422 on row 2's left bars ago shows on that field only", async () => {
     recordScans();
     openAt();

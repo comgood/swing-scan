@@ -533,8 +533,8 @@
     "horizon_exit_pct": 0
   },
   "guides_is": {
-    "winner_mae_p75_pct": -2.536449,
-    "winner_mae_p90_pct": -1.702602,
+    "winner_mae_p75_pct": -5.898606,
+    "winner_mae_p90_pct": -6.79234,
     "mfe_median_pct": 7.509175
   },
   "baseline_trades": [

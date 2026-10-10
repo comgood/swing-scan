@@ -9,6 +9,7 @@ from __future__ import annotations
 import statistics
 import time
 from collections.abc import Sequence
+from functools import cache
 from typing import Any
 
 import pytest
@@ -25,7 +26,16 @@ from acceptance.support import (
     trade_lab,
     ui_owed,
 )
-from engine.contracts import TEMPLATES, Trade, TradeLabResult, TradeMetrics, entries_hash
+from engine.contracts import (
+    TEMPLATES,
+    Market,
+    TemplateOut,
+    Trade,
+    TradeLabResult,
+    TradeMetrics,
+    entries_hash,
+)
+from engine.synthetic import generate
 from golden.reference import entry_signals
 
 STRATEGY = TEMPLATES[1].rule  # pullback to a rising 21 EMA: plenty of signals on a random walk
@@ -219,6 +229,32 @@ def test_six_configs_and_baseline_finish_under_10_seconds_and_6_mb() -> None:
     started = time.perf_counter()
     result = trade_lab(STRATEGY, six, market)
     assert time.perf_counter() - started < 10.0
+    assert len(result.model_dump_json(by_alias=True)) < 6_000_000
+
+
+@cache
+def _seed_42() -> Market:
+    """The full history synthetic market (spec 0006) that spec 0009 AC-11 names."""
+    return generate(42)
+
+
+@pytest.mark.ac("X-7")
+@pytest.mark.parametrize("template", TEMPLATES, ids=lambda t: t.id)
+def test_seed_42_six_configs_run_twice_equal_under_10_seconds_and_6_mb(
+    template: TemplateOut,
+) -> None:
+    """Spec 0009 AC-11 on the generated seed 42 market, both templates, timed warm. The in
+    process run is the CI gate; the deployed number is a verify step (ac-questions#perf)."""
+    six = [*FIVE_CONFIGS, config("Target", {"type": "target", "pct": 15})]
+    tiny = build_market(random_walk_frames(n_tickers=3, n_bars=60, seed=1))
+    trade_lab(STRATEGY, six, tiny)  # fail fast on a stub
+    market = _seed_42()
+    first = trade_lab(template.rule, six, market)  # also warms the caches
+    started = time.perf_counter()
+    result = trade_lab(template.rule, six, market)
+    assert time.perf_counter() - started < 10.0
+    assert result == first
+    assert result.entries.count > 0, "the budget must be measured on a run that trades"
     assert len(result.model_dump_json(by_alias=True)) < 6_000_000
 
 

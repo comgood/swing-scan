@@ -104,14 +104,17 @@ def best_is(strategy_is: Sequence[TradeMetrics]) -> BestIs:
 
 def guides_is(baseline_is: Sequence[Trade]) -> Guides:
     """Winner MAE p75 and p90 and the median MFE, from the baseline config's IS trades (X-5).
-    The caller passes IS trades only; anything else is rejected."""
+    The MAE percentiles are taken on adverse depth (`-mae_pct`) and reported back as signed
+    `mae_pct`, so p90 is deeper than p75: 90% of winners never dipped below p90, which makes
+    it a stop guide (owner ruling 2026-10-09). The caller passes IS trades only; anything
+    else is rejected."""
     if any(t.segment != "is" for t in baseline_is):
         raise ValueError("guides_is takes IS trades only")
-    winners = [t.mae_pct for t in baseline_is if t.return_pct > 0]
+    depths = [-t.mae_pct for t in baseline_is if t.return_pct > 0]
     mfe = [t.mfe_pct for t in baseline_is]
     return Guides(
-        winner_mae_p75_pct=float(np.percentile(winners, 75)) if winners else None,
-        winner_mae_p90_pct=float(np.percentile(winners, 90)) if winners else None,
+        winner_mae_p75_pct=-float(np.percentile(depths, 75)) if depths else None,
+        winner_mae_p90_pct=-float(np.percentile(depths, 90)) if depths else None,
         mfe_median_pct=float(np.median(mfe)) if mfe else None,
     )
 
