@@ -169,9 +169,10 @@ describe("X-3 IS and OOS columns, best IS highlighted in IS only", () => {
       expect(text(cell(onScreen, "Trades IS"))).toBe(String(row.strategy.is.n_trades));
       expect(text(cell(onScreen, "Trades OOS"))).toBe(String(row.strategy.oos.n_trades));
       const winIs = row.strategy.is.win_rate_pct;
-      if (winIs !== null) {
-        expect(text(cell(onScreen, "Win rate IS"))).toContain(winIs.toFixed(2));
-      }
+      // A null rate reads "n/a": still an assertion, so the check never quietly stops running.
+      expect(text(cell(onScreen, "Win rate IS"))).toContain(
+        winIs === null ? "n/a" : winIs.toFixed(2),
+      );
     });
   });
 

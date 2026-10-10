@@ -103,6 +103,14 @@ def test_fetch_pages_and_defaults_to_the_free_iex_feed() -> None:
     assert q["start"] == ["2016-01-04"]
 
 
+def test_fetch_gives_up_when_the_vendor_repeats_a_page_token() -> None:
+    def stuck(url: str, headers: Mapping[str, str]) -> dict[str, Any]:
+        return {"bars": {"SPY": [bar("2016-01-04")]}, "next_page_token": "same"}
+
+    with pytest.raises(LiveLoadError, match="repeated page token"):
+        fetch_bars(["SPY"], date(2016, 1, 4), date(2016, 1, 6), {"APCA-API-KEY-ID": "x"}, stuck)
+
+
 def test_fetch_sends_the_feed_it_is_given() -> None:
     fake = FakeAlpaca(RAW, page_size=99)
     headers = {"APCA-API-KEY-ID": "fake-id"}

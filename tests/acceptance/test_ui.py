@@ -105,6 +105,23 @@ def test_assumptions_carry_every_header_field() -> None:
 
 
 @pytest.mark.ac("U-3")
+def test_a_real_run_fills_every_header_field() -> None:
+    """The schema names the fields; the header is only honest if a response carries values."""
+    market = build_market(random_walk_frames(n_tickers=10, n_bars=300, seed=4))
+    configs = [
+        config("a", {"type": "time", "bars": 10}),
+        config("b", {"type": "stop_pct", "pct": 8}),
+    ]
+    header = trade_lab(TEMPLATES[1].rule, configs, market).assumptions.model_dump()
+    assert set(header) >= U3_FIELDS
+    # Null by contract: trade mode sizes one unit per entry, and a market with no seed names its
+    # version instead ("data version or seed"). Every other field carries a value.
+    optional = {"max_positions", "data_seed"}
+    assert [f for f in sorted(U3_FIELDS - optional) if header[f] is None] == []
+    assert header["data_version"]
+
+
+@pytest.mark.ac("U-3")
 def test_report_renders_the_assumptions_header() -> None:
     # Both reports: the portfolio one (feature 9, spec 0007 AC-12) and the exit lab's, with the
     # horizon, the seed, the overlap rule and one exit line per config (feature 12, AC-19).
