@@ -22,7 +22,6 @@ from typing import Any
 from fastapi.testclient import TestClient
 from pydantic import BaseModel, TypeAdapter
 
-from api.main import app
 from engine.contracts import (
     CONTRACT_VERSION,
     INDICATOR_SPECS,
@@ -676,8 +675,33 @@ def condition(ind: str, n: int | None = None) -> dict[str, Any]:
     return {"left": left, "op": ">", "right": {"kind": "value", "value": 5}}
 
 
+def app_with_no_market() -> TestClient:
+    """The real app with no market loaded, whatever this machine has generated.
+
+    The app loads its market at import from `$SYNTHETIC_DATA_DIR` (spec 0005 AC-8) and
+    `501.scan.json` is only reachable while none is loaded, so `api.main` is imported here,
+    under a fresh empty directory, rather than at module scope. `make contracts` then writes
+    the same mocks with or without a local `data/synthetic` from `make data`.
+    """
+    import os  # local, so the whole no market fix stays in one region of this file
+    from tempfile import TemporaryDirectory
+
+    from engine.data import DATA_DIR_ENV
+
+    with TemporaryDirectory(prefix="swing-scan-no-market-") as empty:
+        os.environ[DATA_DIR_ENV] = empty
+        from api.main import app  # loads its market from `empty`, and so finds none
+        from api.state import market
+    if market is not None:
+        raise RuntimeError(
+            "the 501 mock needs an app with no market loaded, but one is: `api.main` was "
+            f"imported before {DATA_DIR_ENV} pointed at an empty directory"
+        )
+    return TestClient(app)
+
+
 def error_mocks() -> None:
-    client = TestClient(app)
+    client = app_with_no_market()
     ok_rule = TEMPLATES[0].rule.model_dump(mode="json")
     config = {"name": "Baseline", "exits": [{"type": "stop_pct", "pct": 8}]}
 
