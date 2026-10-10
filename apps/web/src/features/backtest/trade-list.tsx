@@ -26,21 +26,40 @@ export const EXIT_REASON_LABELS: Record<Trade["exit_reason"], string> = {
 
 const SEGMENT_LABELS = { is: "IS", oos: "OOS" } as const;
 
-const pct = (header: string, key: keyof Trade): DataTableColumn<Trade> => ({
+/**
+ * A term keeps its header word and gains one plain line as the `abbr` tooltip (doc 01
+ * section 6.8). The line is not repeated inside the header: these headers are sort buttons, and
+ * the paragraph above the table already says the same thing for anyone not hovering.
+ */
+function explained(header: string, hint: string) {
+  const Header = () => (
+    <abbr title={hint} className="no-underline">
+      {header}
+    </abbr>
+  );
+  Header.displayName = `ExplainedHeader(${header})`;
+  return Header;
+}
+
+const pct = (header: string, key: keyof Trade, hint?: string): DataTableColumn<Trade> => ({
   id: key,
   accessorKey: key,
-  header,
+  header: hint ? explained(header, hint) : header,
   meta: { numeric: true },
   cell: (info) => <SignedValue value={info.getValue<number | null>()} format="pct" />,
 });
 
-const r = (header: string, key: keyof Trade): DataTableColumn<Trade> => ({
+const r = (header: string, key: keyof Trade, hint?: string): DataTableColumn<Trade> => ({
   id: key,
   accessorKey: key,
-  header,
+  header: hint ? explained(header, hint) : header,
   meta: { numeric: true },
   cell: (info) => <SignedValue value={info.getValue<number | null>()} format="r" />,
 });
+
+const MAE = "MAE is the deepest a trade went against you before it closed.";
+const MFE = "MFE is the furthest a trade went in your favour before it closed.";
+const IN_R = "The same, counted in multiples of the risk you took (R = the distance to your stop).";
 
 const price = (header: string, key: keyof Trade): DataTableColumn<Trade> => ({
   id: key,
@@ -85,7 +104,11 @@ export const TRADE_COLUMNS: DataTableColumn<Trade>[] = [
     header: "Exit reason",
   },
   pct("Return", "return_pct"),
-  r("R multiple", "r_multiple"),
+  r(
+    "R multiple",
+    "r_multiple",
+    "What the trade returned, counted in multiples of the risk you took (R = the distance to your stop).",
+  ),
   {
     id: "bars_held",
     accessorKey: "bars_held",
@@ -93,10 +116,10 @@ export const TRADE_COLUMNS: DataTableColumn<Trade>[] = [
     meta: { numeric: true },
     cell: (info) => formatInt(info.getValue<number>()),
   },
-  pct("MAE", "mae_pct"),
-  r("MAE (R)", "mae_r"),
-  pct("MFE", "mfe_pct"),
-  r("MFE (R)", "mfe_r"),
+  pct("MAE", "mae_pct", MAE),
+  r("MAE (R)", "mae_r", `${MAE} ${IN_R}`),
+  pct("MFE", "mfe_pct", MFE),
+  r("MFE (R)", "mfe_r", `${MFE} ${IN_R}`),
 ];
 
 interface TradeListProps {
@@ -126,8 +149,9 @@ export function TradeList({
         {truncated
           ? `Showing ${formatInt(trades.length)} of ${formatInt(total)} trades, ${kept === "latest" ? "the latest" : "spread evenly"} by entry date; the metrics use every trade.`
           : `${formatInt(total)} trades.`}{" "}
-        IS is in sample; OOS is out of sample, entries from {formatDate(oosStart)}. MAE and MFE are
-        the worst and best move from the entry price while the trade was open.
+        IS means in sample and OOS means out of sample, whose entries start on{" "}
+        {formatDate(oosStart)}. {MAE} {MFE} The R columns count both in multiples of the risk you
+        took, where R is the distance to your stop.
       </p>
       <DataTable
         columns={TRADE_COLUMNS}

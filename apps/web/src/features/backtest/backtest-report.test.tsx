@@ -70,8 +70,8 @@ describe("BacktestReport", () => {
       .map((c) => c.textContent);
     expect(columns).toEqual([
       "Metric",
-      "In sample",
-      "Out of sample",
+      "In sample (IS)",
+      "Out of sample (OOS)",
       "Benchmark IS",
       "Benchmark OOS",
     ]);
