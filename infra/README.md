@@ -111,3 +111,10 @@ Check it: `make smoke API_URL=<function-url>`. Record the first (cold) response 
 ## 8. Throttle alarm (abuse signal)
 
 Create a CloudWatch alarm on the `Throttles` metric for `swing-scan-api` (sum over 5 minutes > 0) that emails you.
+
+## 9. Live research mode (local only, nothing deployed)
+
+`make load-live` is the one step that uses Alpaca credentials, and it runs only on your machine: `DATA_MODE=live` refuses to start on Lambda, in CI, or bound to anything but `127.0.0.1` (D-5), and `data/live` is gitignored. Put `ALPACA_API_KEY_ID` and `ALPACA_API_SECRET_KEY` in your local `.env`; they never reach CI, the image, or Lambda.
+
+- **Feed**: the loader reads the **`iex`** feed by default, because Alpaca's free Basic plan answers **HTTP 403** for SIP historical bars. Override it with `--feed sip` or `ALPACA_FEED=sip` only on a paid plan; the chosen feed appears in `meta.data_version` (`alpaca-<feed>-all:<last bar date>`) and in the load summary.
+- **Volume caveat (research honesty)**: IEX is a single exchange and a small share of consolidated volume, so volume based rules (`vol_ratio`, `avg_volume`) and any comparison of volume across tickers are **not comparable to a full tape**. Price based rules are unaffected. The load summary repeats this every run. Live results are personal research, never a backtest claim.
