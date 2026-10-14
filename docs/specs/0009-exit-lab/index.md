@@ -85,6 +85,32 @@ the runner up is in [rationale.md](rationale.md).
     | `breakout_52w` | 2,780 + 2,780 | 2.05 s | 717 KB |
     | `pullback_ema21` | 18,566 + 18,566 | 11.39 s | 716 KB |
 
+    **First deployed numbers, 2026-10-14** (`swing-scan-api`, x86_64, 2,048 MB, Function URL in
+    `ap-southeast-1`, from the `make smoke` step of deploy run 38545615053 at commit `0e9f448`):
+
+    | call | time | body |
+    |---|---|---|
+    | health, first call after the update (cold start) | 9.33 s | 57 B |
+    | health, warm | 0.62 s | 57 B |
+    | scan, `breakout_52w` | 0.74 s | 429 B |
+    | backtest, `breakout_52w`, **5** configs | 5.39 s | 633 KB |
+
+    That last row is the one that matters, and it is bad news for the budget. 5 configs on
+    `breakout_52w` is 2 × 2,780 × 5 = 27,800 walks, so **0.194 ms per walk against 0.061 ms in
+    process**: the Lambda is about 3x slower per walk than the CI runner, even allowing for the
+    network and the 633 KB transfer. Carried to the case X-7 actually names, `pullback_ema21` with
+    6 configs and 222,792 walks, that is **roughly 43 s, past the function's own 30 s timeout**,
+    which the caller sees as a 502 rather than a slow answer.
+
+    So the 20 s budget is probably not reachable for that template as the loop stands, and the
+    remedy order below is no longer a contingency. Two things are owed before acting on it: the
+    real measurement rather than this extrapolation from one point at one config count (smoke now
+    runs `pullback_ema21` with the six configs and reports it, gating nothing), and a decision
+    between the optimisation and the entry cap once that number exists.
+
+    The cold start also wants recording elsewhere: 9.33 s against doc 01's "cold start ≤ 10 s",
+    where `infra/README.md` §6 still says about 3.1 s from the first deploy on 2026-10-09.
+
     Cost is linear in entries: fitting the two points gives about 0.4 s of fixed cost plus
     0.59 ms per strategy entry. One strategy entry means **12 trade walks**, not 7, because
     `run_trade_mode()` sends both entry lists through every config (`sim/trade_mode.py`), so

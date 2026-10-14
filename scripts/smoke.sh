@@ -44,13 +44,28 @@ call "templates" 200 "$API_URL/api/v1/templates"
 templates="$(cat "$out")"
 template_id="$(jq -r '.[0].id' <<<"$templates")"
 
+# Dataset and indicator health, deterministically: `close > 0` holds for every live ticker, so a
+# loaded market must return rows with numeric operands. A template scan cannot prove this, because
+# a day with no 52 week breakouts is a legitimate empty answer and a market whose indicator
+# columns are all null also answers 200 with no rows. This rule tells the two apart.
+probe_body='{"rule":{"name":"smoke probe","conditions":[{"left":{"kind":"ind","ind":"close",
+  "n":null,"offset":0,"mult":1},"op":">","right":{"kind":"value","value":0}}]}}'
+call "scan probe (close > 0)" 200 -H 'content-type: application/json' \
+  -d "$(jq -c . <<<"$probe_body")" "$API_URL/api/v1/scan"
+if ! jq -e '(.rows | length) > 0 and all(.rows[].operands[]; type == "number")' "$out" >/dev/null; then
+  echo "the market is missing or its indicator columns are dead: close > 0 matched nothing" >&2
+  head -c 2000 "$out" >&2
+  exit 1
+fi
+echo "  as_of $(jq -r '.as_of' "$out"), $(jq '.rows | length' "$out") rows match close > 0"
+
 scan_body="$(jq -c '{rule: .[0].rule}' <<<"$templates")"
 call "scan $template_id" 200 -H 'content-type: application/json' -d "$scan_body" \
   "$API_URL/api/v1/scan"
-# A deploy with no data answers 200 with no rows, and one with dead indicator columns answers
-# 200 with null operands: both must fail the smoke test, not pass it.
-if ! jq -e '(.rows | length) > 0 and all(.rows[].operands[]; type == "number")' "$out" >/dev/null; then
-  echo "scan on template $template_id answered 200 with no usable rows:" >&2
+# No row count is required here: a template may honestly have no hits on the last session. Any
+# row it does return must carry numeric operands; the probe above owns dataset health.
+if ! jq -e 'all(.rows[].operands[]; type == "number")' "$out" >/dev/null; then
+  echo "scan on template $template_id returned rows with null operands:" >&2
   head -c 2000 "$out" >&2
   exit 1
 fi
@@ -72,5 +87,53 @@ backtest_body="$(jq -c '{
 call "backtest $template_id, 5 configs" 200 -H 'content-type: application/json' \
   -d "$backtest_body" "$API_URL/api/v1/backtest"
 echo "  mode $(jq -r '.mode' "$out")"
+
+# X-7 on the deployed API (spec 0009 AC-11): the slowest template with the six configs of
+# SIX_CONFIGS in engine/tests/sim/test_lab_budget.py. Reported, never gated: in process this run
+# is 11.39 s on a CI runner and the Lambda is about 3x slower per trade walk, so it may pass the
+# function's 30 s timeout and come back 502. A known budget gap must not turn every deploy red,
+# so this prints the number and the verdict and leaves the exit code alone. Budget 20 s warm.
+# shortcut: the six configs are duplicated from the Python test; move both to one JSON fixture
+# when anything about them changes (spec 0009 AC-11 rule 2).
+X7_BUDGET_S="${SMOKE_X7_BUDGET_S:-20}"
+x7_body="$(jq -c '{
+  rule: .[1].rule,
+  configs: [
+    {name: "Baseline", exits: [{type: "stop_pct", pct: 8}, {type: "time", bars: 20}]},
+    {name: "ATR stop and target", exits: [
+      {type: "stop_atr", k: 2, n: 14}, {type: "target", pct: 15}, {type: "time", bars: 30}]},
+    {name: "MA exit, no stop", exits: [{type: "close_below_ma", ma: "ema", n: 21}]},
+    {name: "Trailing 10%", exits: [{type: "trail_pct", pct: 10}, {type: "time", bars: 40}]},
+    {name: "Wide target, no stop", exits: [{type: "target", pct: 60}]},
+    {name: "Stop, target, time", exits: [
+      {type: "stop_pct", pct: 5}, {type: "target", pct: 10}, {type: "time", bars: 15}]}
+  ]
+}' <<<"$templates")"
+x7_id="$(jq -r '.[1].id' <<<"$templates")"
+
+# measure <label>: one call, no gate. Prints status, seconds and bytes, or why it failed.
+measure() {
+  local label="$1" meta status seconds bytes
+  # 45 s, past the function's own 30 s timeout, so a timeout is seen as a 502 rather than
+  # curl giving up first and reporting nothing.
+  meta="$(curl --silent --show-error --max-time 45 -o "$out" \
+    -w '%{http_code} %{time_total} %{size_download}' \
+    -H 'content-type: application/json' -d "$x7_body" "$API_URL/api/v1/backtest" || echo "000 0 0")"
+  read -r status seconds bytes <<<"$meta"
+  echo "$label: $status in ${seconds}s, $bytes bytes"
+  X7_STATUS="$status"
+  X7_SECONDS="$seconds"
+}
+
+echo "X-7 measurement on $x7_id, 6 configs (reported, not gated):"
+measure "  first call"
+measure "  warm"
+if [[ "$X7_STATUS" != "200" ]]; then
+  echo "  X-7 MISSED: answered $X7_STATUS, so the 6 config lab does not complete on this deploy" >&2
+elif awk "BEGIN{exit !($X7_SECONDS > $X7_BUDGET_S)}"; then
+  echo "  X-7 MISSED: warm ${X7_SECONDS}s over the ${X7_BUDGET_S}s budget" >&2
+else
+  echo "  X-7 warm ${X7_SECONDS}s budget ${X7_BUDGET_S}s sha ${GITHUB_SHA:-local}"
+fi
 
 echo "smoke test passed"
