@@ -20,13 +20,13 @@ _Source of truth: acceptance criteria IDs (D, R, S, B, X, U) and settled default
 | 5 | Acceptance test harness & traceability | Foundation | done |
 | 6 | Backtest correctness oracles | Foundation | done |
 | 7 | Synthetic market | Slice 1 | done |
-| 8 | Template scan | Slice 1 | in-progress |
+| 8 | Template scan | Slice 1 | done |
 | 9 | Portfolio backtest core | Slice 1 | in-progress |
 | 10 | Rule builder | Slice 2 | in-progress |
-| 11 | Exit types | Slice 3 | in-progress |
-| 12 | Exit lab | Slice 3 | planned |
-| 13 | Research honesty guards | Slice 3 | in-progress |
-| 14 | Live research mode (local) | Slice 4 | planned |
+| 11 | Exit types | Slice 3 | done |
+| 12 | Exit lab | Slice 3 | in-progress |
+| 13 | Research honesty guards | Slice 3 | done |
+| 14 | Live research mode (local) | Slice 4 | in-progress |
 | 15 | Deploy hardening & demo readiness | Slice 5 | planned |
 | 16 | README, research note & GIF | Slice 5 | planned |
 
@@ -41,7 +41,7 @@ From here on, features run in parallel across the four agent lanes of doc 02 §1
 | **G0 Contracts frozen** | `contracts-v1` tagged (feature 3) | **open** (tag on `9fd3879`) | Lane fan out: every feature marked "now" below |
 | **G1 Oracles approved** | You recompute and merge QA's oracle drafts with the `oracle-approved` label (feature 6) | **open** (oracles approved in PR #9) | Engine simulator and exit work in features 9 and 11 |
 | **G2 Simulator merged** | Feature 9's simulator and its single exit interface (`step()`) on `main` | **open** (`step()` and the day loop landed in #39) | Engine work in features 11 and 12 |
-| **G3 Real scan API** | Feature 8's `/scan` on `main` (and on a preview deploy) | **open on `main`** (#39); no preview deploy yet | FE switches from mocks to the real API, screen by screen |
+| **G3 Real scan API** | Feature 8's `/scan` on `main` (and on a preview deploy) | **open on `main`** (#39) and deployed (2026-10-09) | FE switches from mocks to the real API, screen by screen |
 | **G4 Feature freeze** | Every MUST criterion `required` and green in `docs/qa/traceability.md` | closed | Feature 16, then the `v1.0` tag |
 
 ### Who can work on what, and when
@@ -85,7 +85,7 @@ Done in order on Day 1 before the lanes fan out. Feature 3 ends with the `contra
 Lane DI. Record the stack already chosen in doc 02 (Next.js on Vercel Hobby, FastAPI with Polars and NumPy in a Lambda container, GitHub Actions with OIDC) and scaffold a runnable monorepo with a hello world deploy of both apps.
 **Done when:** the stack is captured in a spec, the empty web app and API both run locally, and both are reachable on their free tier hosts.
 - [x] Decide the stack (spec): `/architect stack & architecture`
-- [x] Scaffold from the decision: `/develop stack & architecture` (local scaffold done; your first deploy per `infra/README.md` still pending)
+- [x] Scaffold from the decision: `/develop stack & architecture` (local scaffold done; first deploy done 2026-10-09: the API on a Lambda Function URL in `ap-southeast-1`, the web app on `https://swing-scan-one.vercel.app`, `make smoke` passes, first cold call about 3.1 s, the throttle alarm emails you; no reserved concurrency because the account quota is 10)
 - [ ] Verify it: `/check verify stack & architecture`
 - [ ] Test it: `/test stack & architecture`
 Spec [0001](../specs/0001-stack-architecture/index.md) · code in `./` (`apps/web`, `services/api`, `engine`)
@@ -154,7 +154,7 @@ Lane DI. A seeded generated market of 500 invented tickers over 5 years with reg
 - [x] Verify it: `/check verify synthetic market` (D-1 to D-3 pass; the linux/amd64 image build still needs an x86 runner, since it segfaults under emulation on Apple Silicon. See [the report](../reviews/2026-10-08-verify-synthetic-market.md))
 - [x] Test it: `/test synthetic market` (54 engine tests pass; QA still owes the D-1 to D-3 acceptance hook)
 
-### 8. Template scan · in-progress
+### 8. Template scan · done
 Lanes BE and FE. Indicators, rule evaluation with the valid rising edge and the signal based cooldown, the two templates, the `/scan` endpoint, and a sortable results table on the landing page.
 **Done when:** a first visit opens the Breakout template with today's hits and the synthetic banner, delisted tickers never appear, scan and backtest signals match, and a warm scan answers in under a second (S-1 to S-4, R-10, U-1, U-5).
 - [x] Design it (spec): `/architect template scan`
@@ -164,20 +164,20 @@ Lanes BE and FE. Indicators, rule evaluation with the valid rising edge and the 
   - [x] Scan contract (BE): `chg_pct`, `vol_ratio`, golden parity, `as_of` 422, warm start, the scan log, the S-4 timing test, and `read_market()` once feature 7 merges (AC-4 to AC-8, AC-13)
   - [x] Workspace finish (FE): `?template` URL, number formats, New badge, paging, states, 375 px; switch to the real API at G3 (AC-10 to AC-12, AC-14)
 - [x] Verify it: `/check verify template scan`
-- [ ] Test it: `/test template scan`
+- [x] Test it: `/test template scan`
 Spec [0005](../specs/0005-template-scan/index.md)
 
 ### 9. Portfolio backtest core · in-progress · GA
 Lanes BE and FE. The portfolio simulator with next open fills, % stop and time exit, equal weight, max positions, slippage, delisting exits, IS and OOS split, an equity curve against the benchmark, a trade list with MAE and MFE, and the report page with its assumptions header.
 **Done when:** all approved oracles pass, results are deterministic, the top ranked signals fill free slots, and the report shows IS and OOS side by side with the assumptions header (B-1, B-2, B-7 to B-11, B-13 to B-16, U-3).
 - [x] Design it (spec): `/architect portfolio backtest core` (signed off by the owner 2026-10-08)
-- [ ] Build it: `/develop portfolio backtest core`
+- [x] Build it: `/develop portfolio backtest core`
   - [x] BE thread: `Exit` protocol, one `step()`, `stop_pct`, `time`, delisting, `end_of_test`, `walk_trade()`, the day loop and a minimal `PortfolioResult` behind `/backtest` (AC-1 to AC-3, AC-8, AC-11)
   - [x] BE portfolio rules and metrics: ranking, slots, sizing, window cut, IS and OOS, metrics, curves, truncation, `trial`, `assumptions`, the 3 s and 6 MB budget (AC-4 to AC-7, AC-9, AC-10); B-9 and B-10 portfolio turn green with feature 11's exits
-  - [ ] FE report page: `/backtest` with the exit form, assumptions header, IS and OOS metrics, equity chart, trade list, trial counter and every state, on mocks first (AC-12 to AC-17)
+  - [x] FE report page: `/backtest` with the exit form, assumptions header, IS and OOS metrics, equity chart, trade list, trial counter and every state, on mocks first (AC-12 to AC-17)
 - [ ] Verify it: `/check verify portfolio backtest core`
-- [ ] Test it: `/test portfolio backtest core`
-- [ ] Review it (fresh model): `/check review portfolio backtest core`
+- [x] Test it: `/test portfolio backtest core` (engine response assembly, metric nulls, thinning and ranking gaps in PR #83; report page states, metrics table, exit form and chart in PR #85; no bugs found)
+- [x] Review it (fresh model): `/check review portfolio backtest core` ([findings](../reviews/2026-10-09-review-9-backtest-engine.md); the two major findings are fixed)
 - [ ] Document it: `/document portfolio backtest core`
 Spec [0007](../specs/0007-portfolio-backtest-core/index.md)
 
@@ -187,40 +187,41 @@ Spec [0007](../specs/0007-portfolio-backtest-core/index.md)
 Lanes BE and FE. Build your own entry rules: a flat AND list of up to 8 conditions over 12 indicators, with numbers or indicators on the right side, crosses, offsets, and clear validation. The templates load into it as editable starting points.
 **Done when:** rules round trip as JSON, crosses and offsets behave as specified, warm up bars evaluate as not computable, invalid rules return a clear 422 shown on the right row, and the structure key ignores numbers (R-1 to R-9, U-7).
 - [x] Design it (spec): `/architect rule builder` (signed off by the owner 2026-10-08)
-- [ ] Build it: `/develop rule builder`
+- [x] Build it: `/develop rule builder`
   - [x] FE thread: reducer over the contract `Rule`, one editable row, "Run scan" on the mocks, UI to JSON parity (AC-4, AC-8)
   - [x] FE rows and links: every field, add and remove limits, catalog hints, 422 on the right field, `?template` to `?r=` links, bad link fallback, JSON panel (AC-1 to AC-3, AC-5 to AC-7, AC-9)
   - [x] FE finish: 375 px and 320 px, keyboard, axe, `/ui` gallery, mounted in feature 8's workspace, real API at G3 (AC-10)
-  - [ ] BE tests after feature 8's evaluator merges: R-3, R-4, R-5, R-7 on custom rules, every R-6 case through `/scan` (AC-11, AC-12; AC-13 is already met by spec 0002)
+  - [x] BE tests after feature 8's evaluator merges: R-3, R-4, R-5, R-7 on custom rules, every R-6 case through `/scan` (AC-11, AC-12; AC-13 is already met by spec 0002)
 - [ ] Verify it: `/check verify rule builder`
-- [ ] Test it: `/test rule builder`
+- [x] Test it: `/test rule builder`
 Spec [0008](../specs/0008-rule-builder/index.md)
 
 ## Slice 3: Exit research
 
-### 11. Exit types · in-progress · GA
+### 11. Exit types · done · GA
 Lane BE. Add the remaining exits behind the same exit interface: ATR stop, % target, trailing stop, and close below a moving average filled at the next open, with stops checked before targets.
 **Done when:** each exit passes its oracle and the per bar precedence holds (B-3 to B-6). Rests on the spec from feature 9.
 - [x] Build it: `/develop exit types`
 Spec [0007](../specs/0007-portfolio-backtest-core/index.md) · code in `engine/src/engine/exits/`
 
-### 12. Exit lab · planned · GA
+### 12. Exit lab · in-progress · GA
 Lanes BE and FE. Hold one entry rule fixed and compare 2 to 6 exit setups on identical entries, trade by trade, with a random entry baseline run through the same exits.
 **Done when:** entries are identical across configs, metrics are per trade only with IS and OOS columns, the best IS config is highlighted, MAE and MFE guides use IS trades only, expectancy per bar, distinct entry weeks and horizon exits show, edge versus random is reported, and six configs finish within the time budget (X-1 to X-5, X-7 to X-10).
 - [x] Design it (spec): `/architect exit lab` (signed off by the owner 2026-10-08)
-- [ ] Build it: `/develop exit lab`
-  - [ ] BE trade mode thread (after G2, PR #31): per trade loop over `walk_trade()` with the horizon, shared entries, per trade metrics, `best_is`, `guides_is`, warnings, still 501 for 2 to 6 configs (AC-1, AC-3 to AC-7, AC-9, AC-12)
-  - [ ] BE random baseline and edge, then drop the 501; B-10 trade mode and parity (AC-2, AC-8, AC-10)
-  - [ ] BE budget: 6 configs plus baseline under 10 s and 6 MB on seed 42 (AC-11)
-  - [ ] FE exit lab table on the mock: IS and OOS pairs, best IS highlight, R n/a footnote, horizon badge, edge and random rows, `ProcedureNote` directly under, guide row (AC-13 to AC-18)
-  - [ ] FE page wiring on `/backtest` after feature 9's report page: 2 to 6 config form, assumptions, trial counter, states, 375 px (AC-19, AC-20)
+- [x] Build it: `/develop exit lab`
+  - [x] BE trade mode thread (after G2, PR #31): per trade loop over `walk_trade()` with the horizon, shared entries, per trade metrics, `best_is`, `guides_is`, warnings, still 501 for 2 to 6 configs (AC-1, AC-3 to AC-7, AC-9, AC-12)
+  - [x] BE random baseline and edge, then drop the 501; B-10 trade mode and parity (AC-2, AC-8, AC-10)
+  - [x] BE budget: 6 configs plus baseline under 10 s and 6 MB on seed 42 (AC-11, `engine/tests/sim/test_lab_budget.py`; the hot loop moved to plain lists and slotted dataclasses)
+  - [x] FE exit lab table on the mock: IS and OOS pairs, best IS highlight, R n/a footnote, horizon badge, edge and random rows, `ProcedureNote` directly under, guide row (AC-13 to AC-18)
+  - [x] FE page wiring on `/backtest` after feature 9's report page: 2 to 6 config form, assumptions, trial counter, states, 375 px (AC-19, AC-20; `lab-configs.tsx`, `exit-fields.tsx`, the `mode` switch in `backtest-report.tsx`)
+  - [ ] BE enforcement split (amended AC-11, measured 2026-10-11): the fixed size market becomes the hard CI gate, the seed 42 pair reports its numbers and fails at 2x, `x-compute-ms` and `x-cache` headers let smoke prove a warm call, and feature 15's smoke owns the deployed 20 s budget
 - [ ] Verify it: `/check verify exit lab`
-- [ ] Test it: `/test exit lab`
-- [ ] Review it (fresh model): `/check review exit lab`
+- [x] Test it: `/test exit lab`
+- [x] Review it (fresh model): `/check review exit lab` ([findings](../reviews/2026-10-09-review-11-12-exits-and-lab.md), shared with feature 11; both majors fixed in PR #75)
 - [ ] Document it: `/document exit lab`
 Spec [0009](../specs/0009-exit-lab/index.md)
 
-### 13. Research honesty guards · in-progress
+### 13. Research honesty guards · done
 Lanes FE and BE. The things that stop you fooling yourself: the structure keyed trial counter with a session total and a warning at 10, the procedure note under the exit lab table, and the data banners.
 **Done when:** tweaking only numbers still counts toward the same rule's trials, the warning shows at 10, the procedure note renders, and the synthetic and survivors only banners appear in the right modes (U-2, U-4, U-8).
 - [x] Design it (spec): `/architect research honesty guards` (signed off by the owner 2026-10-08)
@@ -233,10 +234,11 @@ Spec [0004](../specs/0004-research-honesty-guards/index.md) (signed off by the o
 
 ## Slice 4: Live research mode
 
-### 14. Live research mode (local) · planned
+### 14. Live research mode (local) · in-progress
 Lane DI, run by you. Load Alpaca free daily bars since 2016 for about 500 current S&P 500 names plus SPY into the same schema, on your machine only.
 **Done when:** `make load-live` fills local data with keys from the environment, the API refuses live mode anywhere but localhost, and `research/` is ignored by git (D-4, D-5).
-- [ ] Build it: `/develop live research mode`
+- [x] Build it: `/develop live research mode` (assumed decisions, spec 0010; you run `make load-live`)
+Spec [0010](../specs/0010-live-research-mode/index.md) (Assumed) · code in `engine/src/engine/live/`, `services/api/src/api/settings.py`
 
 ## Slice 5: Ship
 

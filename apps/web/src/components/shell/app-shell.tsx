@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { ApiStatus } from "./api-status";
 import { DataModeBanner } from "./data-mode-banner";
 import { ShellWarmup } from "./shell-warmup";
+import { SiteNav } from "./site-nav";
 
 export function AppShell({ children }: { children: ReactNode }) {
   return (
@@ -21,6 +22,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Link href="/" className="text-base font-semibold">
             Swing Scan
           </Link>
+          <SiteNav />
           <ApiStatus />
         </div>
       </header>

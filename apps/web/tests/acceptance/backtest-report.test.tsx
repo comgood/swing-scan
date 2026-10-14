@@ -1,16 +1,15 @@
-// QA acceptance: U-3 (the assumptions header) on the portfolio backtest report `/backtest`
-// (scope feature 9), from doc 01 section 6.6 and spec 0007 AC-10 and AC-12. Written against the
-// rendered page (roles and labels), the `PortfolioResult` contract and its mocks; the report's
-// own code is not read.
+// QA acceptance: U-3 (the assumptions header) and U-4 (the trial counter) on the portfolio
+// backtest report `/backtest` (scope feature 9), from doc 01 section 6.6 and spec 0007 AC-10 and
+// AC-12, with spec 0004 AC-1 for the counter's place in a report. Written against the rendered
+// page (roles and labels), the `PortfolioResult` contract and its mocks; the report's own code is
+// not read. The exit lab report's half of U-3, U-4 and U-8 is in `exit-lab-report.test.tsx`.
 //
-// The report is on `main`, so these are plain `it` and always block. U-3 stays pending in
-// tests/acceptance/status.yaml until the exit lab report (feature 12) shows its header too
-// (`horizon_bars`, the seed and one exit rule line per config).
+// The report is on `main`, so these are plain `it` and always block.
 import type { Schemas } from "@swing-scan/api-client";
-import { screen, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import BacktestPage from "@/app/backtest/page";
 import { mocks } from "@/mocks/handlers";
@@ -27,6 +26,15 @@ type Assumptions = Schemas["Assumptions"];
 
 /** Spec 0007 AC-12: a null field reads this. */
 const NOT_USED = "not used in portfolio mode";
+
+/** Spec 0004, assumption 3. */
+const LOCAL_PREFIX = "swing-scan:trials:v1:";
+const SESSION_KEY = "swing-scan:session-trials:v1";
+
+beforeEach(() => {
+  localStorage.clear();
+  sessionStorage.clear();
+});
 
 /** Run the report on Breakout with the form's defaults and return the assumptions header. */
 async function runReport(body: Schemas["PortfolioResult"] = mocks.backtestPortfolio) {
@@ -161,5 +169,35 @@ describe("U-3 assumptions header on the portfolio report", () => {
     expect(valueOf(pairs, /data version/i)).toBe("live:2026-10-01");
     // A null seed never shows a number (spec 0007 AC-12 gives nulls one fixed wording).
     expect(valueOf(pairs, /data seed/i)).not.toMatch(/\d/);
+  });
+});
+
+describe("U-4 the trial counter on the portfolio report", () => {
+  const TRIAL = mocks.backtestPortfolio.trial;
+
+  it("U-4: the counter shows once a 200 result is on screen, beside the header", async () => {
+    const header = await runReport();
+    const line = await screen.findByText("Trial #1 for this rule structure · 1 this session");
+    expect(line).toBeVisible();
+    expect(header.contains(line)).toBe(true);
+    expect(JSON.parse(localStorage.getItem(LOCAL_PREFIX + TRIAL.structure_key) ?? "null")).toEqual(
+      TRIAL.pair_keys,
+    );
+  });
+
+  it("U-4: a failed run shows no counter and adds no count", async () => {
+    server.use(
+      http.post("*/api/v1/backtest", () =>
+        HttpResponse.json({ detail: "engine exploded" }, { status: 500 }),
+      ),
+    );
+    nav.set("template=breakout_52w", "/backtest");
+    renderPage(BacktestPage);
+    await userEvent.setup().click(await screen.findByRole("button", { name: "Run backtest" }));
+    await waitFor(() => expect(screen.getByRole("alert")).toBeInTheDocument());
+    expect(screen.queryByText(/Trial #/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/this session/)).not.toBeInTheDocument();
+    expect(localStorage.getItem(LOCAL_PREFIX + TRIAL.structure_key)).toBeNull();
+    expect(sessionStorage.getItem(SESSION_KEY)).toBeNull();
   });
 });

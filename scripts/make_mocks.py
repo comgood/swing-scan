@@ -4,6 +4,10 @@ Mocks are real contract models filled from a seeded generator (seed 42), never f
 data, so they are safe to commit (D-6). Counts and rates agree with the trades they
 summarise. Each 422 and 501 mock is a real response from the app through `TestClient`.
 Every float is rounded to 6 places so the output is byte identical on macOS and Linux.
+
+The numbers are the generator's, but every decision a consumer can see is the engine's own:
+warnings, which trades a truncated list keeps and what `exposure_pct` measures all come from
+`engine.api`, so a mock can never prove the opposite of production.
 """
 
 from __future__ import annotations
@@ -22,7 +26,11 @@ from typing import Any
 from fastapi.testclient import TestClient
 from pydantic import BaseModel, TypeAdapter
 
-from api.main import app
+from engine.api import (  # the engine's own warnings and caps, never a second copy of them
+    MAX_TRADES,
+    _lab_warnings,
+    _warnings,
+)
 from engine.contracts import (
     CONTRACT_VERSION,
     INDICATOR_SPECS,
@@ -30,15 +38,12 @@ from engine.contracts import (
     Assumptions,
     BenchmarkMetrics,
     BenchmarkSplit,
-    BestIs,
     ConfigRow,
     DataMeta,
-    EdgeMetrics,
     EdgeSplit,
     Entries,
     ExitConfig,
     ExitReason,
-    Guides,
     IndicatorSpec,
     MetaResponse,
     Point,
@@ -51,14 +56,21 @@ from engine.contracts import (
     TemplateOut,
     Trade,
     TradeLabResult,
-    TradeMetrics,
     TradeSplit,
     Trial,
-    Warning,
     entries_hash,
     pair_key,
     scan_columns,
     structure_key,
+)
+from engine.metrics import (
+    best_is,
+    edge,
+    even_spread,
+    exposure_pct,
+    guides_is,
+    trade_metrics,
+    trade_stats,
 )
 
 OUT = Path(__file__).resolve().parents[1] / "contracts" / "mocks"
@@ -66,7 +78,7 @@ SEED = 42
 OOS_FRACTION = 0.3
 SLIPPAGE_BPS = 10.0
 HORIZON = 60
-TRADE_CAP = 2000
+MAX_POSITIONS = 10
 POINT_CAP = 500
 
 BENCHMARK = "SYN-INDEX"
@@ -212,74 +224,6 @@ def by_entry(trades: list[Trade]) -> list[Trade]:
     return sorted(trades, key=lambda t: (t.entry_date, t.ticker))
 
 
-def mean(values: Sequence[float]) -> float | None:
-    return statistics.fmean(values) if values else None
-
-
-def distinct_weeks(trades: Sequence[Trade]) -> int:
-    return len({t.entry_date.isocalendar()[:2] for t in trades})
-
-
-@dataclass(frozen=True)
-class Stats:
-    """The per trade metrics shared by both modes (spec 0002, Metric definitions)."""
-
-    n_trades: int
-    win_rate_pct: float | None
-    avg_win_pct: float | None
-    avg_loss_pct: float | None
-    expectancy_pct: float | None
-    expectancy_r: float | None
-    expectancy_per_bar_pct: float | None
-    profit_factor: float | None
-    avg_bars_held: float | None
-    avg_mae_pct: float | None
-    avg_mfe_pct: float | None
-    horizon_exit_pct: float | None
-
-
-def trade_stats(trades: Sequence[Trade]) -> Stats:
-    n = len(trades)
-    returns = [t.return_pct for t in trades]
-    wins = [r for r in returns if r > 0]
-    losses = [r for r in returns if r <= 0]
-    r_values = [t.r_multiple for t in trades if t.r_multiple is not None]
-    bars = sum(t.bars_held for t in trades)
-    return Stats(
-        n_trades=n,
-        win_rate_pct=len(wins) / n * 100 if n else None,
-        avg_win_pct=mean(wins),
-        avg_loss_pct=mean(losses),
-        expectancy_pct=mean(returns),
-        expectancy_r=mean(r_values) if n and len(r_values) == n else None,
-        expectancy_per_bar_pct=sum(returns) / bars if bars else None,
-        profit_factor=sum(wins) / abs(sum(losses)) if n and losses and sum(losses) else None,
-        avg_bars_held=mean([float(t.bars_held) for t in trades]),
-        avg_mae_pct=mean([t.mae_pct for t in trades]),
-        avg_mfe_pct=mean([t.mfe_pct for t in trades]),
-        horizon_exit_pct=(sum(t.exit_reason == "horizon" for t in trades) / n * 100 if n else None),
-    )
-
-
-def trade_metrics(trades: Sequence[Trade]) -> TradeMetrics:
-    s = trade_stats(trades)
-    return TradeMetrics(
-        n_trades=s.n_trades,
-        distinct_weeks=distinct_weeks(trades),
-        win_rate_pct=s.win_rate_pct,
-        avg_win_pct=s.avg_win_pct,
-        avg_loss_pct=s.avg_loss_pct,
-        expectancy_pct=s.expectancy_pct,
-        expectancy_r=s.expectancy_r,
-        expectancy_per_bar_pct=s.expectancy_per_bar_pct,
-        profit_factor=s.profit_factor,
-        avg_bars_held=s.avg_bars_held,
-        avg_mae_pct=s.avg_mae_pct,
-        avg_mfe_pct=s.avg_mfe_pct,
-        horizon_exit_pct=s.horizon_exit_pct,
-    )
-
-
 def split(trades: Sequence[Trade]) -> tuple[list[Trade], list[Trade]]:
     return [t for t in trades if t.segment == "is"], [t for t in trades if t.segment == "oos"]
 
@@ -316,12 +260,15 @@ def curve_metrics(values: list[float], start: int, end: int) -> tuple[float, flo
     return cagr, max_dd, sharpe
 
 
-def exposure_pct(trades: Sequence[Trade], start: int, end: int) -> float:
+def invested_share(trades: Sequence[Trade], start: int, end: int) -> list[float]:
+    """Share of equity held in positions at each close, what the engine's `exposure_pct`
+    averages: equal weight over `MAX_POSITIONS` slots, not the share of sessions held."""
     index = {d: i for i, d in enumerate(SESSIONS)}
-    held: set[int] = set()
+    open_count = [0] * len(SESSIONS)
     for t in trades:
-        held.update(range(index[t.entry_date], index[t.exit_date] + 1))
-    return len(held & set(range(start, end))) / (end - start) * 100
+        for i in range(index[t.entry_date], index[t.exit_date] + 1):
+            open_count[i] += 1
+    return [min(c, MAX_POSITIONS) / MAX_POSITIONS for c in open_count[start:end]]
 
 
 # ---- Shared response parts -------------------------------------------------------------
@@ -333,7 +280,7 @@ def assumptions(configs: list[ExitConfig], portfolio: bool) -> Assumptions:
         slippage_bps=SLIPPAGE_BPS,
         commission_bps=0,
         sizing="equal_weight" if portfolio else "unit_notional",
-        max_positions=10 if portfolio else None,
+        max_positions=MAX_POSITIONS if portfolio else None,
         entry_rising_edge=True,
         cooldown_bars=10,
         cooldown_basis="signal",
@@ -365,14 +312,6 @@ def benchmark_parts(rng: random.Random) -> tuple[list[Point], BenchmarkSplit]:
         oos=BenchmarkMetrics(cagr_pct=oos_m[0], max_dd_pct=oos_m[1]),
     )
     return stride(values), split_
-
-
-def cap(trades: list[Trade]) -> list[Trade]:
-    """Over 2,000 trades, keep 2,000 evenly spread through the entry order."""
-    total = len(trades)
-    if total <= TRADE_CAP:
-        return trades
-    return [trades[round(i * (total - 1) / (TRADE_CAP - 1))] for i in range(TRADE_CAP)]
 
 
 # ---- Portfolio mode --------------------------------------------------------------------
@@ -418,7 +357,7 @@ def portfolio_metrics(
         expectancy_r=s.expectancy_r,
         profit_factor=s.profit_factor,
         avg_bars_held=s.avg_bars_held,
-        exposure_pct=exposure_pct(trades, start, end),
+        exposure_pct=exposure_pct(invested_share(trades, start, end)),
     )
 
 
@@ -439,26 +378,13 @@ def portfolio_result(rng: random.Random, rule: Rule, n_trades: int) -> Portfolio
     equity = random_walk(rng, 0.0004, 0.009) if trades else [100.0] * len(SESSIONS)
     is_trades, oos_trades = split(trades)
     benchmark, benchmark_metrics = benchmark_parts(rng)
-    shown = cap(trades)
-    warnings = []
-    if not trades:
-        warnings.append(
-            Warning(code="no_entries", config_index=None, message="The rule produced no entries.")
-        )
-    if len(shown) < len(trades):
-        warnings.append(
-            Warning(
-                code="trades_truncated",
-                config_index=0,
-                message=f"Showing {len(shown)} of {len(trades)} trades; metrics use every trade.",
-            )
-        )
+    shown = trades[-MAX_TRADES:]  # the latest, as `_portfolio()` keeps them
     return PortfolioResult(
         mode="portfolio",
         assumptions=assumptions([config], portfolio=True),
         oos_start=OOS_START,
         trial=trial(rule, [config]),
-        warnings=warnings,
+        warnings=_warnings(len(trades)),
         metrics=PortfolioSplit(
             is_=portfolio_metrics(is_trades, equity, 0, OOS_INDEX),
             oos=portfolio_metrics(oos_trades, equity, OOS_INDEX, len(SESSIONS)),
@@ -499,66 +425,6 @@ LAB_CONFIGS = [
 ]
 
 
-def edge(strategy: TradeMetrics, random_: TradeMetrics) -> EdgeMetrics:
-    def diff(a: float | None, b: float | None) -> float | None:
-        return a - b if a is not None and b is not None else None
-
-    return EdgeMetrics(
-        expectancy_pct=diff(strategy.expectancy_pct, random_.expectancy_pct),
-        expectancy_r=diff(strategy.expectancy_r, random_.expectancy_r),
-        expectancy_per_bar_pct=diff(
-            strategy.expectancy_per_bar_pct, random_.expectancy_per_bar_pct
-        ),
-        win_rate_pct=diff(strategy.win_rate_pct, random_.win_rate_pct),
-    )
-
-
-HIGHER_IS_BETTER = (
-    "win_rate_pct",
-    "avg_win_pct",
-    "avg_loss_pct",
-    "expectancy_pct",
-    "expectancy_r",
-    "expectancy_per_bar_pct",
-    "profit_factor",
-    "avg_mae_pct",
-    "avg_mfe_pct",
-)
-
-
-def best_is(rows: list[ConfigRow]) -> BestIs:
-    best: dict[str, int | None] = {}
-    for metric in (*HIGHER_IS_BETTER, "horizon_exit_pct"):
-        sign = -1 if metric == "horizon_exit_pct" else 1
-        scored = [
-            (sign * value, -i)
-            for i, row in enumerate(rows)
-            if (value := getattr(row.strategy.is_, metric)) is not None
-        ]
-        best[metric] = -max(scored)[1] if scored else None
-    return BestIs.model_validate(best)
-
-
-def percentile(values: list[float], q: float) -> float | None:
-    """NumPy's default (linear interpolation) percentile."""
-    if not values:
-        return None
-    ordered = sorted(values)
-    pos = (len(ordered) - 1) * q
-    lo = math.floor(pos)
-    hi = min(lo + 1, len(ordered) - 1)
-    return ordered[lo] + (ordered[hi] - ordered[lo]) * (pos - lo)
-
-
-def guides(baseline_is: list[Trade]) -> Guides:
-    winners = [t.mae_pct for t in baseline_is if t.return_pct > 0]
-    return Guides(
-        winner_mae_p75_pct=percentile(winners, 0.75),
-        winner_mae_p90_pct=percentile(winners, 0.90),
-        mfe_median_pct=percentile([t.mfe_pct for t in baseline_is], 0.5),
-    )
-
-
 def trade_lab_result(rng: random.Random, rule: Rule) -> TradeLabResult:
     configs = LAB_CONFIGS
     last_entry = len(SESSIONS) - 2
@@ -580,9 +446,8 @@ def trade_lab_result(rng: random.Random, rule: Rule) -> TradeLabResult:
         for _ in range(oos_count)
     ]
     rows: list[ConfigRow] = []
-    baseline_trades: list[Trade] = []
-    warnings: list[Warning] = []
-    for i, config in enumerate(configs):
+    strategies: list[list[Trade]] = []
+    for config in configs:
         strategy = by_entry([make_trade(rng, m, config, HORIZON) for m in moves])
         random_ = by_entry([make_trade(rng, m, config, HORIZON) for m in random_moves])
         s_is, s_oos = (trade_metrics(part) for part in split(strategy))
@@ -595,26 +460,15 @@ def trade_lab_result(rng: random.Random, rule: Rule) -> TradeLabResult:
                 edge=EdgeSplit(is_=edge(s_is, r_is), oos=edge(s_oos, r_oos)),
             )
         )
-        if i == 0:
-            baseline_trades = strategy
-        if any((m.horizon_exit_pct or 0) > 10 for m in (s_is, s_oos)):
-            warnings.append(
-                Warning(
-                    code="horizon_exits_over_10pct",
-                    config_index=i,
-                    message=(
-                        f"{config.name}: more than 10% of trades hit the {HORIZON} bar "
-                        "horizon, so its results are cut short."
-                    ),
-                )
-            )
-    shown = cap(baseline_trades)
+        strategies.append(strategy)
+    baseline_trades = strategies[0]
+    shown = even_spread(baseline_trades, MAX_TRADES)
     return TradeLabResult(
         mode="trade",
         assumptions=assumptions(configs, portfolio=False),
         oos_start=OOS_START,
         trial=trial(rule, configs),
-        warnings=warnings,
+        warnings=_lab_warnings([c.name for c in configs], strategies, len(moves), HORIZON),
         entries=Entries(
             count=len(moves),
             is_count=is_count,
@@ -625,8 +479,8 @@ def trade_lab_result(rng: random.Random, rule: Rule) -> TradeLabResult:
             random_oos_count=oos_count,
         ),
         rows=rows,
-        best_is=best_is(rows),
-        guides_is=guides(split(baseline_trades)[0]),
+        best_is=best_is([row.strategy.is_ for row in rows]),
+        guides_is=guides_is(split(baseline_trades)[0]),
         baseline_trades=shown,
         baseline_trades_total=len(baseline_trades),
         baseline_trades_truncated=len(shown) < len(baseline_trades),
@@ -670,8 +524,33 @@ def condition(ind: str, n: int | None = None) -> dict[str, Any]:
     return {"left": left, "op": ">", "right": {"kind": "value", "value": 5}}
 
 
+def app_with_no_market() -> TestClient:
+    """The real app with no market loaded, whatever this machine has generated.
+
+    The app loads its market at import from `$SYNTHETIC_DATA_DIR` (spec 0005 AC-8) and
+    `501.scan.json` is only reachable while none is loaded, so `api.main` is imported here,
+    under a fresh empty directory, rather than at module scope. `make contracts` then writes
+    the same mocks with or without a local `data/synthetic` from `make data`.
+    """
+    import os  # local, so the whole no market fix stays in one region of this file
+    from tempfile import TemporaryDirectory
+
+    from engine.data import DATA_DIR_ENV
+
+    with TemporaryDirectory(prefix="swing-scan-no-market-") as empty:
+        os.environ[DATA_DIR_ENV] = empty
+        from api.main import app  # loads its market from `empty`, and so finds none
+        from api.state import market
+    if market is not None:
+        raise RuntimeError(
+            "the 501 mock needs an app with no market loaded, but one is: `api.main` was "
+            f"imported before {DATA_DIR_ENV} pointed at an empty directory"
+        )
+    return TestClient(app)
+
+
 def error_mocks() -> None:
-    client = TestClient(app)
+    client = app_with_no_market()
     ok_rule = TEMPLATES[0].rule.model_dump(mode="json")
     config = {"name": "Baseline", "exits": [{"type": "stop_pct", "pct": 8}]}
 
@@ -745,7 +624,14 @@ def main() -> None:
     write("scan.json", scan_response(rng, rule))
     write("scan.empty.json", ScanResponse(as_of=SESSIONS[-1], columns=scan_columns(rule), rows=[]))
     write("backtest.portfolio.json", portfolio_result(rng, rule, 150))
-    write("backtest.portfolio.truncated.json", portfolio_result(rng, rule, 2600))
+    # shortcut: the truncation mock keeps 120 of its 2,000 trades, where the API would send all
+    # 2,000, so its warning message still quotes production's 2,000; it saves 36k committed lines
+    # and nothing reads the count. Restore the full slice if a consumer needs a realistic page.
+    truncated = portfolio_result(rng, rule, 2600)
+    write(
+        "backtest.portfolio.truncated.json",
+        truncated.model_copy(update={"trades": truncated.trades[-120:]}),
+    )
     write("backtest.trade_lab.json", trade_lab_result(rng, rule))
     write("backtest.no_entries.json", portfolio_result(rng, rule, 0))
     error_mocks()

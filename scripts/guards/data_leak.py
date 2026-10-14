@@ -19,8 +19,9 @@ DATA_SUFFIXES_UNDER_BLOCKED_DIRS = (".parquet", ".csv")
 KEY_PATTERNS = (
     # Alpaca key IDs: PK (paper), AK (live) or CK, then 18 uppercase letters or digits.
     re.compile(r"\b[PAC]K[A-Z0-9]{18}\b"),
-    # Any Alpaca variable assigned a non empty value (empty placeholders are fine).
-    re.compile(r"ALPACA_API_(?:KEY_ID|SECRET_KEY)\s*[=:]\s*['\"]?[A-Za-z0-9/+]{16,}"),
+    # Any Alpaca variable assigned a non empty value (empty placeholders are fine). Alpaca's own
+    # SDK and docs spell it APCA_, so a .env copied from the vendor must match too.
+    re.compile(r"(?:ALPACA|APCA)_API_(?:KEY_ID|SECRET_KEY)\s*[=:]\s*['\"]?[A-Za-z0-9/+]{16,}"),
 )
 
 
@@ -40,6 +41,9 @@ def content_problem(path: str) -> str | None:
         raw = Path(path).read_bytes()
     except OSError:
         return None  # deleted or unreadable; nothing to scan
+    if raw[:4] == b"PAR1":
+        # Parquet's magic bytes, so a market dump renamed to .dat is still caught.
+        return "is a parquet file whatever its name"
     if b"\0" in raw[:8192]:
         return None  # binary
     text = raw.decode("utf-8", errors="ignore")

@@ -57,7 +57,7 @@
       "expectancy_r": -0.02978,
       "profit_factor": 0.917267,
       "avg_bars_held": 17.504274,
-      "exposure_pct": 90.131579
+      "exposure_pct": 23.004386
     },
     "oos": {
       "n_trades": 33,
@@ -71,7 +71,7 @@
       "expectancy_r": -0.051854,
       "profit_factor": 0.857326,
       "avg_bars_held": 17.69697,
-      "exposure_pct": 75.703325
+      "exposure_pct": 15.780051
     }
   },
   "benchmark_metrics": {

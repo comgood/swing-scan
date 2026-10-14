@@ -8,6 +8,7 @@ type Assumptions = Schemas["Assumptions"];
 type Exit = ExitConfig["exits"][number];
 
 export const NOT_USED = "not used in portfolio mode";
+export const NOT_USED_TRADE = "not used in trade mode";
 
 interface AssumptionLabel<K extends keyof Assumptions> {
   label: string;
@@ -35,8 +36,6 @@ function configText(config: ExitConfig): string {
   const exits = config.exits.length ? config.exits.map(exitText).join(", ") : "no exits";
   return `${config.name}: ${exits}`;
 }
-
-const yes = (on: boolean) => (on ? "yes" : "no");
 
 export const ASSUMPTION_LABELS = {
   fill_model: {
@@ -69,8 +68,15 @@ export const ASSUMPTION_LABELS = {
     label: "Last bar entry",
     text: () => "none: a signal on the last bar is never entered",
   },
-  same_ticker_overlap: { label: "Overlapping trades in one ticker", text: yes },
-  horizon_bars: { label: "Horizon", text: (v) => `${formatInt(v)} bars` },
+  same_ticker_overlap: {
+    label: "Overlapping trades in one ticker",
+    text: (v) => (v ? "yes: same ticker trades may overlap" : "no"),
+  },
+  horizon_bars: {
+    label: "Horizon",
+    text: (v) =>
+      `${formatInt(v)} bars: a trade still open on bar ${formatInt(v)} exits at its close`,
+  },
   seed: { label: "Random seed", text: (v) => String(v) },
   configs: {
     label: "Exit rules",
@@ -100,12 +106,16 @@ export interface AssumptionLine {
   text: string;
 }
 
-/** The header's lines in map order; a null field reads "not used in portfolio mode". */
-export function assumptionLines(assumptions: Assumptions): AssumptionLine[] {
+/** The header's lines in map order; a null field reads "not used in <mode> mode" (AC-12, AC-19). */
+export function assumptionLines(
+  assumptions: Assumptions,
+  mode: "portfolio" | "trade" = "portfolio",
+): AssumptionLine[] {
+  const notUsed = mode === "trade" ? NOT_USED_TRADE : NOT_USED;
   return (Object.keys(ASSUMPTION_LABELS) as (keyof Assumptions)[]).map((key) => {
     const entry = ASSUMPTION_LABELS[key] as AssumptionLabel<typeof key>;
     const value = assumptions[key];
-    const text = value === null || value === undefined ? NOT_USED : entry.text(value as never);
+    const text = value === null || value === undefined ? notUsed : entry.text(value as never);
     return { key, label: entry.label, text };
   });
 }

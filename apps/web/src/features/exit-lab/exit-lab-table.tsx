@@ -82,6 +82,23 @@ export function formatValue(kind: ValueKind, v: Value): ReactNode {
   }
 }
 
+/**
+ * A term keeps its label and gains one plain line (doc 01 section 6.8): the line is the `abbr`
+ * tooltip and, for anyone not hovering, a screen reader only sentence. No `aria-label` here: the
+ * acceptance suite indexes the IS and OOS leaf headers by that attribute.
+ */
+function Explained({ label, hint }: { label: string; hint?: string }) {
+  if (!hint) return label;
+  return (
+    <>
+      <abbr title={hint} className="no-underline">
+        {label}
+      </abbr>
+      <span className="sr-only">. {hint}</span>
+    </>
+  );
+}
+
 /** The footnote mark on an R cell of a config without a stop (X-4). */
 function NoStopMark() {
   return (
@@ -207,20 +224,23 @@ export function ExitLabTable({ result }: { result: TradeLabResult }) {
               Exit config
             </TableHead>
             <TableHead scope="colgroup" colSpan={METRIC_COLUMNS.length * 2} className="text-center">
-              Per trade metrics
+              Per trade metrics, in sample (IS) and out of sample (OOS)
             </TableHead>
             <TableHead
               scope="colgroup"
               colSpan={EDGE_COLUMNS.length * 2}
               className="border-l text-center"
             >
-              Edge vs random
+              <Explained
+                label="Edge vs random"
+                hint="This config's value minus the same config run on random entries."
+              />
             </TableHead>
           </TableRow>
           <TableRow>
             {METRIC_COLUMNS.map((column) => (
               <TableHead key={column.key} scope="colgroup" colSpan={2} className="text-center">
-                {column.label}
+                <Explained label={column.label} hint={column.hint} />
               </TableHead>
             ))}
             {EDGE_COLUMNS.map((column, i) => (
@@ -230,7 +250,7 @@ export function ExitLabTable({ result }: { result: TradeLabResult }) {
                 colSpan={2}
                 className={cn("text-center", i === 0 && "border-l")}
               >
-                {column.label}
+                <Explained label={column.label} hint={column.hint} />
               </TableHead>
             ))}
           </TableRow>

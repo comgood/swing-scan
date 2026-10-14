@@ -11,6 +11,7 @@ import engine
 from engine.api import NotYetImplemented
 from engine.contracts import CONTRACT_VERSION
 
+from . import state
 from .routes import backtest, catalog, scan
 from .settings import Settings
 
@@ -40,7 +41,11 @@ v1 = APIRouter(prefix="/api/v1")
 @v1.get("/health")
 def health() -> dict[str, str]:
     """Readiness check for the Lambda Web Adapter and the web app's warm up ping."""
-    return {"status": "ok", "data_mode": settings.data_mode, "version": engine.__version__}
+    # The loaded dataset's own mode, so the web app's banner (U-1, U-2) describes the data on
+    # screen rather than an environment variable someone forgot to set. Kept out of the
+    # docstring: FastAPI publishes that as the route description, and this is not contract text.
+    mode = state.market.meta.data_mode if state.market else settings.data_mode
+    return {"status": "ok", "data_mode": mode, "version": engine.__version__}
 
 
 v1.include_router(catalog.router)

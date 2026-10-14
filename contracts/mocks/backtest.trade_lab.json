@@ -101,7 +101,7 @@
     {
       "code": "horizon_exits_over_10pct",
       "config_index": 4,
-      "message": "Wide target, no stop: more than 10% of trades hit the 60 bar horizon, so its results are cut short."
+      "message": "Wide target, no stop: more than 10% of these trades were still open at the 60 bar horizon, so they were closed early and the results are cut short."
     }
   ],
   "entries": {
@@ -533,8 +533,8 @@
     "horizon_exit_pct": 0
   },
   "guides_is": {
-    "winner_mae_p75_pct": -2.536449,
-    "winner_mae_p90_pct": -1.702602,
+    "winner_mae_p75_pct": -5.898606,
+    "winner_mae_p90_pct": -6.79234,
     "mfe_median_pct": 7.509175
   },
   "baseline_trades": [

@@ -124,7 +124,7 @@ export const SAMPLE_TRADE_LAB: TradeLabResult = {
     avg_mfe_pct: 1,
     horizon_exit_pct: 0,
   },
-  guides_is: { winner_mae_p75_pct: -2.1, winner_mae_p90_pct: -1.3, mfe_median_pct: 6.4 },
+  guides_is: { winner_mae_p75_pct: -2.1, winner_mae_p90_pct: -3.4, mfe_median_pct: 6.4 },
   baseline_trades: [],
   baseline_trades_total: 0,
   baseline_trades_truncated: false,

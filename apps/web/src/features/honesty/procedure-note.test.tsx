@@ -9,7 +9,9 @@ describe("ProcedureNote (U-8, AC-7)", () => {
   it("renders the U-8 copy word for word as one line of text", () => {
     render(<ProcedureNote />);
     expect(PROCEDURE_NOTE).toBe(
-      "Trade mode isolates the exit effect. Pick the exit on IS, read OOS once, then confirm with a single portfolio backtest.",
+      "Trade mode isolates the exit effect: every config trades identical entries, so the exit " +
+        "is the only difference. Pick the exit on in sample (IS), read out of sample (OOS) once, " +
+        "then confirm with a single portfolio backtest.",
     );
     expect(screen.getByText(PROCEDURE_NOTE)).toBeVisible();
   });

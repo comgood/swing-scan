@@ -296,7 +296,7 @@ For each config, with IS | OOS columns:
 - avg MAE / MFE;
 - **% exited by horizon**, with a warning above 10% (X-9).
 
-The response contains **no CAGR, max DD or Sharpe** in trade mode (X-8). A one-line note under the table gives the procedure (U-8): *"Trade mode isolates the exit effect. Pick the exit on IS, read OOS once, then confirm with a single portfolio backtest."*
+The response contains **no CAGR, max DD or Sharpe** in trade mode (X-8). A one-line note under the table gives the procedure (U-8): *"Trade mode isolates the exit effect: every config trades identical entries, so the exit is the only difference. Pick the exit on in sample (IS), read out of sample (OOS) once, then confirm with a single portfolio backtest."*
 
 **Random-entry baseline (X-10, lead ruling 7):**
 - **Sampling:** for each run, sample the **same number of entries** as the strategy, **stratified into IS and OOS counts**. Draws are uniform from (ticker, t) pairs that are alive and not on the ticker's last bar. **Seed** = `sim.seed` (default 42), shown in the assumptions.

@@ -160,3 +160,34 @@ def test_with_a_market_loaded_scan_answers_200(monkeypatch: pytest.MonkeyPatch) 
     assert body["as_of"] == "2020-01-03"
     assert [row["ticker"] for row in body["rows"]] == ["AAA"]
     assert body["rows"][0]["new_today"] is True
+
+
+def test_a_validation_error_building_the_backtest_response_is_500_not_422(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Only the request errors (`range_outside_data`) map to 422; a contract bound the engine
+    # breaks while building its result is a bug, so it surfaces as a 500.
+    from engine import api as use_cases
+    from engine.contracts import Trade
+
+    def broken(*_: object) -> None:
+        Trade.model_validate({"ticker": "AAA"})
+
+    _fixture_market(monkeypatch)
+    monkeypatch.setattr(use_cases, "backtest", broken)
+    res = client.post("/api/v1/backtest", json={"rule": RULE, "configs": configs(1)})
+    assert res.status_code == 500
+
+
+def test_a_window_with_no_session_says_so(monkeypatch: pytest.MonkeyPatch) -> None:
+    _fixture_market(monkeypatch)  # bars 1 to 6: 2020-01-02 to 2020-01-09
+    sim = {"start": "2020-01-04", "end": "2020-01-05"}  # a weekend
+    res = client.post("/api/v1/backtest", json={"rule": RULE, "configs": configs(1), "sim": sim})
+    assert res.status_code == 422
+    (error,) = res.json()["detail"]
+    assert (error["type"], error["loc"]) == ("range_outside_data", ["body", "sim", "start"])
+    assert error["msg"] == (
+        "no session between start 2020-01-04 and end 2020-01-05; "
+        "the data runs from 2020-01-02 to 2020-01-09"
+    )
+    assert error["ctx"] == {"min": "2020-01-02", "max": "2020-01-09"}

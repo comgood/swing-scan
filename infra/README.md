@@ -163,7 +163,14 @@ The warm up ping is the web app's (spec 0001): it calls `GET /api/v1/health` on 
 
 GitHub turns off scheduled workflows in a public repo after 60 days with no repository activity. Any push to `main` resets the clock. If it was turned off, GitHub emails you; turn it back on with `gh workflow enable keep-alive.yml`. The deploy workflow is triggered by CI, not by a schedule, so the rule never touches it.
 
-## 11. Day 1 checks (doc 02 task F6), outcome
+## 11. Live research mode (local only, nothing deployed)
+
+`make load-live` is the one step that uses Alpaca credentials, and it runs only on your machine: `DATA_MODE=live` refuses to start on Lambda, in CI, or bound to anything but `127.0.0.1` (D-5), and `data/live` is gitignored. Put `ALPACA_API_KEY_ID` and `ALPACA_API_SECRET_KEY` in your local `.env`; they never reach CI, the image, or Lambda.
+
+- **Feed**: the loader reads the **`iex`** feed by default, because Alpaca's free Basic plan answers **HTTP 403** for SIP historical bars. Override it with `--feed sip` or `ALPACA_FEED=sip` only on a paid plan; the chosen feed appears in `meta.data_version` (`alpaca-<feed>-all:<last bar date>`) and in the load summary.
+- **Volume caveat (research honesty)**: IEX is a single exchange and a small share of consolidated volume, so volume based rules (`vol_ratio`, `avg_volume`) and any comparison of volume across tickers are **not comparable to a full tape**. Price based rules are unaffected. The load summary repeats this every run. Live results are personal research, never a backtest claim.
+
+## 12. Day 1 checks (doc 02 task F6), outcome
 
 Checked on 2026-10-09:
 
@@ -171,3 +178,4 @@ Checked on 2026-10-09:
 - **GitHub's 60 day rule.** Doc 02 planned no scheduled workflow, so it was not applicable. Feature 15 adds one (step 10); the rule now applies to that workflow only, and step 10 says how to keep it on.
 - **Lambda 6 MB limit.** A synchronous call (which a Function URL in buffered mode is) can return at most 6 MB. The guards: the contract caps every list (scan rows ≤ 500 in `engine/src/engine/contracts/scan.py`; equity and benchmark points ≤ 500, trades ≤ 2,000 and baseline trades ≤ 2,000 in `engine/src/engine/contracts/backtest.py`) and allows at most 6 configs; the acceptance tests for B-13 (`tests/acceptance/test_backtest.py`) and X-7 (`tests/acceptance/test_exit_lab.py`) assert each response's uncompressed JSON is under 6,000,000 bytes on a 500 ticker, 5 year market; and `scripts/smoke.sh` fails if a deployed response (health, scan, a 5 config exit lab) reaches 6,000,000 bytes uncompressed. On the seed 42 market that exit lab is about 0.63 MB, and `GZipMiddleware` shrinks it again for browsers.
 - **Cold start.** See step 6: about 3.1 s.
+

@@ -1,7 +1,7 @@
 # 0005. Build the template scan on a cached Polars indicator engine with a read only template workspace
 
 **Date**: 2026-10-07
-**Status**: In Progress
+**Status**: Accepted
 
 ## Summary
 

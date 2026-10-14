@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
+from dataclasses import asdict
 from datetime import date
 
 import numpy as np
@@ -35,6 +38,15 @@ def test_same_seed_gives_equal_frames_and_meta(demo: Market) -> None:  # D-1
     assert demo.bars.equals(again.bars)
     assert demo.securities.equals(again.securities)
     assert demo.meta == again.meta
+
+
+def test_the_published_defaults_are_pinned_to_the_generator_version() -> None:  # D-1
+    """Two fresh builds agree by construction, so D-1 cannot see a changed default. This can:
+    change a number in `SyntheticConfig` and the digest moves, so bump `GENERATOR_VERSION`
+    (and this digest) rather than let every published number shift under the same version."""
+    fields = json.dumps(asdict(SyntheticConfig()), default=str, sort_keys=True)
+    digest = hashlib.sha256(fields.encode()).hexdigest()[:16]
+    assert (GENERATOR_VERSION, digest) == ("synthetic-1", "073c7b80b9d0576c")
 
 
 def test_different_seeds_give_different_markets() -> None:

@@ -148,6 +148,7 @@ def _big_market() -> Market:
 
 
 @pytest.mark.ac("S-4")
+@pytest.mark.slow
 def test_warm_scan_of_500_tickers_answers_under_a_second() -> None:
     """In process timing on a 500 ticker, 5 year market. The deployed check is in the verify
     steps (`make smoke`), because CI never calls the deployed API."""
@@ -311,6 +312,7 @@ def _eight_condition_rule() -> Rule:
 
 
 @pytest.mark.ac("S-4")
+@pytest.mark.slow
 def test_warm_scan_of_8_conditions_on_500_tickers_answers_under_a_second() -> None:
     """Spec 0005 AC-7: 8 conditions, 500 tickers by 1,260 bars, warm, in process."""
     rule = _eight_condition_rule()

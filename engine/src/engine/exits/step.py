@@ -17,6 +17,8 @@ MAE and MFE then update with the exit bar limited to what was knowable before th
 
 from __future__ import annotations
 
+from engine.contracts import ExitReason
+
 from .protocol import BarView, EntryContext, Exit, Fill, Position
 
 STOP_ORDER = ("stop_pct", "stop_atr", "trail_pct")
@@ -41,19 +43,24 @@ def open_position(
     return position
 
 
+def _stop_rank(reason: ExitReason) -> int:
+    return STOP_ORDER.index(reason) if reason in STOP_ORDER else len(STOP_ORDER)
+
+
 def _stop(position: Position, bar: BarView) -> Fill | None:
-    levels = [
-        (level, exit_.reason)
-        for exit_ in position.exits
-        if exit_.kind == "stop" and (level := exit_.level(position, bar)) is not None
-    ]
-    if not levels:
+    top: float | None = None
+    reason: ExitReason = "stop_pct"
+    for exit_ in position.exits:  # the highest level; a tie goes to the earlier STOP_ORDER
+        if exit_.kind != "stop" or (level := exit_.level(position, bar)) is None:
+            continue
+        if (
+            top is None
+            or level > top
+            or (level == top and _stop_rank(exit_.reason) < _stop_rank(reason))
+        ):
+            top, reason = level, exit_.reason
+    if top is None:
         return None
-    top = max(level for level, _ in levels)
-    reason = min(
-        (r for level, r in levels if level == top),
-        key=lambda r: STOP_ORDER.index(r) if r in STOP_ORDER else len(STOP_ORDER),
-    )
     if bar.open <= top:
         return Fill(bar.open, reason, "open")
     if bar.low <= top:
@@ -104,8 +111,11 @@ def _track_extremes(position: Position, bar: BarView, fill: Fill | None) -> None
         low, high = fill.price, bar.open
     else:  # intraday_target
         low, high = bar.open, fill.price
-    position.mae_low = min(position.mae_low, low)
-    position.mfe_high = max(position.mfe_high, high)
+    # Plain comparisons, not min() and max(): this runs once per held bar (spec 0009, AC-11).
+    if low < position.mae_low:
+        position.mae_low = low
+    if high > position.mfe_high:
+        position.mfe_high = high
 
 
 def step(position: Position, bar: BarView) -> Fill | None:
@@ -113,6 +123,6 @@ def step(position: Position, bar: BarView) -> Fill | None:
     position.bars_held = bar.b
     fill = _decide(position, bar)
     _track_extremes(position, bar, fill)
-    if fill is None:
-        position.high_water = max(position.high_water, bar.high)
+    if fill is None and bar.high > position.high_water:
+        position.high_water = bar.high
     return fill

@@ -2,7 +2,8 @@
 # Smoke test an API (spec 0001, doc 02 section 9 CD smoke): health, one scan on the first
 # template, and one exit lab backtest with 5 configs. Prints the first call and warm health
 # timings (right after a deploy the first call is a cold start) and fails if any response
-# body is at or over the size budget (Lambda's 6 MB response limit, B-13 and X-7).
+# body is at or over the size budget (Lambda's 6 MB response limit, B-13 and X-7). The scan
+# must also come back usable: a 200 with no rows, or with null operands, fails.
 # Usage: scripts/smoke.sh https://<function-url>   (or http://127.0.0.1:8000 for a local image)
 set -euo pipefail
 
@@ -46,6 +47,13 @@ template_id="$(jq -r '.[0].id' <<<"$templates")"
 scan_body="$(jq -c '{rule: .[0].rule}' <<<"$templates")"
 call "scan $template_id" 200 -H 'content-type: application/json' -d "$scan_body" \
   "$API_URL/api/v1/scan"
+# A deploy with no data answers 200 with no rows, and one with dead indicator columns answers
+# 200 with null operands: both must fail the smoke test, not pass it.
+if ! jq -e '(.rows | length) > 0 and all(.rows[].operands[]; type == "number")' "$out" >/dev/null; then
+  echo "scan on template $template_id answered 200 with no usable rows:" >&2
+  head -c 2000 "$out" >&2
+  exit 1
+fi
 echo "  as_of $(jq -r '.as_of' "$out"), $(jq '.rows | length' "$out") rows"
 
 # Five exit lab configs (doc 02 section 9), the same set as FIVE_CONFIGS in the X-7 acceptance test.

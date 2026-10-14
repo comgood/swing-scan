@@ -158,6 +158,31 @@ def test_data_leak_guard_blocks_market_data(tmp_path: Path, path: str) -> None:
 
 
 @pytest.mark.ac("D-6")
+def test_data_leak_guard_blocks_a_parquet_under_any_name(tmp_path: Path) -> None:
+    # The suffix list cannot catch a market dump saved as prices.dat, so the guard reads
+    # parquet's magic bytes. Without that, renaming the file is enough to commit real bars.
+    target = tmp_path / "notes" / "prices.dat"
+    target.parent.mkdir(parents=True)
+    target.write_bytes(b"PAR1" + b"\x00" * 64)
+    result = _guard(tmp_path, "notes/prices.dat")
+    assert result.returncode != 0
+    assert "parquet" in result.stdout + result.stderr
+
+
+@pytest.mark.ac("D-6")
+@pytest.mark.parametrize("name", ["ALPACA_API_SECRET_KEY", "APCA_API_SECRET_KEY"])
+def test_data_leak_guard_blocks_an_alpaca_key_in_either_spelling(tmp_path: Path, name: str) -> None:
+    # Alpaca's own SDK and docs use APCA_; gitleaks does not recognise either spelling, so
+    # these two patterns are the only thing standing between a copied .env and a public repo.
+    # Assembled at runtime so this file never holds a key shaped string itself.
+    fake = "wJalrXUtnFEMI" + "K7MDENGbPxRfiCYEXAMPLEKEY"
+    (tmp_path / ".env").write_text(f"{name}={fake}\n")
+    result = _guard(tmp_path, ".env")
+    assert result.returncode != 0
+    assert "Alpaca API key" in result.stdout + result.stderr
+
+
+@pytest.mark.ac("D-6")
 def test_data_leak_guard_allows_test_fixtures(tmp_path: Path) -> None:
     target = tmp_path / "tests" / "fixtures" / "small.csv"
     target.parent.mkdir(parents=True)

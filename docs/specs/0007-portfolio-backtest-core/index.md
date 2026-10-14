@@ -35,8 +35,12 @@ the runner up is in [rationale.md](rationale.md).
    run, then everything is marked at the close.
 4. **Free slots and sizing.** Slots = `max_positions` minus positions held at the previous close
    (a slot freed today is usable from tomorrow). Each entry's notional = equity at the signal
-   close ÷ `max_positions`, capped by the cash on hand; fractional shares, no leverage, cash
-   earns 0%.
+   close ÷ `max_positions`, capped by the cash on hand at the previous close, before any of
+   today's exits (owner ruling 2026-10-09: no exit on day d, at any fill time, funds an entry on
+   day d); fractional shares, no leverage, cash earns 0%.
+   **Missing bars** (owner ruling 2026-10-09): the day loop steps by session date. A ticker with
+   no bar on a session is neither stepped nor marked from a later bar that day; it keeps its last
+   close, and no bar dated after the session is ever read.
 5. **Ranking.** `rs(126)` at the signal bar, descending, then ticker A to Z; a null `rs(126)`
    (a young ticker) ranks after every non null one. A ticker already held is skipped.
 6. **Equity scale.** Equity starts at 100.0; the benchmark curve is `DEMO-INDEX` close rescaled
@@ -240,7 +244,7 @@ Then MAE and MFE update with the §7.2 exit bar cap, keyed on `Fill.at`. Every f
 | `win_rate_pct` | trades with `return_pct > 0` ÷ n × 100 | n = 0 |
 | `avg_win_pct`, `avg_loss_pct` | mean `return_pct` of wins, of losses (≤ 0) | no wins, no losses |
 | `expectancy_pct` | mean `return_pct` | n = 0 |
-| `expectancy_r` | mean `r_multiple` | no stop in the config, or n = 0 |
+| `expectancy_r` | mean `r_multiple` over the trades that have one (owner ruling 2026-10-09: a trade with no stop, e.g. `stop_atr` entered during ATR warm up, is left out of R only) | no stop in the config, or no trade in the segment has an `r_multiple` |
 | `profit_factor` | Σ wins ÷ abs(Σ losses) | n = 0, or abs(Σ losses) = 0 |
 | `avg_bars_held` | mean `bars_held` | n = 0 |
 | `cagr_pct` | `((E_end ÷ E_start)^(252 ÷ s) − 1) × 100`, s = sessions in the segment; E_start = the close before the segment's first session (100 for IS) | s < 2 |
@@ -328,8 +332,9 @@ until the API is real.
 ## Follow-up
 
 - [x] Owner sign-off on the twelve assumed decisions above.
-- [ ] Feature 11 adds the four remaining `Exit` classes against this spec's `step()`; B-9 and
+- [x] Feature 11 adds the four remaining `Exit` classes against this spec's `step()`; B-9 and
   B-10 (portfolio) turn green there.
-- [ ] Feature 12 builds the trade mode loop on `walk_trade()` and makes the parity oracle green.
-- [ ] Feature 10 replaces `?template=` with `?r=` on the report page.
+- [x] Feature 12 builds the trade mode loop on `walk_trade()` and makes the parity oracle green.
+- [ ] Feature 10 replaces `?template=` with `?r=` on the report page (open PR #57).
+- [ ] The fresh model review (`docs/reviews/2026-10-09-review-9-backtest-engine.md`, PR #68) asked for the cash timing, missing bar and R rulings above; BE applies them in the review fix PRs.
 - [ ] Feature 15 measures the cold start with a backtest after the scan warm up.

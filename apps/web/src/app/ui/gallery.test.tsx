@@ -82,6 +82,7 @@ describe("/ui gallery (AC-15, AC-16)", () => {
     expect(await section.findByText(/^Trial #1 for this rule structure/)).toBeVisible();
     expect(section.getByRole("columnheader", { name: "Benchmark OOS" })).toBeVisible();
     expect(section.getByText(/^Showing 12 of 2,600 trades/)).toBeVisible();
+    expect(section.getByRole("img", { name: /^Strategy equity from 100/ })).toBeVisible();
     expect(section.getAllByText("n/a").length).toBeGreaterThan(0);
   });
 
@@ -108,8 +109,8 @@ describe("/ui gallery (AC-15, AC-16)", () => {
       }),
     ).toBeDisabled();
     expect(
-      state("Number and indicator right sides").getAllByRole("combobox", { name: "Compare with" }),
-    ).toHaveLength(2);
+      state("Number and indicator right sides").getAllByRole("combobox", { name: "Field" }),
+    ).toHaveLength(4);
     expect(
       state("Eight rows (add disabled)").getByRole("button", { name: "Add condition" }),
     ).toBeDisabled();

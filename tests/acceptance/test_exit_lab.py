@@ -9,6 +9,7 @@ from __future__ import annotations
 import statistics
 import time
 from collections.abc import Sequence
+from functools import cache
 from typing import Any
 
 import pytest
@@ -23,9 +24,18 @@ from acceptance.support import (
     random_walk_frames,
     run_backtest,
     trade_lab,
-    ui_owed,
+    ui_covered_by,
 )
-from engine.contracts import TEMPLATES, Trade, TradeLabResult, TradeMetrics, entries_hash
+from engine.contracts import (
+    TEMPLATES,
+    Market,
+    TemplateOut,
+    Trade,
+    TradeLabResult,
+    TradeMetrics,
+    entries_hash,
+)
+from engine.synthetic import generate
 from golden.reference import entry_signals
 
 STRATEGY = TEMPLATES[1].rule  # pullback to a rising 21 EMA: plenty of signals on a random walk
@@ -145,7 +155,9 @@ def test_every_metric_has_is_and_oos_and_only_is_is_ranked() -> None:
 
 @pytest.mark.ac("X-3")
 def test_report_highlights_best_is_and_never_oos() -> None:
-    ui_owed("X-3 (highlight rendering)")
+    # The lab table on `/backtest`: one IS and one OOS column per metric, the "Best IS" marker in
+    # the IS cell `best_is` names and nowhere else (spec 0009 AC-13).
+    ui_covered_by("X-3", "exit-lab-report.test.tsx")
 
 
 # ---------------------------------------------------------------- X-4 no stop means no R
@@ -166,7 +178,9 @@ def test_config_without_a_stop_reports_percent_and_null_r() -> None:
 
 @pytest.mark.ac("X-4")
 def test_r_columns_show_na_with_a_footnote() -> None:
-    ui_owed("X-4 (n/a cells and footnote)")
+    # The stopless configs read "n/a" in every R cell, keep their % expectancy, and the footnote
+    # explains that R needs a stop (spec 0009 AC-14).
+    ui_covered_by("X-4", "exit-lab-report.test.tsx")
 
 
 # ---------------------------------------------------------------- X-5 IS only guides
@@ -182,10 +196,12 @@ def _percentile(xs: list[float], q: float) -> float:
 
 
 def _guides(trades: list[Trade]) -> tuple[float, float, float]:
-    winners = [t.mae_pct for t in trades if t.return_pct > 0]
+    """Spec 0002 `guides_is` (owner ruling 2026-10-09): winner percentiles on adverse
+    depth (`-mae_pct`), reported back as signed `mae_pct`, so p90 <= p75 <= 0."""
+    depth = [-t.mae_pct for t in trades if t.return_pct > 0]
     return (
-        _percentile(winners, 0.75),
-        _percentile(winners, 0.90),
+        -_percentile(depth, 0.75),
+        -_percentile(depth, 0.90),
         statistics.median(t.mfe_pct for t in trades),
     )
 
@@ -200,6 +216,8 @@ def test_guides_use_baseline_is_trades_only() -> None:
     with_oos = _guides(lab.baseline_trades)
     assert expected != with_oos, "fixture must be one where OOS trades would move the guides"
     got = lab.guides_is
+    assert got.winner_mae_p90_pct is not None and got.winner_mae_p75_pct is not None
+    assert got.winner_mae_p90_pct <= got.winner_mae_p75_pct <= 0
     assert got.winner_mae_p75_pct == pytest.approx(expected[0], abs=1e-6)
     assert got.winner_mae_p90_pct == pytest.approx(expected[1], abs=1e-6)
     assert got.mfe_median_pct == pytest.approx(expected[2], abs=1e-6)
@@ -209,6 +227,7 @@ def test_guides_use_baseline_is_trades_only() -> None:
 
 
 @pytest.mark.ac("X-7")
+@pytest.mark.slow
 def test_six_configs_and_baseline_finish_under_10_seconds_and_6_mb() -> None:
     """In process on a 500 ticker, 5 year market. The deployed number is a verify step."""
     tiny = build_market(random_walk_frames(n_tickers=3, n_bars=60, seed=1))
@@ -219,6 +238,33 @@ def test_six_configs_and_baseline_finish_under_10_seconds_and_6_mb() -> None:
     started = time.perf_counter()
     result = trade_lab(STRATEGY, six, market)
     assert time.perf_counter() - started < 10.0
+    assert len(result.model_dump_json(by_alias=True)) < 6_000_000
+
+
+@cache
+def _seed_42() -> Market:
+    """The full history synthetic market (spec 0006) that spec 0009 AC-11 names."""
+    return generate(42)
+
+
+@pytest.mark.ac("X-7")
+@pytest.mark.slow
+@pytest.mark.parametrize("template", TEMPLATES, ids=lambda t: t.id)
+def test_seed_42_six_configs_run_twice_equal_under_10_seconds_and_6_mb(
+    template: TemplateOut,
+) -> None:
+    """Spec 0009 AC-11 on the generated seed 42 market, both templates, timed warm. The in
+    process run is the CI gate; the deployed number is a verify step (ac-questions#perf)."""
+    six = [*FIVE_CONFIGS, config("Target", {"type": "target", "pct": 15})]
+    tiny = build_market(random_walk_frames(n_tickers=3, n_bars=60, seed=1))
+    trade_lab(STRATEGY, six, tiny)  # fail fast on a stub
+    market = _seed_42()
+    first = trade_lab(template.rule, six, market)  # also warms the caches
+    started = time.perf_counter()
+    result = trade_lab(template.rule, six, market)
+    assert time.perf_counter() - started < 10.0
+    assert result == first
+    assert result.entries.count > 0, "the budget must be measured on a run that trades"
     assert len(result.model_dump_json(by_alias=True)) < 6_000_000
 
 
@@ -309,7 +355,8 @@ def test_open_trade_exits_at_the_horizon_and_warns() -> None:
 
 @pytest.mark.ac("X-9")
 def test_horizon_warning_badge_renders() -> None:
-    ui_owed("X-9 (warning badge on the config row)")
+    # The warned config's row carries the badge and the message; no other row does (AC-15).
+    ui_covered_by("X-9", "exit-lab-report.test.tsx")
 
 
 # ---------------------------------------------------------------- X-10 random baseline

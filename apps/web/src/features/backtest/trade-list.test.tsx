@@ -73,6 +73,16 @@ describe("TradeList", () => {
     ]);
   });
 
+  // covers: doc 01 section 6.8, the term keeps its header word and gains one plain line
+  it("explains MAE, MFE and R without renaming a header", () => {
+    renderList();
+    const mae = screen.getByRole("columnheader", { name: "MAE" });
+    expect(within(mae).getByTitle(/deepest a trade went against you/).textContent).toBe("MAE");
+    // Not repeated in the sort button's name; the paragraph above the table says it in full.
+    expect(screen.getByText(/MAE is the deepest a trade went against you/)).toBeVisible();
+    expect(screen.getByText(/MFE is the furthest a trade went in your favour/)).toBeVisible();
+  });
+
   it("marks out of sample trades, which sort above IS on the second click", async () => {
     const user = userEvent.setup();
     renderList();
@@ -103,10 +113,10 @@ describe("TradeList", () => {
   it("says showing 2,000 of N when truncated, and pages the rows", () => {
     renderList(truncated);
     expect(
-      screen.getByText(/^Showing 2,000 of 2,600 trades, the latest by entry date/),
+      screen.getByText(/^Showing 120 of 2,600 trades, the latest by entry date/),
     ).toBeInTheDocument();
     expect(bodyRows()).toHaveLength(50);
-    expect(screen.getByText("Page 1 of 40")).toBeInTheDocument();
+    expect(screen.getByText("Page 1 of 3")).toBeInTheDocument();
   });
 
   it("states the total when nothing was cut", () => {

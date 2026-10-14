@@ -1,10 +1,18 @@
 // DOM setup for component tests (spec 0003 AC-16): jest-dom matchers, cleanup, and stubs for
-// what Base UI needs and jsdom lacks.
+// what Base UI needs and jsdom lacks. Lightweight Charts needs a canvas, so every test gets the
+// recording fake in `lightweight-charts-fake.ts` instead.
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
-import { afterEach } from "vitest";
+import { afterEach, vi } from "vitest";
 
-afterEach(() => cleanup());
+import { charts } from "./lightweight-charts-fake";
+
+vi.mock("lightweight-charts", () => import("./lightweight-charts-fake"));
+
+afterEach(() => {
+  cleanup();
+  charts.length = 0;
+});
 
 class ResizeObserverStub {
   observe() {}

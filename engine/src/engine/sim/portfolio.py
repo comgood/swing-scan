@@ -1,14 +1,18 @@
 """The portfolio day loop (doc 02 §7.1 and §7.3, spec 0007).
 
 Per session d:
-1. every held position steps on bar d (ticker A to Z); exits credit cash at fill × (1 - slip);
-2. accepted signals from d - 1, minus tickers held at close d - 1, ranked by `rs(126)`
-   descending (nulls last) then ticker, fill the slots free at close d - 1;
+1. every held position steps on its bars dated up to d (ticker A to Z); exits credit cash at
+   fill × (1 - slip);
+2. accepted signals from d - 1, minus tickers held at close d - 1 and tickers with no bar on d,
+   ranked by `rs(126)` descending (nulls last) then ticker, fill the slots free at close d - 1;
 3. each entry fills at open(d) × (1 + slip) for `min(equity(d - 1) / max_positions, cash)`,
-   then steps on bar d as its first bar;
-4. everything is marked at close(d).
+   where cash is the cash at close d - 1 less today's earlier entries: no exit on d, whatever
+   its fill time, funds an entry on d (spec 0007 decision 4). Then it steps on bar d as its
+   first bar;
+4. everything is marked at close(d), a ticker with no bar on d at its last close.
 
-Signals that find no slot are dropped, never queued.
+The loop aligns on dates and never reads a bar dated after d; `b` counts the ticker's own
+bars, as in `walk_trade()`. Signals that find no slot are dropped, never queued.
 """
 
 from __future__ import annotations
@@ -74,25 +78,46 @@ def run_portfolio(
         cash += position.shares * fill.price * (1 - slip)
         run.trades.append(ClosedTrade(position, fill, entry_row, row))
 
-    for i in range(len(sessions)):
+    n_rows = len(bars.ticker)
+
+    def next_bar(row: int, ticker: str, day: date) -> int | None:
+        """The ticker's row after `row` when it is dated on or before `day`, else None."""
+        nxt = row + 1
+        if nxt < n_rows and bars.ticker[nxt] == ticker and bars.date[nxt] <= day:
+            return nxt
+        return None
+
+    for i, day in enumerate(sessions):
         held_before = set(held)
         free = max_positions - len(held_before)
+        budget = cash  # the cash at close d - 1: no exit on d funds an entry on d
 
         for ticker in sorted(held):
             position, entry_row, row = held[ticker]
-            row += 1
-            held[ticker] = (position, entry_row, row)
-            view = bars.view(row, row - entry_row + 1, is_final=i == last)
-            if (fill := step(position, view)) is not None:
-                close(ticker, fill, row)
+            # Every bar of the ticker up to today, in order: none on a missing session (the
+            # position keeps its last close), more than one if it traded off the calendar.
+            while (nxt := next_bar(row, ticker, day)) is not None:
+                row = nxt
+                held[ticker] = (position, entry_row, row)
+                final = i == last and bars.date[row] == day
+                view = bars.view(row, row - entry_row + 1, is_final=final)
+                if (fill := step(position, view)) is not None:
+                    close(ticker, fill, row)
+                    break
 
+        # A ticker with no bar today cannot be bought at today's open; its signal is dropped.
         candidates = [
-            r for r in signals_by_session.get(i - 1, []) if bars.ticker[r] not in held_before
+            r
+            for r in signals_by_session.get(i - 1, [])
+            if bars.ticker[r] not in held_before
+            and (nxt := next_bar(r, bars.ticker[r], day)) is not None
+            and bars.date[nxt] == day
         ]
         for signal_row in sorted(candidates, key=key)[: max(free, 0)]:
-            notional = min(equity / max_positions, cash)
+            notional = min(equity / max_positions, budget)
             if notional <= 0:
                 continue
+            budget -= notional
             row = signal_row + 1
             fill_price = float(bars.open[row]) * (1 + slip)
             ticker = bars.ticker[row]

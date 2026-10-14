@@ -37,6 +37,12 @@ function emptyRow(): RowErrors {
   return { left: {}, right: {} };
 }
 
+/** Anything to show on this row, so a closed row can open and show it (U-7). */
+export function rowHasError(row: RowErrors): boolean {
+  const sides = [...Object.values(row.left), ...Object.values(row.right)];
+  return Boolean(row.row ?? row.op) || sides.some(Boolean);
+}
+
 export function builderErrors(errors: FieldErrors | undefined, rowCount: number): BuilderErrors {
   const out: BuilderErrors = { rows: Array.from({ length: rowCount }, emptyRow), top: [] };
   if (!errors) return out;

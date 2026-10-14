@@ -20,7 +20,9 @@ class TradeStats:
     avg_loss_pct: float | None
     expectancy_pct: float | None
     expectancy_r: float | None
-    """Null when any trade has no R (a config without a stop) or there are no trades."""
+    """Mean `r_multiple` over the trades that have one. A trade without R (a `stop_atr` entry
+    during ATR warm up sets no stop) is left out of R only; every other metric counts it.
+    Null when no trade has R: a config without a stop, or no trades (owner ruling 2026-10-09)."""
     profit_factor: float | None
     avg_bars_held: float | None
 
@@ -34,7 +36,7 @@ def trade_stats(trades: Sequence[Trade]) -> TradeStats:
     returns = [t.return_pct for t in trades]
     wins = [r for r in returns if r > 0]
     losses = [r for r in returns if r <= 0]
-    r_multiples = [t.r_multiple for t in trades]
+    r_multiples = [t.r_multiple for t in trades if t.r_multiple is not None]
     loss_sum = abs(sum(losses))
     return TradeStats(
         n_trades=len(trades),
@@ -42,11 +44,7 @@ def trade_stats(trades: Sequence[Trade]) -> TradeStats:
         avg_win_pct=_mean(wins),
         avg_loss_pct=_mean(losses),
         expectancy_pct=_mean(returns),
-        expectancy_r=(
-            fmean(r for r in r_multiples if r is not None)
-            if trades and None not in r_multiples
-            else None
-        ),
+        expectancy_r=_mean(r_multiples),
         profit_factor=sum(wins) / loss_sum if trades and loss_sum > 0 else None,
         avg_bars_held=_mean([float(t.bars_held) for t in trades]),
     )
