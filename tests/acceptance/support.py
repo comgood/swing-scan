@@ -271,15 +271,6 @@ def ui_covered_by(crit: str, *files: str) -> None:
         )
 
 
-def ui_owed(crit: str) -> NoReturn:
-    """The UI half of a criterion lives in `apps/web/tests/acceptance/` (Vitest), not here."""
-    owed(
-        "ui-tests",
-        f"{crit} UI test belongs in apps/web/tests/acceptance/ (Vitest against the mocks), "
-        "not written yet",
-    )
-
-
 # ---------------------------------------------------------------- the API on a generated market
 
 
