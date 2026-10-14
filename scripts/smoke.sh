@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Smoke test an API (spec 0001, doc 02 section 9 CD smoke): health, one scan on the first
 # template, and one exit lab backtest with 5 configs. Prints the first call and warm health
-# timings (right after a deploy the first call is a cold start) and fails if any response
+# timings (the first call pays for image optimisation, see below) and fails if any response
 # body is at or over the size budget (Lambda's 6 MB response limit, B-13 and X-7). The scan
 # must also come back usable: a 200 with no rows, or with null operands, fails.
 # Usage: scripts/smoke.sh https://<function-url>   (or http://127.0.0.1:8000 for a local image)
@@ -35,7 +35,11 @@ call() {
   echo "$label: $status in ${seconds}s, $bytes bytes"
 }
 
-call "health (first call)" 200 "$API_URL/api/v1/health"
+# Named for what it is: run from a deploy, this first call lands on a freshly pushed image and
+# pays for Lambda optimising it, so it runs several seconds longer than the cold start a visitor
+# meets on an idle function (measured separately, infra/README section 6). It is the worst case,
+# not the number doc 01's "cold start <= 10 s" judges.
+call "health (first call after update)" 200 "$API_URL/api/v1/health"
 grep -q '"status":"ok"' "$out"
 grep -q '"data_mode":"synthetic"' "$out"
 call "health (warm)" 200 "$API_URL/api/v1/health"

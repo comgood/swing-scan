@@ -90,7 +90,7 @@ the runner up is in [rationale.md](rationale.md).
 
     | call | time | body |
     |---|---|---|
-    | health, first call after the update (cold start) | 9.33 s | 57 B |
+    | health, first call after the update (new image, not the visitor cold start) | 9.33 s | 57 B |
     | health, warm | 0.62 s | 57 B |
     | scan, `breakout_52w` | 0.74 s | 429 B |
     | backtest, `breakout_52w`, **5** configs | 5.39 s | 633 KB |
@@ -108,8 +108,10 @@ the runner up is in [rationale.md](rationale.md).
     runs `pullback_ema21` with the six configs and reports it, gating nothing), and a decision
     between the optimisation and the entry cap once that number exists.
 
-    The cold start also wants recording elsewhere: 9.33 s against doc 01's "cold start ≤ 10 s",
-    where `infra/README.md` §6 still says about 3.1 s from the first deploy on 2026-10-09.
+    The 9.33 s in that table is not the cold start doc 01 judges: a first call after
+    `update-function-code` pays for Lambda optimising the newly pushed image (13.94 s on the
+    next deploy of the same code). A visitor's cold start, measured on an idle function the
+    same day, is 2.66 s. `infra/README.md` §6 now records both and says which is which.
 
     Cost is linear in entries: fitting the two points gives about 0.4 s of fixed cost plus
     0.59 ms per strategy entry. One strategy entry means **12 trade walks**, not 7, because

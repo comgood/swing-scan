@@ -83,8 +83,22 @@ Doc 02 section 15.4 puts these in `apps/web/tests/acceptance/` as Vitest tests a
 - X-3, X-4, X-9, U-3, U-4, U-7 and U-8, exit lab report: `exit-lab-report.test.tsx`, against `/backtest` switched to the lab (the "Exit lab" radio, then "Run exit lab") on the `backtest.trade_lab.json` mock (plain `it`, so it blocks). The table is read through its header cells, each carrying `aria-label` "<metric> IS" or "<metric> OOS", which fixes every data cell's column without reading the component. X-3: a pair of columns per metric, each row's values from the response, the "Best IS" marker in exactly the cells `best_is` names, and in no OOS, random or edge cell. X-4: the two stopless configs read "n/a" in `Expectancy (R)` and `Edge Expectancy (R)` for both segments, keep their % expectancy, point at a footnote, and the footnote explains R needs a stop and names them; a config with a stop shows its R. X-9: the warned config's row carries a worded badge and the message, no other row does, and a response with no warnings shows none. U-3: an Assumptions header before the table, one line per `Assumptions` field, every doc 01 item with the trade mode value (the horizon, the seed, "same ticker trades may overlap", `max_positions` as "not used in trade mode", one exit line per config, the baseline config), and a response with other numbers echoed, not the form's. U-4: the counter beside the header (not inside the table) reading k for k configs, one stored pair per config under the spec 0004 keys, and no counter and no stored count after a 500 or a 422. U-7: a 422 at `configs.2.exits.<i>.stop_pct.pct` marks config 3's "Stop loss (%)" with the message as its description, and marks no other config and no other field of config 3. U-8: the note word for word, outside the table's scroll box and the first thing after it, as body text.
 - U-4, in the portfolio report: `backtest-report.test.tsx`. The counter is inside the Assumptions region once a 200 result is on screen, with the mock's one pair stored; a 500 shows no counter and stores nothing.
 
-**Still owed:**
-- U-6: real builder rows stacking (the builder is on `/` now; jsdom cannot see stacking), and anything that needs layout: `scrollWidth` at 375 px and the actual column stacking. jsdom has no CSS, so these stay a browser check in `/check verify` until Playwright is added (spec 0003 follow up). U-6 is the only UI ID left `pending`, and no page will change that.
+**Still owed:** nothing. U-6's browser half was measured on 2026-10-14, see below.
+
+<a id="U-6-browser"></a>
+## U-6: the half jsdom cannot see, and why it is now `required`
+
+**Status:** ruled (owner, 2026-10-14). U-6 is `required`.
+jsdom applies no CSS, so `layout-375.test.tsx` can only check structure: no fixed width over 375 px, every table in its own labelled scroll box, `FormRow` one column below `sm`. Real stacking and `scrollWidth` need a browser, which is why U-6 stayed `pending`.
+**Measured** in headless Chrome against the dev app on the seed 42 market, `/` and `/backtest`, with a scan and a full portfolio report on screen:
+
+| width | `documentElement.scrollWidth` vs `clientWidth` | sideways page scroll | axe |
+|---|---|---|---|
+| 375 px | 375 vs 375 | none | clean, every condition row open |
+| 320 px | 320 vs 320 | none | clean |
+
+The results table, the metrics table and the trade list each sit in their own `role="region"` scroll box with an `aria-label`, so the only sideways scrolling is inside a labelled region, which is what U-6 asks for. The builder's left, operator and right boxes stack one per line at 320 px.
+**What `required` gates:** the structure half in CI, as for every other UI ID. The layout half has no CI assertion and is attested by the `/check verify` pass above; it is re run whenever the builder or a table changes. Automating it needs Playwright (spec 0003 follow up), which stays post v1.0.
 
 Each ID keeps a pointer (`ui_covered_by`) in `tests/acceptance/` naming the Vitest files that cover it, plus a contract level test where one applies (U-3 fields, U-7 error paths, U-4 trial keys, X-3 `best_is`, X-4 null R); the pointer checks each file exists, names the ID in a test title and owes no `it.todo` for it. The `it.todo` placeholders for U-4 and U-8 in `honesty.test.tsx` are gone: those halves are driven through the two report files instead.
 

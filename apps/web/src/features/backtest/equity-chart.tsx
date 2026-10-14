@@ -64,6 +64,10 @@ export function EquityChart({ equity, benchmark, oosStart }: EquityChartProps) {
         handleScale: false,
         rightPriceScale: { borderVisible: false },
         timeScale: { borderVisible: false },
+        // The library's own logo is a focusable link with no accessible name, and it lands
+        // inside the `role="img"` box below, which axe fails as a nested interactive control.
+        // The licence's link requirement is met by the attribution link beside the chart.
+        layout: { attributionLogo: false },
       });
       const strategy = chart.addSeries(lib.LineSeries, { lineWidth: 2, title: "Strategy" });
       const bench = chart.addSeries(lib.LineSeries, { lineWidth: 2, title: "Benchmark" });
@@ -137,6 +141,13 @@ export function EquityChart({ equity, benchmark, oosStart }: EquityChartProps) {
         aria-label={chartSummary({ equity, benchmark, oosStart })}
         className="h-64 w-full min-w-0 sm:h-80"
       />
+      {/* The Lightweight Charts licence asks for this link somewhere on the page; it replaces
+          the library's own logo, which cannot live inside the `role="img"` box above. */}
+      <p className="text-xs text-muted-foreground">
+        <a className="underline" href="https://www.tradingview.com/" rel="noreferrer noopener">
+          Charting by TradingView
+        </a>
+      </p>
     </figure>
   );
 }

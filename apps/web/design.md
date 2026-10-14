@@ -23,34 +23,34 @@ Light and dark both ship. The page follows your operating system setting (`prefe
 
 After shadcn init, delete preset variables this table does not name (`sidebar-*`, `chart-1` to `chart-5`). Defined once in `src/app/globals.css` as CSS variables on `:root`, redefined inside `@media (prefers-color-scheme: dark)`, and exposed to Tailwind through `@theme inline`. Components use the Tailwind names (`bg-background`, `text-muted-foreground`, `text-positive`), never raw hex values or Tailwind palette classes (`text-red-600`).
 
-| Token                            | Light                               | Dark                  | Use                                             |
-| -------------------------------- | ----------------------------------- | --------------------- | ----------------------------------------------- |
-| `background`                     | `#ffffff`                           | `#09090b`             | page                                            |
-| `foreground`                     | `#18181b`                           | `#fafafa`             | body text                                       |
-| `card`                           | `#ffffff`                           | `#0f0f12`             | panels, table body                              |
-| `card-foreground`                | `#18181b`                           | `#fafafa`             | text on panels                                  |
-| `popover` / `popover-foreground` | alias of `card` / `card-foreground` | same                  | menus and popups from the preset                |
-| `muted`                          | `#f4f4f5`                           | `#18181b`             | table header, skeleton, subtle fills            |
-| `muted-foreground`               | `#52525b`                           | `#a1a1aa`             | hints, captions, secondary text                 |
-| `secondary`                      | `#f4f4f5`                           | `#27272a`             | secondary button                                |
-| `secondary-foreground`           | `#18181b`                           | `#fafafa`             | text on secondary                               |
-| `primary`                        | `#1d4ed8`                           | `#60a5fa`             | primary button, links, active sort              |
-| `primary-foreground`             | `#ffffff`                           | `#09090b`             | text on primary                                 |
-| `accent`                         | `#eff6ff`                           | `#172554`             | hover fill, "best IS" cell highlight            |
-| `accent-foreground`              | `#18181b`                           | `#fafafa`             | text on accent                                  |
-| `destructive`                    | `#b91c1c`                           | `#f87171`             | solid destructive button fill, field error text |
-| `destructive-foreground`         | `#ffffff`                           | `#09090b`             | text on destructive                             |
-| `border`                         | `#e4e4e7`                           | `#27272a`             | dividers, card edges (decorative)               |
-| `input`                          | `#71717a`                           | `#71717a`             | form control borders (must stay 3:1)            |
-| `ring`                           | `#2563eb`                           | `#60a5fa`             | focus ring                                      |
-| `positive`                       | `#15803d`                           | `#4ade80`             | gains, positive edge                            |
-| `negative`                       | `#b91c1c`                           | `#f87171`             | losses, negative edge                           |
-| `info` / `info-foreground`       | `#eff6ff` / `#1e40af`               | `#0c1a33` / `#93c5fd` | info banner                                     |
-| `warning` / `warning-foreground` | `#fffbeb` / `#92400e`               | `#271a06` / `#fcd34d` | synthetic banner, live badge, overfit warning   |
-| `danger` / `danger-foreground`   | `#fef2f2` / `#991b1b`               | `#2a0c0c` / `#fca5a5` | error states                                    |
-| `chart-equity`                   | `#1d4ed8`                           | `#60a5fa`             | equity curve                                    |
-| `chart-benchmark`                | `#52525b`                           | `#a1a1aa`             | benchmark curve                                 |
-| `chart-oos`                      | `#b45309`                           | `#fbbf24`             | IS/OOS split line                               |
+| Token                            | Light                               | Dark                  | Use                                                                 |
+| -------------------------------- | ----------------------------------- | --------------------- | ------------------------------------------------------------------- |
+| `background`                     | `#ffffff`                           | `#09090b`             | page                                                                |
+| `foreground`                     | `#18181b`                           | `#fafafa`             | body text                                                           |
+| `card`                           | `#ffffff`                           | `#0f0f12`             | panels, table body                                                  |
+| `card-foreground`                | `#18181b`                           | `#fafafa`             | text on panels                                                      |
+| `popover` / `popover-foreground` | alias of `card` / `card-foreground` | same                  | menus and popups from the preset                                    |
+| `muted`                          | `#f4f4f5`                           | `#18181b`             | table header, skeleton, subtle fills                                |
+| `muted-foreground`               | `#52525b`                           | `#a1a1aa`             | hints, captions, secondary text                                     |
+| `secondary`                      | `#f4f4f5`                           | `#27272a`             | secondary button                                                    |
+| `secondary-foreground`           | `#18181b`                           | `#fafafa`             | text on secondary                                                   |
+| `primary`                        | `#1d4ed8`                           | `#60a5fa`             | primary button, links, active sort                                  |
+| `primary-foreground`             | `#ffffff`                           | `#09090b`             | text on primary                                                     |
+| `accent`                         | `#eff6ff`                           | `#172554`             | hover fill, "best IS" cell highlight                                |
+| `accent-foreground`              | `#18181b`                           | `#fafafa`             | text on accent                                                      |
+| `destructive`                    | `#b91c1c`                           | `#f87171`             | solid destructive button fill, field error text                     |
+| `destructive-foreground`         | `#ffffff`                           | `#09090b`             | text on destructive                                                 |
+| `border`                         | `#e4e4e7`                           | `#27272a`             | dividers, card edges (decorative)                                   |
+| `input`                          | `#71717a`                           | `#71717a`             | form control borders (must stay 3:1)                                |
+| `ring`                           | `#2563eb`                           | `#60a5fa`             | focus ring                                                          |
+| `positive`                       | `#15803d`                           | `#4ade80`             | gains, positive edge                                                |
+| `negative`                       | `#b91c1c`                           | `#f87171`             | losses, negative edge                                               |
+| `info` / `info-foreground`       | `#eff6ff` / `#1e40af`               | `#0c1a33` / `#93c5fd` | info banner, condition left side                                    |
+| `warning` / `warning-foreground` | `#fffbeb` / `#92400e`               | `#271a06` / `#fcd34d` | synthetic banner, live badge, overfit warning, condition right side |
+| `danger` / `danger-foreground`   | `#fef2f2` / `#991b1b`               | `#2a0c0c` / `#fca5a5` | error states                                                        |
+| `chart-equity`                   | `#1d4ed8`                           | `#60a5fa`             | equity curve                                                        |
+| `chart-benchmark`                | `#52525b`                           | `#a1a1aa`             | benchmark curve                                                     |
+| `chart-oos`                      | `#b45309`                           | `#fbbf24`             | IS/OOS split line                                                   |
 
 ### Contrast (WCAG 2.2 AA)
 

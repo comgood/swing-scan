@@ -25,7 +25,6 @@ from acceptance.support import (
     random_walk_frames,
     trade_lab,
     ui_covered_by,
-    ui_owed,
 )
 from engine.contracts import TEMPLATES, ExitConfig, Rule, pair_key, structure_key
 
@@ -177,7 +176,10 @@ def test_slow_request_shows_warming_up_state() -> None:
 
 @pytest.mark.ac("U-6")
 def test_layout_holds_at_375_px() -> None:
-    ui_owed("U-6")
+    # Structure only, which is all jsdom can see: no fixed width over 375 px, every table in its
+    # own labelled scroll box, `FormRow` one column below `sm`. Real stacking and `scrollWidth`
+    # need a browser, measured in `/check verify` (docs/qa/ac-questions.md#U-6-browser).
+    ui_covered_by("U-6", "layout-375.test.tsx")
 
 
 @pytest.mark.ac("U-7")
