@@ -85,7 +85,7 @@ Done in order on Day 1 before the lanes fan out. Feature 3 ends with the `contra
 Lane DI. Record the stack already chosen in doc 02 (Next.js on Vercel Hobby, FastAPI with Polars and NumPy in a Lambda container, GitHub Actions with OIDC) and scaffold a runnable monorepo with a hello world deploy of both apps.
 **Done when:** the stack is captured in a spec, the empty web app and API both run locally, and both are reachable on their free tier hosts.
 - [x] Decide the stack (spec): `/architect stack & architecture`
-- [x] Scaffold from the decision: `/develop stack & architecture` (local scaffold done; first deploy done 2026-10-09: the API on a Lambda Function URL in `ap-southeast-1`, the web app on `https://swing-scan-one.vercel.app`, `make smoke` passes, first cold call about 3.1 s, the throttle alarm emails you; no reserved concurrency because the account quota is 10)
+- [x] Scaffold from the decision: `/develop stack & architecture` (local scaffold done; first deploy done 2026-10-09: the API on a Lambda Function URL in `ap-southeast-1`, the web app on `https://swing-scan-one.vercel.app`, `make smoke` passes, the throttle alarm emails you; no reserved concurrency because the account quota is 10). Cold start was about 3.1 s on that first deploy and **9.33 s measured 2026-10-14** on the OIDC deploy of `0e9f448`, against doc 01's "cold start ≤ 10 s", so it now has about 7% to spare
 - [ ] Verify it: `/check verify stack & architecture`
 - [ ] Test it: `/test stack & architecture`
 Spec [0001](../specs/0001-stack-architecture/index.md) · code in `./` (`apps/web`, `services/api`, `engine`)
