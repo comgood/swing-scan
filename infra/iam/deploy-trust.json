@@ -11,7 +11,7 @@
       "Condition": {
         "StringEquals": {
           "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
-          "token.actions.githubusercontent.com:sub": "repo:comgood/swing-scan:ref:refs/heads/main"
+          "token.actions.githubusercontent.com:sub": "repo:comgood@79810368/swing-scan@1408489888:ref:refs/heads/main"
         }
       }
     }
