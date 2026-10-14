@@ -1,0 +1,33 @@
+# Weekly health call so the Lambda never goes Inactive (scope feature 15).
+# The warm up ping itself is the web app's: it calls /api/v1/health on page load (spec 0001).
+# A container image function that gets no calls for several weeks goes Inactive and rejects
+# the next call while Lambda re-optimizes the image, which would break the first demo visit.
+# One call a week costs nothing (Lambda always free tier, public repo minutes). It is not a
+# keep warm: an idle environment is reclaimed within minutes to hours either way.
+# GitHub disables scheduled workflows in a public repo after 60 days without repo activity;
+# any push to main resets that clock, and `gh workflow enable keep-alive.yml` turns it back on.
+name: API keep alive
+
+on:
+  schedule:
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  health:
+    name: health call
+    if: vars.API_URL != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # Retries cover the one rejected call of an Inactive function and a cold start.
+      - name: Call /api/v1/health
+        env:
+          API_URL: ${{ vars.API_URL }}
+        run: |
+          curl --fail --silent --show-error --max-time 30 \
+            --retry 5 --retry-delay 20 --retry-all-errors \
+            -w '\nhealth answered %{http_code} in %{time_total}s\n' "${API_URL%/}/api/v1/health"
