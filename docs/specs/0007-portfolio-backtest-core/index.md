@@ -101,6 +101,13 @@ Engine and API (BE):
   `oos_fraction=0.3`, and the data mode, version and seed from `market.meta`.
 - **AC-11**: 2 to 6 configs return 501 naming feature 12; an exit type feature 11 owns returns
   501 naming feature 11; no market loaded returns 501 (existing).
+  *Amended 2026-10-14, in place:* the first two clauses were feature 9 era gates and are
+  **superseded**. Feature 11 shipped every exit type and feature 12 shipped the exit lab, so
+  2 to 6 configs now answer 200 in `trade` mode (checked against the running API on
+  2026-10-14) and every exit type is accepted. Only "no market loaded returns 501" still
+  holds, and that is what this criterion now means. The 501 mentions elsewhere in this spec
+  (decisions 1 and 2, the API table, the build plan) are the record of what feature 9 built
+  and are left as written.
 
 Report page (FE):
 - **AC-12** [U-3]: the report opens with the assumptions header listing every AC-10 item in
@@ -115,6 +122,9 @@ Report page (FE):
   screen (spec 0004).
 - **AC-17** [U-6, U-7]: loading, warming up, 422 (on the right field), 501 and empty
   (`no_entries`) states all render; the page is keyboard usable, axe clean, and holds at 375 px.
+  *Note 2026-10-14:* the only 501 left to render is "no market loaded" (see AC-11). "axe clean"
+  is checked in a real browser with a report on screen, not only in jsdom, which cannot draw the
+  chart's canvas and so cannot see what the chart injects into the page.
 
 ## Decision
 

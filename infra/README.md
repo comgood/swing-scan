@@ -103,9 +103,17 @@ aws logs put-retention-policy --log-group-name /aws/lambda/swing-scan-api \
 
 Since October 2025 a new public Function URL needs both statements, `lambda:InvokeFunctionUrl` and `lambda:InvokeFunction` (restricted to calls through the URL); with only the first, every request gets 403 Forbidden. The log group only exists after the first invocation, so if `put-retention-policy` says it does not exist, call `/api/v1/health` once and run it again.
 
-Check it: `make smoke API_URL=<function-url>`. It prints the first call and warm call times, and the size of each response. A first call over 8 s reopens ADR-001.
+Check it: `make smoke API_URL=<function-url>`. It prints the first call and warm call times, and the size of each response.
 
-**Measured cold start:** about 3.1 s for the first call from outside AWS on 2026-10-09 (2048 MB, x86_64, synthetic market loaded at import). That is under the 6 s goal and well under ADR-001's 8 s limit. Every automated deploy prints a fresh first call time in its run summary, because the first call after `update-function-code` lands on a new execution environment.
+**Measured cold start.** There are two different first calls here, and only one of them is what doc 01's "cold start ≤ 10 s" and ADR-001's 8 s trigger are about.
+
+| what it is | measured | when |
+|---|---|---|
+| **A visitor's cold start:** first call to an idle function, image already optimised | **2.66 s** (warm 0.07 s) | 2026-10-14, ~2 h after the last deploy |
+| the same, on the first deploy | 3.1 s | 2026-10-09 |
+| **First call after `update-function-code`:** a freshly pushed image Lambda has not optimised yet | 9.33 s, then 13.94 s | 2026-10-14, deploys `0e9f448` and `dfe10b9` |
+
+The visitor number is the one to judge: 2.66 s, under the 6 s goal and well under ADR-001's 8 s trigger, so ADR-001 stands as decided. The post deploy number is several seconds longer because Lambda optimises each new container image on its first invocation, and it varies a lot (9.33 s then 13.94 s on the same code). `make smoke` prints that one, labelled "health (first call after update)", on every deploy. Do not read it as the cold start a demo visitor meets; measure that by leaving the function alone for an hour and calling `/api/v1/health` twice.
 
 ## 7. Vercel project
 
@@ -122,7 +130,7 @@ Create a CloudWatch alarm on the `Throttles` metric for `swing-scan-api` (sum ov
 
 `.github/workflows/deploy.yml` (Deploy API) runs after CI passes on a push to `main`. It reuses the image CI built and smoked (artifact `api-image-<sha>`), pushes it to ECR as `<7 char sha>`, runs `aws lambda update-function-code` and waits for the update, then runs `make smoke` against the Function URL. It holds no AWS keys: it asks GitHub for an OIDC token and trades it for a short session on a deploy role that trusts only this repo's `main` branch. Until you set the `AWS_ROLE_ARN` variable the job is skipped, so `main` stays green.
 
-The policies live in `infra/iam/`: `deploy-trust.json` (who may assume the role: GitHub's OIDC provider, audience `sts.amazonaws.com`, subject `repo:comgood/swing-scan:ref:refs/heads/main`) and `deploy-policy.json` (what the role may do: log in to ECR, push to and read only the `swing-scan-api` repository, and update and read only the `swing-scan-api` function). The two repository policy actions are there because Lambda adds its own pull permission to the repository through the caller when it is missing.
+The policies live in `infra/iam/`: `deploy-trust.json` (who may assume the role: GitHub's OIDC provider, audience `sts.amazonaws.com`, subject `repo:comgood@79810368/swing-scan@1408489888:ref:refs/heads/main`) and `deploy-policy.json` (what the role may do: log in to ECR, push to and read only the `swing-scan-api` repository, and update and read only the `swing-scan-api` function). The two repository policy actions are there because Lambda adds its own pull permission to the repository through the caller when it is missing.
 
 Run these from the repo root, with the same AWS CLI login as steps 1 to 8:
 
@@ -140,6 +148,8 @@ aws iam put-role-policy --role-name swing-scan-deploy --policy-name swing-scan-d
 gh variable set AWS_ROLE_ARN --body "arn:aws:iam::${ACCOUNT}:role/swing-scan-deploy"
 gh variable set API_URL --body https://fmcpmff6uu77byyy45vo6tsocu0fadzx.lambda-url.ap-southeast-1.on.aws
 ```
+
+**The subject is not the repository name.** This account's GitHub organisation issues OIDC tokens with *immutable* subject claims, so the `sub` carries numeric ids that never change when something is renamed: `repo:<owner>@<owner id>/<repo>@<repo id>:ref:refs/heads/main`. A trust policy written as the plain `repo:comgood/swing-scan:ref:refs/heads/main` never matches, and the deploy fails with `Not authorized to perform sts:AssumeRoleWithWebIdentity`. AWS answers with that same message when the role does not exist at all, so the error tells you nothing about which of the two is wrong. Read the real claim out of a failed run's OIDC token request, or check the organisation's setting, rather than guessing. Fixed in PR #96.
 
 If `create-open-id-connect-provider` says `EntityAlreadyExists`, the account already has GitHub's provider; skip it and go on. No thumbprint is needed: AWS checks GitHub's certificate against its trusted authorities. Write `${ACCOUNT}` with braces: in zsh, `$ACCOUNT:role` would read `:r` as a modifier. The workflow defaults `AWS_REGION`, `ECR_REPOSITORY` and `LAMBDA_FUNCTION_NAME` to `ap-southeast-1` and `swing-scan-api`; set those variables only if yours differ. These are repository variables, not secrets: nothing here is sensitive.
 
@@ -177,5 +187,5 @@ Checked on 2026-10-09:
 - **Alpaca terms.** Alpaca's market data docs confirm the free Basic plan serves historical SIP bars back to 2016, holds back only the latest 15 minutes (no effect on daily bars), and allows 200 calls a minute. The docs grant no right to redistribute or display the data to others, so live data stays personal, non commercial and local only, as doc 01 already says: never committed, never hosted, never in the GIF (D-5, D-6). Read the market data agreement in your Alpaca account before you ever change that.
 - **GitHub's 60 day rule.** Doc 02 planned no scheduled workflow, so it was not applicable. Feature 15 adds one (step 10); the rule now applies to that workflow only, and step 10 says how to keep it on.
 - **Lambda 6 MB limit.** A synchronous call (which a Function URL in buffered mode is) can return at most 6 MB. The guards: the contract caps every list (scan rows ≤ 500 in `engine/src/engine/contracts/scan.py`; equity and benchmark points ≤ 500, trades ≤ 2,000 and baseline trades ≤ 2,000 in `engine/src/engine/contracts/backtest.py`) and allows at most 6 configs; the acceptance tests for B-13 (`tests/acceptance/test_backtest.py`) and X-7 (`tests/acceptance/test_exit_lab.py`) assert each response's uncompressed JSON is under 6,000,000 bytes on a 500 ticker, 5 year market; and `scripts/smoke.sh` fails if a deployed response (health, scan, a 5 config exit lab) reaches 6,000,000 bytes uncompressed. On the seed 42 market that exit lab is about 0.63 MB, and `GZipMiddleware` shrinks it again for browsers.
-- **Cold start.** See step 6: about 3.1 s.
+- **Cold start.** See step 6: 2.66 s for a visitor on an idle function. The first call right after a deploy is a different, slower number (9.33 s and 13.94 s measured) because Lambda optimises the new image then.
 

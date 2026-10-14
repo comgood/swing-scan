@@ -22,12 +22,12 @@ _Source of truth: acceptance criteria IDs (D, R, S, B, X, U) and settled default
 | 7 | Synthetic market | Slice 1 | done |
 | 8 | Template scan | Slice 1 | done |
 | 9 | Portfolio backtest core | Slice 1 | in-progress |
-| 10 | Rule builder | Slice 2 | in-progress |
+| 10 | Rule builder | Slice 2 | done |
 | 11 | Exit types | Slice 3 | done |
 | 12 | Exit lab | Slice 3 | in-progress |
 | 13 | Research honesty guards | Slice 3 | done |
 | 14 | Live research mode (local) | Slice 4 | in-progress |
-| 15 | Deploy hardening & demo readiness | Slice 5 | planned |
+| 15 | Deploy hardening & demo readiness | Slice 5 | done |
 | 16 | README, research note & GIF | Slice 5 | planned |
 
 ## Parallel work
@@ -85,7 +85,7 @@ Done in order on Day 1 before the lanes fan out. Feature 3 ends with the `contra
 Lane DI. Record the stack already chosen in doc 02 (Next.js on Vercel Hobby, FastAPI with Polars and NumPy in a Lambda container, GitHub Actions with OIDC) and scaffold a runnable monorepo with a hello world deploy of both apps.
 **Done when:** the stack is captured in a spec, the empty web app and API both run locally, and both are reachable on their free tier hosts.
 - [x] Decide the stack (spec): `/architect stack & architecture`
-- [x] Scaffold from the decision: `/develop stack & architecture` (local scaffold done; first deploy done 2026-10-09: the API on a Lambda Function URL in `ap-southeast-1`, the web app on `https://swing-scan-one.vercel.app`, `make smoke` passes, the throttle alarm emails you; no reserved concurrency because the account quota is 10). Cold start was about 3.1 s on that first deploy and **9.33 s measured 2026-10-14** on the OIDC deploy of `0e9f448`, against doc 01's "cold start ≤ 10 s", so it now has about 7% to spare
+- [x] Scaffold from the decision: `/develop stack & architecture` (local scaffold done; first deploy done 2026-10-09: the API on a Lambda Function URL in `ap-southeast-1`, the web app on `https://swing-scan-one.vercel.app`, `make smoke` passes, the throttle alarm emails you; no reserved concurrency because the account quota is 10). Cold start, the number doc 01's "cold start ≤ 10 s" is about, is **2.66 s measured 2026-10-14** on an idle function (3.1 s on the first deploy). The first call right after a deploy is a different and much slower number, 9.33 s then 13.94 s, because Lambda optimises each newly pushed image; `infra/README.md` §6 keeps both apart
 - [ ] Verify it: `/check verify stack & architecture`
 - [ ] Test it: `/test stack & architecture`
 Spec [0001](../specs/0001-stack-architecture/index.md) · code in `./` (`apps/web`, `services/api`, `engine`)
@@ -175,7 +175,7 @@ Lanes BE and FE. The portfolio simulator with next open fills, % stop and time e
   - [x] BE thread: `Exit` protocol, one `step()`, `stop_pct`, `time`, delisting, `end_of_test`, `walk_trade()`, the day loop and a minimal `PortfolioResult` behind `/backtest` (AC-1 to AC-3, AC-8, AC-11)
   - [x] BE portfolio rules and metrics: ranking, slots, sizing, window cut, IS and OOS, metrics, curves, truncation, `trial`, `assumptions`, the 3 s and 6 MB budget (AC-4 to AC-7, AC-9, AC-10); B-9 and B-10 portfolio turn green with feature 11's exits
   - [x] FE report page: `/backtest` with the exit form, assumptions header, IS and OOS metrics, equity chart, trade list, trial counter and every state, on mocks first (AC-12 to AC-17)
-- [ ] Verify it: `/check verify portfolio backtest core`
+- [x] Verify it: `/check verify portfolio backtest core` (2026-10-14, real browser on the seed 42 market: all 17 ACs met, including the truncation line at 2,382 trades. AC-17's "axe clean" failed first: the chart's TradingView attribution link sat inside its `role="img"` box, fixed here and re-checked clean)
 - [x] Test it: `/test portfolio backtest core` (engine response assembly, metric nulls, thinning and ranking gaps in PR #83; report page states, metrics table, exit form and chart in PR #85; no bugs found)
 - [x] Review it (fresh model): `/check review portfolio backtest core` ([findings](../reviews/2026-10-09-review-9-backtest-engine.md); the two major findings are fixed)
 - [ ] Document it: `/document portfolio backtest core`
@@ -183,7 +183,7 @@ Spec [0007](../specs/0007-portfolio-backtest-core/index.md)
 
 ## Slice 2: Rule builder
 
-### 10. Rule builder · in-progress
+### 10. Rule builder · done
 Lanes BE and FE. Build your own entry rules: a flat AND list of up to 8 conditions over 12 indicators, with numbers or indicators on the right side, crosses, offsets, and clear validation. The templates load into it as editable starting points.
 **Done when:** rules round trip as JSON, crosses and offsets behave as specified, warm up bars evaluate as not computable, invalid rules return a clear 422 shown on the right row, and the structure key ignores numbers (R-1 to R-9, U-7).
 - [x] Design it (spec): `/architect rule builder` (signed off by the owner 2026-10-08)
@@ -192,7 +192,7 @@ Lanes BE and FE. Build your own entry rules: a flat AND list of up to 8 conditio
   - [x] FE rows and links: every field, add and remove limits, catalog hints, 422 on the right field, `?template` to `?r=` links, bad link fallback, JSON panel (AC-1 to AC-3, AC-5 to AC-7, AC-9)
   - [x] FE finish: 375 px and 320 px, keyboard, axe, `/ui` gallery, mounted in feature 8's workspace, real API at G3 (AC-10)
   - [x] BE tests after feature 8's evaluator merges: R-3, R-4, R-5, R-7 on custom rules, every R-6 case through `/scan` (AC-11, AC-12; AC-13 is already met by spec 0002)
-- [ ] Verify it: `/check verify rule builder`
+- [x] Verify it: `/check verify rule builder` (2026-10-14, real browser on the seed 42 market: all 13 ACs met, axe clean at 1280 and 375 px with every row open; the chart `nested-interactive` finding belongs to feature 9)
 - [x] Test it: `/test rule builder`
 Spec [0008](../specs/0008-rule-builder/index.md)
 
@@ -242,10 +242,10 @@ Spec [0010](../specs/0010-live-research-mode/index.md) (Assumed) · code in `eng
 
 ## Slice 5: Ship
 
-### 15. Deploy hardening & demo readiness · planned
+### 15. Deploy hardening & demo readiness · done
 Lane DI. Make the public demo dependable at $0: OIDC deploys, a $1 budget alarm, the warm up ping, response size limits, a measured cold start, and the Day 1 checks (Alpaca terms, GitHub's 60 day rule, the Lambda 6 MB limit).
 **Done when:** a merge to main deploys both apps without stored keys, the budget alarm exists, cold start is measured and recorded, and every response stays under the size limit.
-- [ ] Build it: `/develop deploy hardening`
+- [x] Build it: `/develop deploy hardening` (PR #73: OIDC deploys with no stored keys, the keep alive ping, the $1 budget and throttle alarms, response size guards in `scripts/smoke.sh`; cold start recorded in `infra/README.md` §6, 2.66 s on an idle function 2026-10-14)
 
 ### 16. README, research note & GIF · planned
 Lane orchestrator. The portfolio face of the project: the portfolio ready checklist, one research note run on the synthetic market, an ADR digest, the agent log, a GIF of the demo script, and the not investment advice and data licence statements.

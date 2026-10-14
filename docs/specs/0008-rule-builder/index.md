@@ -1,7 +1,7 @@
 # 0008. Build the rule builder as typed condition rows over the frozen rule contract
 
 **Date**: 2026-10-08
-**Status**: In Progress (owner signed off 2026-10-08)
+**Status**: Accepted (owner signed off 2026-10-08; built, verified and tested, scope feature 10 done 2026-10-14)
 **Authorized by**: /architect, run unattended overnight by the orchestrator lane; every open
 question took /architect's recommended answer (listed below) and waits for the owner
 
@@ -48,6 +48,14 @@ the runner up is in [rationale.md](rationale.md).
    right side with a Number or Indicator switch. Offset and mult show inline with their defaults
    (0 and 1); at 375 px the parts stack (U-6). No reorder: AND does not care about order.
    Runner up: hide offset and mult behind "More": hides part of the rule from you (ADR-013).
+   *Amended 2026-10-14, in place, after the UI pass:* the offset label reads **"Bars back"**, not
+   "bars ago", which read as the age of the whole condition rather than of one operand, and there
+   is no separate Number or Indicator switch. The right side's **"Field"** dropdown carries
+   "Number" as a choice beside the indicators, so one control answers "what do I compare
+   against", and picking Number swaps the fields below it. Decision 9's switching behaviour is
+   unchanged. Each row is a `<details>` whose `<summary>` reads the condition back as a bubble,
+   with the left, operator and right parts colour marked and those colours repeated on the
+   editor boxes below (`apps/web/AGENTS.md` carries the convention).
 8. **Rows.** "Add condition" adds `close > sma(50)` as a neutral starting row; it is
    disabled at 8 with "A rule has at most 8 conditions". Remove is disabled on the last row.
 9. **Right side switch.** Number to Indicator keeps nothing (starts `sma(50)`); Indicator to
