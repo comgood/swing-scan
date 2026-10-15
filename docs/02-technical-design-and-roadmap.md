@@ -22,7 +22,7 @@
 |---|---|---|
 | A1 | The owner works about 7.5 focused hours a day for 7 days. Agents write most of the code. The owner writes the oracle tests, reviews engine diffs and approves | §11.5 |
 | A2 | **Synthetic market:** 500 invented tickers × 5 years (≈ 1,260 sessions), regimes, sectors, a **documented, planted momentum term**, about 5% planted delistings (at least 20), about 5% mid-sample listings, adjusted prices only, `DEMO-INDEX`. Generated at image build | — |
-| A3 | **Live mode (local):** Alpaca free daily bars (`feed=sip`, `adjustment=all`) from **2016-01-04**, about 500 current S&P 500 + SPY (≈ 1.35M bars). Biased upward by survivorship, index selection and one bull regime (OOS ≈ 2023–2026). The badge, the README and the random baseline address this (§7.5) | — |
+| A3 | ~~**Live mode (local):** Alpaca free daily bars (`feed=sip`, `adjustment=all`) from **2016-01-04**, about 500 current S&P 500 + SPY (≈ 1.35M bars).~~ **Corrected 2026-10-15 by the first real load:** the free plan has no `sip`, so the default is `feed=iex`, whose history starts **2017-11-15**. Measured: 502 names plus SPY, **770,552 bars**, 2017-11-15 → 2026-10-14, one symbol missing (DOW), 97 bars dropped by the D-2 filter. That is 43% fewer bars and 22 months less history than assumed, and iex volume is one exchange only. Biased upward by survivorship, index selection and one bull regime (OOS ≈ 2023–2026), now over a shorter and more bullish window than planned. The badge, the README and the random baseline address the bias (§7.5) | D-4 |
 | A4 | ~~A warm Lambda (2 GB, 30 s) runs a 6-config exit lab **plus its random baseline** on synthetic data in under 10 s (X-7), using the per-trade loop. **Measured on Day 4**~~ **Wrong, and never measured on Day 4.** Measured 2026-10-15 on the deployed function: 16.5–18.9 s warm with the per-trade loop. X-7's budget is now 25 s, set from that reading (doc 01 X-7, spec 0009 AC-11). It clears the 30 s timeout by over 10 s, so the assumption held for feasibility and failed only on speed | ADR-016 fallback, costed but not taken |
 | A5 | The AWS account stays within always-free allowances (upgrade to the Paid plan before the 6-month Free plan ends), with a $1 budget alarm | Cloud Run (ADR-001) |
 
@@ -70,8 +70,8 @@
 
 | | **`DATA_MODE=synthetic`** (default, the only mode deployed) | **`DATA_MODE=live`** (owner's laptop only) |
 |---|---|---|
-| Source | Seeded generator `engine/synthetic/` | `make load-live`: Alpaca free (`feed=sip`, `adjustment=all`) |
-| Universe and history | 500 invented tickers + `DEMO-INDEX`; 5 years | About 500 current S&P 500 + **SPY**; 2016-01-04 → latest (≈ 2,700 sessions) |
+| Source | Seeded generator `engine/synthetic/` | `make load-live`: Alpaca free (`feed=iex` by default, `adjustment=all`) |
+| Universe and history | 500 invented tickers + `DEMO-INDEX`; 5 years | About 500 current S&P 500 + **SPY**; asks for 2016-01-04 → previous close, gets 2017-11-15 → latest on the free iex feed (measured 2026-10-15: 2,239 sessions, 770,552 bars) |
 | Delistings | Planted (about 5%, at least 20) | None, so the U-2 badge shows "survivors only, current S&P 500 members" |
 | Checks | D-1, D-2, D-3 | D-4 (load summary), D-5 (localhost guard) |
 | Where | `data/synthetic/` at build and in tests. Never committed | `data/live/`, gitignored and dockerignored |

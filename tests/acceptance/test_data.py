@@ -2,10 +2,10 @@
 
 D-1 to D-3 call the synthetic generator's public entry points (spec 0006):
 `engine.synthetic.generate(seed)`, the `python -m engine.synthetic --seed N --out DIR` command and
-`engine.data.read_market(DIR)`. The live loader (feature 14) has no frozen entry point yet, so
-D-4 and D-5 reach it through an owed hook. The assertions use the frozen `Market` shape
-(spec 0002, `BARS_SCHEMA`, `SECURITIES_SCHEMA`, `DataMeta`). D-6 is checked black box through
-the guard's command line.
+`engine.data.read_market(DIR)`. D-4 reads the local live dataset through that same `read_market`
+and skips where there is none; D-5 drives `api.settings.Settings.from_env`, the host rule feature
+14 settled. The assertions use the frozen `Market` shape (spec 0002, `BARS_SCHEMA`,
+`SECURITIES_SCHEMA`, `DataMeta`). D-6 is checked black box through the guard's command line.
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ from pathlib import Path
 import polars as pl
 import pytest
 
-from acceptance.support import owed
+from api.settings import Settings
 from engine.contracts import Market
 from engine.data import read_market
 from engine.synthetic import generate
@@ -41,7 +41,14 @@ def _seed_42() -> Market:
 
 
 def load_live_market() -> Market:
-    owed("D-4", "entry point that reads the local live dataset written by make load-live")
+    """The live dataset `make load-live` writes, read through the same frozen entry point as
+    D-1 to D-3. It needs Alpaca keys and real bars, so it can never exist in CI (D-6 forbids
+    committing `data/`); there the test skips and the owner's local run is the evidence
+    (docs/qa/ac-questions.md#D-4)."""
+    live = REPO / "data" / "live"
+    if not (live / "bars.parquet").exists():
+        pytest.skip(f"no live dataset at {live}; run `make load-live` with Alpaca keys (D-4)")
+    return read_market(live)
 
 
 def _bar_sanity_violations(market: Market) -> pl.DataFrame:
@@ -131,9 +138,38 @@ def test_live_load_starts_2016_and_includes_spy() -> None:
     assert market.meta.survivors_only is True
 
 
+PUBLIC = "0.0.0.0"  # noqa: S104  # the address D-5 exists to refuse, never one we bind
+LOOPBACK = "127.0.0.1"
+
+
 @pytest.mark.ac("D-5")
-def test_live_mode_refuses_a_public_host() -> None:
-    owed("D-5", "how the API learns its host and refuses DATA_MODE=live off localhost")
+@pytest.mark.parametrize(
+    ("argv", "env", "because"),
+    [
+        (["--host", PUBLIC], {}, f"bound to {PUBLIC!r}"),
+        ([f"--host={PUBLIC}"], {}, f"bound to {PUBLIC!r}"),
+        ([], {"UVICORN_HOST": PUBLIC}, f"bound to {PUBLIC!r}"),
+        (["--host", LOOPBACK], {"CI": "true"}, "running in CI"),
+        (["--host", LOOPBACK], {"AWS_LAMBDA_FUNCTION_NAME": "swing-scan-api"}, "AWS Lambda"),
+    ],
+)
+def test_live_mode_refuses_a_public_host(
+    argv: list[str], env: dict[str, str], because: str
+) -> None:
+    """Settings reads the host the way uvicorn does, so `--host`, `--host=` and `UVICORN_HOST`
+    all count, and Lambda and CI are refused wherever they are bound (feature 14, spec 0010)."""
+    with pytest.raises(RuntimeError) as raised:
+        Settings.from_env({"DATA_MODE": "live", **env}, argv)
+    message = str(raised.value)
+    assert because in message
+    assert "D-5" in message  # the error has to say which rule stopped it
+
+
+@pytest.mark.ac("D-5")
+def test_live_mode_starts_on_loopback() -> None:
+    """The other half: the refusal must not lock the owner out of their own machine."""
+    settings = Settings.from_env({"DATA_MODE": "live"}, ["--host", LOOPBACK])
+    assert settings.data_mode == "live"
 
 
 def _guard(cwd: Path, *files: str) -> subprocess.CompletedProcess[str]:

@@ -26,7 +26,7 @@ _Source of truth: acceptance criteria IDs (D, R, S, B, X, U) and settled default
 | 11 | Exit types | Slice 3 | done |
 | 12 | Exit lab | Slice 3 | in-progress |
 | 13 | Research honesty guards | Slice 3 | done |
-| 14 | Live research mode (local) | Slice 4 | in-progress |
+| 14 | Live research mode (local) | Slice 4 | done |
 | 15 | Deploy hardening & demo readiness | Slice 5 | done |
 | 16 | README, research note & GIF | Slice 5 | planned |
 
@@ -42,7 +42,7 @@ From here on, features run in parallel across the four agent lanes of doc 02 §1
 | **G1 Oracles approved** | You recompute and merge QA's oracle drafts with the `oracle-approved` label (feature 6) | **open** (oracles approved in PR #9) | Engine simulator and exit work in features 9 and 11 |
 | **G2 Simulator merged** | Feature 9's simulator and its single exit interface (`step()`) on `main` | **open** (`step()` and the day loop landed in #39) | Engine work in features 11 and 12 |
 | **G3 Real scan API** | Feature 8's `/scan` on `main` (and on a preview deploy) | **open on `main`** (#39) and deployed (2026-10-09) | FE switches from mocks to the real API, screen by screen |
-| **G4 Feature freeze** | Every MUST criterion `required` and green in `docs/qa/traceability.md` | closed | Feature 16, then the `v1.0` tag |
+| **G4 Feature freeze** | Every MUST criterion `required` and green in `docs/qa/traceability.md` | **open** (52 required, 0 pending, 2026-10-15; D-4 and D-5 were the last two) | Feature 16, then the `v1.0` tag |
 
 ### Who can work on what, and when
 
@@ -234,11 +234,13 @@ Spec [0004](../specs/0004-research-honesty-guards/index.md) (signed off by the o
 
 ## Slice 4: Live research mode
 
-### 14. Live research mode (local) · in-progress
+### 14. Live research mode (local) · done
 Lane DI, run by you. Load Alpaca free daily bars since 2016 for about 500 current S&P 500 names plus SPY into the same schema, on your machine only.
 **Done when:** `make load-live` fills local data with keys from the environment, the API refuses live mode anywhere but localhost, and `research/` is ignored by git (D-4, D-5).
 - [x] Build it: `/develop live research mode` (assumed decisions, spec 0010; you run `make load-live`)
-Spec [0010](../specs/0010-live-research-mode/index.md) (Assumed) · code in `engine/src/engine/live/`, `services/api/src/api/settings.py`
+- [x] Verify it: `/check verify live research mode` (2026-10-15, a real `make load-live` with your keys: 502 tickers plus SPY, 770,552 bars, 2017-11-15 to 2026-10-14, 1 missing symbol, 97 bars dropped; the dataset serves through the API in live mode and a 52 week breakout scan on it returns real hits. D-5 driven against a real uvicorn down all five refusal paths, each exiting 1, with loopback still starting)
+- [x] QA gate: D-4 and D-5 flipped to `required`, which **opens G4** at 52 required and 0 pending. The hooks both tests were owed are now real: D-4 reads `data/live` through `read_market` and skips where there is none, so CI stays green while the owner's local run is the evidence; D-5 drives `Settings.from_env` over every host spelling and both markers
+Spec [0010](../specs/0010-live-research-mode/index.md) (Assumed, and the first real load corrected three of its assumptions: `feed=iex` not `sip`, and 2017-11-15 not 2016-01-04) · code in `engine/src/engine/live/`, `services/api/src/api/settings.py`
 
 ## Slice 5: Ship
 

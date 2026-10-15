@@ -185,7 +185,15 @@ Hours are the Architect's "v3-fit" figures (`02` §11.1), less the v3.2 deferral
 - Parquet baked into the image. Tickers never match real symbols.
 
 **Live mode (local only):**
-- `make load-live` fetches Alpaca free daily bars (`feed=sip`, `adjustment=all`) **from 2016-01-04 to the latest close** for ~500 current S&P 500 names plus **SPY** (the benchmark), into the same schema.
+- `make load-live` fetches Alpaca free daily bars (`adjustment=all`) **from 2016-01-04 to the
+  previous close** for ~500 current S&P 500 names plus **SPY** (the benchmark), into the same
+  schema. _Corrected 2026-10-15, from the first real load: the free plan does not include
+  `feed=sip`, so the default is `feed=iex` (`--feed sip` is there for a paid plan). The iex
+  feed has no history before **2017-11-15**, so the dataset starts there, not 2016-01-04, and
+  holds **770,552 bars** across 502 tickers plus SPY, not the ≈ 1.35M doc 02 A3 assumed. D-4
+  asks for first bars "on or after 2016-01-04", so it passes; there is simply 22 months less
+  history than this line used to imply. iex is also one exchange, so volume is a small share
+  of the consolidated tape and `vol_ratio` is not comparable across tickers._
 - `DATA_MODE=live` refuses non-localhost hosts.
 - `data/` is gitignored.
 - The UI shows **"Real data: survivors only, current S&P 500 members. Results are biased upward; treat them as hypotheses."**
@@ -503,7 +511,7 @@ project. Not investment advice."
 ## 8. Data (free-source angle)
 Details are in `01a-free-data-sources.md`.
 - **Public demo, GIF, CI and fixtures:** synthetic only.
-- **Live research (local):** Alpaca free plan, daily SIP bars since 2016-01-04, `adjustment=all`, 200 calls/min. ~500 names × ~2,700 bars ≈ 1.35M bars, a few minutes to fetch. **Personal, non-commercial use only.** Never committed, never hosted, never shown in the GIF.
+- **Live research (local):** Alpaca free plan, daily **iex** bars (sip needs a paid plan), `adjustment=all`, 200 calls/min. Measured 2026-10-15: 502 names plus SPY, 770,552 bars from 2017-11-15, about 90 seconds to fetch. **Personal, non-commercial use only.** Never committed, never hosted, never shown in the GIF.
 - **Known biases:** see §8.1 (shown in the UI badge and copied to the README).
 - **Path to stronger evidence (Later):**
   - **Massive free, 2-year Grouped Daily** (delisted-inclusive), plus nightly archiving to grow it;
