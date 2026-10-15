@@ -95,23 +95,41 @@ the runner up is in [rationale.md](rationale.md).
     | scan, `breakout_52w` | 0.74 s | 429 B |
     | backtest, `breakout_52w`, **5** configs | 5.39 s | 633 KB |
 
-    That last row is the one that matters, and it is bad news for the budget. 5 configs on
-    `breakout_52w` is 2 × 2,780 × 5 = 27,800 walks, so **0.194 ms per walk against 0.061 ms in
-    process**: the Lambda is about 3x slower per walk than the CI runner, even allowing for the
-    network and the 633 KB transfer. Carried to the case X-7 actually names, `pullback_ema21` with
-    6 configs and 222,792 walks, that is **roughly 43 s, past the function's own 30 s timeout**,
-    which the caller sees as a 502 rather than a slow answer.
+    That last row is 2 × 2,780 × 5 = 27,800 walks, so 0.194 ms per walk, which read as about 3x
+    the CI runner. Extrapolating it to the case X-7 names gave roughly 43 s, past the function's
+    own 30 s timeout. **That extrapolation was wrong, and too pessimistic**, because a 5.39 s
+    call is small enough that fixed cost (the network, serialising 633 KB) is a large share of
+    it, which inflates the per walk figure. The measurement below replaces it.
 
-    So the 20 s budget is probably not reachable for that template as the loop stands, and the
-    remedy order below is no longer a contingency. Two things are owed before acting on it: the
-    real measurement rather than this extrapolation from one point at one config count (smoke now
-    runs `pullback_ema21` with the six configs and reports it, gating nothing), and a decision
-    between the optimisation and the entry cap once that number exists.
+    **The X-7 measurement, 2026-10-14** (deploy run 38566692330 at commit `f003b31`, the same
+    function, `pullback_ema21` with the six `SIX_CONFIGS` plus the random baseline, warm, from
+    `scripts/smoke.sh`):
 
-    The 9.33 s in that table is not the cold start doc 01 judges: a first call after
-    `update-function-code` pays for Lambda optimising the newly pushed image (13.94 s on the
-    next deploy of the same code). A visitor's cold start, measured on an idle function the
-    same day, is 2.66 s. `infra/README.md` §6 now records both and says which is which.
+    | call | time | body |
+    |---|---|---|
+    | health, first call after the update | 4.85 s | 57 B |
+    | health, warm | 0.73 s | 57 B |
+    | scan probe, `close > 0` | 1.21 s, 475 rows | 64 KB |
+    | scan, `breakout_52w` | 0.73 s | 429 B |
+    | backtest, `breakout_52w`, 5 configs | 5.31 s | 633 KB |
+    | **exit lab, `pullback_ema21`, 6 configs** | **24.85 s** | 200, under the 6 MB cap |
+
+    So it answers rather than timing out, with about 5 s of margin against the function's 30 s
+    timeout, and it misses doc 01's 10 s by **2.5x**. Per walk: 24.85 s over 222,792 walks is
+    **0.111 ms, against 0.057 ms for the same work in process on a CI runner** (12.60 s), so the
+    Lambda is about **2x slower per walk**, not 3x.
+
+    The budget is not reachable by tuning the deployment, because the same work already takes
+    12.60 s in process on an ordinary CI runner with no Lambda involved. Raising memory cannot
+    help either: 2,048 MB is already past the 1,769 MB full vCPU point and this loop is single
+    threaded. What is left is making the loop cheaper (ADR-016's vectorised per trade windows)
+    or doing less work (fewer configs, or fewer entries), and the two differ in what the user
+    loses. That decision is open.
+
+    Neither "first call after the update" row is the cold start doc 01 judges: that call pays
+    for Lambda optimising the newly pushed image, and it swings a lot (9.33 s, then 13.94 s,
+    then 4.85 s, all on this function in one day). A visitor's cold start, measured on an idle
+    function, is 2.66 s. `infra/README.md` §6 records both and says which is which.
 
     Cost is linear in entries: fitting the two points gives about 0.4 s of fixed cost plus
     0.59 ms per strategy entry. One strategy entry means **12 trade walks**, not 7, because
