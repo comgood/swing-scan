@@ -124,7 +124,47 @@ the runner up is in [rationale.md](rationale.md).
     help either: 2,048 MB is already past the 1,769 MB full vCPU point and this loop is single
     threaded. What is left is making the loop cheaper (ADR-016's vectorised per trade windows)
     or doing less work (fewer configs, or fewer entries), and the two differ in what the user
-    loses. That decision is open.
+    loses.
+
+    **The profile, 2026-10-15.** AC-11 says profile before vectorising, so here is what the warm
+    `pullback_ema21` run spends its time on (`cProfile`, six configs plus the baseline, 3.73 M
+    bar steps over 222,792 walks):
+
+    | | share of the warm run |
+    |---|---|
+    | building a `BarView` per held bar | 18% |
+    | `step`, `_decide` and the three precedence scans, their own overhead | ~55% |
+    | the exits' real work (`level()`, `at_close()`) | **~8%** |
+    | `make_trade` and its Pydantic validation | 11% |
+    | the `walk_trade` loop itself | 10% |
+
+    So the exit logic is not the cost; interpreter and object overhead is. Three changes took
+    that overhead out without touching a precedence rule: the walker now reuses one `BarView`
+    instead of allocating one per bar (`BarArrays.into_view`), `open_position` splits the config's
+    exits by kind once per walk so a bar scans only the exits each step reads, and `_decide` skips
+    a step whose list is empty. Measured on the same machine and process, `engine/tests/sim/test_lab_budget.py`:
+
+    | template | before | after |
+    |---|---|---|
+    | `breakout_52w` | 0.72 s | 0.53 s |
+    | `pullback_ema21` | 4.38 s | 3.07 s |
+
+    **1.43x on the expensive template, and the profile is now flat**: no hotspot is left, just
+    about 22 M interpreter dispatches spread evenly over five functions. Pure Python has roughly
+    another 1.3x in it, not the 2x still owed. Scaling the 1.43x by the measured ratios puts the
+    CI runner near 8.8 s (inside the budget in process) and the Lambda near 17 s, but **both are
+    extrapolations**; the deployed figure comes from the next deploy's `make smoke`.
+
+    Cost per config is uneven, so "fewer configs" needs a number too. Warm, local, same
+    workload: 2 configs 0.84 s, 3 configs 1.79 s, 4 configs 1.87 s, 5 configs (the lab's own
+    defaults) 2.21 s, 6 configs 3.06 s. The sixth config is a 15% target with no stop and no
+    time exit, so it holds to the horizon and costs 0.85 s alone. Scaled to the Lambda, only
+    **2 configs** fits 10 s, which means doc 02 §14's "lower the exit lab to 2 to 4 configs"
+    fallback does not reach the budget at 4 and guts the lab at 2 (trade mode's own minimum, and
+    X-5 and X-9 exist to compare configs). The open decision is therefore narrower than it was:
+    ADR-016's vectorised windows, which keeps six configs and the budget but puts a second
+    implementation of the exit precedence beside `step()`, against the engine's rule that
+    precedence lives in exactly one place; or a budget set to a measured number.
 
     Neither "first call after the update" row is the cold start doc 01 judges: that call pays
     for Lambda optimising the newly pushed image, and it swings a lot (9.33 s, then 13.94 s,

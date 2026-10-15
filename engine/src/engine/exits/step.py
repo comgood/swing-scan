@@ -36,7 +36,16 @@ def open_position(
     """A new position with every exit's entry levels set. The initial stop (for R) is the
     highest stop level at entry, or None when the config has no stop."""
     position = Position(ticker, entry_index, fill, shares, exits)
-    for exit_ in exits:
+    for exit_ in exits:  # one pass: this runs once per trade walk, 222 k times per lab run
+        kind = exit_.kind
+        if kind == "stop":
+            position.stops.append(exit_)
+        elif kind == "target":
+            position.targets.append(exit_)
+        elif kind == "time":
+            position.timed.append(exit_)
+        else:
+            position.mas.append(exit_)
         exit_.on_entry(position, ctx)
     if position.stop_levels:
         position.initial_stop = max(position.stop_levels.values())
@@ -50,8 +59,8 @@ def _stop_rank(reason: ExitReason) -> int:
 def _stop(position: Position, bar: BarView) -> Fill | None:
     top: float | None = None
     reason: ExitReason = "stop_pct"
-    for exit_ in position.exits:  # the highest level; a tie goes to the earlier STOP_ORDER
-        if exit_.kind != "stop" or (level := exit_.level(position, bar)) is None:
+    for exit_ in position.stops:  # the highest level; a tie goes to the earlier STOP_ORDER
+        if (level := exit_.level(position, bar)) is None:
             continue
         if (
             top is None
@@ -69,8 +78,8 @@ def _stop(position: Position, bar: BarView) -> Fill | None:
 
 
 def _target(position: Position, bar: BarView) -> Fill | None:
-    for exit_ in position.exits:
-        if exit_.kind != "target" or (level := exit_.level(position, bar)) is None:
+    for exit_ in position.targets:
+        if (level := exit_.level(position, bar)) is None:
             continue
         if bar.open >= level:
             return Fill(bar.open, exit_.reason, "open")
@@ -80,15 +89,15 @@ def _target(position: Position, bar: BarView) -> Fill | None:
 
 
 def _at_close(position: Position, bar: BarView) -> Fill | None:
-    for exit_ in position.exits:
-        if exit_.kind == "time" and exit_.at_close(position, bar):
+    for exit_ in position.timed:
+        if exit_.at_close(position, bar):
             return Fill(bar.close, exit_.reason, "close")
     if bar.is_delisting:
         return Fill(bar.close, "delisted", "close")
     if bar.horizon is not None and bar.b == bar.horizon:
         return Fill(bar.close, "horizon", "close")
-    for exit_ in position.exits:
-        if exit_.kind == "ma" and exit_.at_close(position, bar):
+    for exit_ in position.mas:
+        if exit_.at_close(position, bar):
             position.pending_ma = True
     if bar.is_final:
         return Fill(bar.close, "end_of_test", "close")
@@ -98,7 +107,12 @@ def _at_close(position: Position, bar: BarView) -> Fill | None:
 def _decide(position: Position, bar: BarView) -> Fill | None:
     if position.pending_ma:
         return Fill(bar.open, "ma", "open")
-    return _stop(position, bar) or _target(position, bar) or _at_close(position, bar)
+    # Each `if` only skips a step whose exit list is empty, so the precedence above is unchanged.
+    if position.stops and (fill := _stop(position, bar)) is not None:
+        return fill
+    if position.targets and (fill := _target(position, bar)) is not None:
+        return fill
+    return _at_close(position, bar)
 
 
 def _track_extremes(position: Position, bar: BarView, fill: Fill | None) -> None:

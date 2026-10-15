@@ -55,6 +55,12 @@ class Position:
     fill: float
     shares: float
     exits: list[Exit]
+    stops: list[Exit] = field(default_factory=list)
+    """`exits` split by `kind`, so a bar scans only the exits that step reads (`open_position`).
+    The per bar path runs millions of times and most configs leave two of these empty."""
+    targets: list[Exit] = field(default_factory=list)
+    timed: list[Exit] = field(default_factory=list)
+    mas: list[Exit] = field(default_factory=list)
     initial_stop: float | None = None
     bars_held: int = 0
     stop_levels: dict[str, float] = field(default_factory=dict)

@@ -32,13 +32,15 @@ def walk_trade(
 ) -> TradeOutcome:
     """Hold one unit from `entry_row` until an exit; the ticker's last row always exits."""
     position = open_position(bars.ticker[entry_row], entry_row, entry_fill, 1.0, exits, ctx)
-    view = bars.view
+    into_view = bars.into_view
+    bar = bars.view(entry_row, 1, is_final=False, horizon=horizon)  # reused for every bar below
     row = entry_row
     while True:
-        fill = step(position, view(row, row - entry_row + 1, is_final=False, horizon=horizon))
+        fill = step(position, bar)
         if fill is not None:
             return TradeOutcome(position, fill, row)
         row += 1
+        into_view(bar, row, row - entry_row + 1, is_final=False, horizon=horizon)
 
 
 def make_trade(

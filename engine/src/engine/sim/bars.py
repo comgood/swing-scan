@@ -55,14 +55,25 @@ class BarArrays:
         )
 
     def view(self, row: int, b: int, *, is_final: bool, horizon: int | None = None) -> BarView:
-        return BarView(
-            open=self.open[row],
-            high=self.high[row],
-            low=self.low[row],
-            close=self.close[row],
-            b=b,
-            is_delisting=self.is_delisting[row],
-            is_final=is_final or self.is_last[row],
-            horizon=horizon,
-            row=row,
+        """A fresh view of one bar. The trade walker reuses one view instead (`into_view`)."""
+        return self.into_view(
+            BarView(0.0, 0.0, 0.0, 0.0, 0, False, False), row, b, is_final=is_final, horizon=horizon
         )
+
+    def into_view(
+        self, view: BarView, row: int, b: int, *, is_final: bool, horizon: int | None = None
+    ) -> BarView:
+        """Point an existing view at `row`, so a walk allocates one view instead of one per bar.
+
+        Safe because no exit and neither loop keeps a view past its own `step()` call.
+        """
+        view.open = self.open[row]
+        view.high = self.high[row]
+        view.low = self.low[row]
+        view.close = self.close[row]
+        view.b = b
+        view.is_delisting = self.is_delisting[row]
+        view.is_final = is_final or self.is_last[row]
+        view.horizon = horizon
+        view.row = row
+        return view
