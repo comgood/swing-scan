@@ -155,16 +155,51 @@ the runner up is in [rationale.md](rationale.md).
     CI runner near 8.8 s (inside the budget in process) and the Lambda near 17 s, but **both are
     extrapolations**; the deployed figure comes from the next deploy's `make smoke`.
 
-    Cost per config is uneven, so "fewer configs" needs a number too. Warm, local, same
-    workload: 2 configs 0.84 s, 3 configs 1.79 s, 4 configs 1.87 s, 5 configs (the lab's own
-    defaults) 2.21 s, 6 configs 3.06 s. The sixth config is a 15% target with no stop and no
-    time exit, so it holds to the horizon and costs 0.85 s alone. Scaled to the Lambda, only
-    **2 configs** fits 10 s, which means doc 02 §14's "lower the exit lab to 2 to 4 configs"
-    fallback does not reach the budget at 4 and guts the lab at 2 (trade mode's own minimum, and
-    X-5 and X-9 exist to compare configs). The open decision is therefore narrower than it was:
-    ADR-016's vectorised windows, which keeps six configs and the budget but puts a second
-    implementation of the exit precedence beside `step()`, against the engine's rule that
-    precedence lives in exactly one place; or a budget set to a measured number.
+    **How a local number becomes a deployed one.** There is one bridge: the 24.85 s Lambda run
+    and the 4.38 s local run measured the same six configs at the same commit, so the Lambda is
+    **5.7x** slower than that laptop on this workload. Every deployed figure below is a local
+    measurement times 5.7, which makes them estimates from a ratio measured once, not readings.
+
+    Cost per config is uneven, so "fewer configs" needs a number too. Warm, local, post
+    optimisation, `SIX_CONFIGS[:n]`, the set the Lambda ran:
+
+    | configs | local | times 5.7 |
+    |---|---|---|
+    | 2 | 1.00 s | 5.7 s |
+    | 3 | 1.28 s | 7.3 s |
+    | 4 | 1.70 s | 9.6 s |
+    | 5 | 2.50 s | 14.2 s |
+    | 6 | 2.90 s | 16.4 s |
+
+    So doc 02 §14's "lower the exit lab to 2 to 4 configs" fallback does reach the budget at
+    four, though 9.6 s against 10 s is too close to call without measuring it deployed.
+
+    **The vectorisation, costed against a prototype rather than estimated.** `run_trade_mode()`
+    is **90%** of the warm run (2.61 s of 2.90 s), so Amdahl allows a large win here, unlike the
+    loop tuning above. Two throwaway prototypes checked the two parts that could have sunk it,
+    each against `walk_trade()` over all 18,566 entries:
+
+    | prototype | speedup on the walk | mismatches vs the loop |
+    |---|---|---|
+    | `stop_pct` + `target` + `time`: fixed levels, precedence, both intraday fills | 38x | 0 exit bars, 0 prices |
+    | `trail_pct` + `time`: the moving level, plus MAE and MFE | 12x | 0 exit bars, 0 prices, 0 MAE, 0 MFE |
+
+    The moving trail level is the cumulative max of the highs shifted by one bar and floored at
+    the entry fill, because `step()` raises `high_water` only on a bar the position survives.
+    MAE and MFE are a running min and max to the exit bar, with the exit bar limited by the fill
+    type. Both vectorise exactly.
+
+    Projected: the walk stage falls to about 0.3 s of array work plus the roughly 0.39 s of
+    building 222,792 `Trade` models, which the vectorisation does not remove, giving about 1.0 s
+    local and **about 5.7 s deployed**, inside the budget with roughly 1.75x of margin. Taking
+    metrics off the `Trade` objects too would reach about 3.4 s, and is not needed.
+
+    The price is not the build time (about 4 to 5 h, against doc 02's 2 h estimate) but the
+    second implementation of the exit precedence living beside `step()`, against the engine's
+    rule that precedence lives in exactly one place. What makes that bearable: `step()` stays
+    the definition of correctness and the vectorised path has to prove equality against it on
+    every field of every trade, both templates, all six configs. The prototypes show that test
+    is cheap to write. The decision is open.
 
     Neither "first call after the update" row is the cold start doc 01 judges: that call pays
     for Lambda optimising the newly pushed image, and it swings a lot (9.33 s, then 13.94 s,
