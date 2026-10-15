@@ -28,7 +28,7 @@ _Source of truth: acceptance criteria IDs (D, R, S, B, X, U) and settled default
 | 13 | Research honesty guards | Slice 3 | done |
 | 14 | Live research mode (local) | Slice 4 | done |
 | 15 | Deploy hardening & demo readiness | Slice 5 | done |
-| 16 | README, research note & GIF | Slice 5 | planned |
+| 16 | README, research note & GIF | Slice 5 | in-progress |
 
 ## Parallel work
 
@@ -249,10 +249,17 @@ Lane DI. Make the public demo dependable at $0: OIDC deploys, a $1 budget alarm,
 **Done when:** a merge to main deploys both apps without stored keys, the budget alarm exists, cold start is measured and recorded, and every response stays under the size limit.
 - [x] Build it: `/develop deploy hardening` (PR #73: OIDC deploys with no stored keys, the keep alive ping, the $1 budget and throttle alarms, response size guards in `scripts/smoke.sh`; cold start recorded in `infra/README.md` §6, 2.66 s on an idle function 2026-10-14)
 
-### 16. README, research note & GIF · planned
+### 16. README, research note & GIF · in-progress
 Lane orchestrator. The portfolio face of the project: the portfolio ready checklist, one research note run on the synthetic market, an ADR digest, the agent log, a GIF of the demo script, and the not investment advice and data licence statements.
 **Done when:** every item in doc 01's portfolio ready definition is ticked and the README links the live demo and the GIF.
-- [ ] Build it: `/develop readme & demo`
+- [x] Build it: `/develop readme & demo`, everything but the GIF (2026-10-16)
+  - [x] `README.md`: the idea, the demo script, a Mermaid architecture diagram, the honest tech list, the $0/month breakdown with the measured 2.66 s cold start, "Limits of the research" copied from doc 01 §8.1, the data licence statement, the not investment advice notice, the CI badge and the live demo link
+  - [x] [Research note 0001](../research-notes/0001-fixed-vs-trailing-stop-synthetic.md): a real run on the seed 42 market following doc 01 §4.3. The hypothesis (a 10% trailing stop beats a fixed 8% stop per bar) is **rejected**, and the note's own headline is that the chosen config's OOS expectancy quadrupled while its edge over random fell 78%
+  - [x] [ADR digest](../adr-digest.md): all 17 decisions tracked to what actually happened. 15 held, ADR-005's "p95 > 10 s" trigger fired and the deviation was accepted on purpose, ADR-016's checkpoint resolved against its own fallback
+  - [x] [Agent log](../agent-log.md): the four lanes, the five mechanisms that kept the agents honest, and what they got wrong (every failure was a number asserted without measuring it)
+  - [x] Doc 01 §4.1 portfolio ready checklist ticked, including correcting the stale 10 s exit lab figure it still carried
+- [ ] **Record the GIF** (you, at a screen recorder): the six steps of the demo script against `make dev` on the seed 42 market, 375 px wide, into `docs/assets/demo.gif`, under about 10 MB, with the synthetic banner legible in frame 1. The README has a pending notice in its place and a one line swap in a comment
+- [ ] Tag `v1.0` once the GIF lands
 
 ## Deferred
 
