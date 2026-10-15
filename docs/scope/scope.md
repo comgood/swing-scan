@@ -26,9 +26,9 @@ _Source of truth: acceptance criteria IDs (D, R, S, B, X, U) and settled default
 | 11 | Exit types | Slice 3 | done |
 | 12 | Exit lab | Slice 3 | in-progress |
 | 13 | Research honesty guards | Slice 3 | done |
-| 14 | Live research mode (local) | Slice 4 | in-progress |
+| 14 | Live research mode (local) | Slice 4 | done |
 | 15 | Deploy hardening & demo readiness | Slice 5 | done |
-| 16 | README, research note & GIF | Slice 5 | planned |
+| 16 | README, research note & GIF | Slice 5 | in-progress |
 
 ## Parallel work
 
@@ -42,7 +42,7 @@ From here on, features run in parallel across the four agent lanes of doc 02 §1
 | **G1 Oracles approved** | You recompute and merge QA's oracle drafts with the `oracle-approved` label (feature 6) | **open** (oracles approved in PR #9) | Engine simulator and exit work in features 9 and 11 |
 | **G2 Simulator merged** | Feature 9's simulator and its single exit interface (`step()`) on `main` | **open** (`step()` and the day loop landed in #39) | Engine work in features 11 and 12 |
 | **G3 Real scan API** | Feature 8's `/scan` on `main` (and on a preview deploy) | **open on `main`** (#39) and deployed (2026-10-09) | FE switches from mocks to the real API, screen by screen |
-| **G4 Feature freeze** | Every MUST criterion `required` and green in `docs/qa/traceability.md` | closed | Feature 16, then the `v1.0` tag |
+| **G4 Feature freeze** | Every MUST criterion `required` and green in `docs/qa/traceability.md` | **open** (52 required, 0 pending, 2026-10-15; D-4 and D-5 were the last two) | Feature 16, then the `v1.0` tag |
 
 ### Who can work on what, and when
 
@@ -234,11 +234,13 @@ Spec [0004](../specs/0004-research-honesty-guards/index.md) (signed off by the o
 
 ## Slice 4: Live research mode
 
-### 14. Live research mode (local) · in-progress
+### 14. Live research mode (local) · done
 Lane DI, run by you. Load Alpaca free daily bars since 2016 for about 500 current S&P 500 names plus SPY into the same schema, on your machine only.
 **Done when:** `make load-live` fills local data with keys from the environment, the API refuses live mode anywhere but localhost, and `research/` is ignored by git (D-4, D-5).
 - [x] Build it: `/develop live research mode` (assumed decisions, spec 0010; you run `make load-live`)
-Spec [0010](../specs/0010-live-research-mode/index.md) (Assumed) · code in `engine/src/engine/live/`, `services/api/src/api/settings.py`
+- [x] Verify it: `/check verify live research mode` (2026-10-15, a real `make load-live` with your keys: 502 tickers plus SPY, 770,552 bars, 2017-11-15 to 2026-10-14, 1 missing symbol, 97 bars dropped; the dataset serves through the API in live mode and a 52 week breakout scan on it returns real hits. D-5 driven against a real uvicorn down all five refusal paths, each exiting 1, with loopback still starting)
+- [x] QA gate: D-4 and D-5 flipped to `required`, which **opens G4** at 52 required and 0 pending. The hooks both tests were owed are now real: D-4 reads `data/live` through `read_market` and skips where there is none, so CI stays green while the owner's local run is the evidence; D-5 drives `Settings.from_env` over every host spelling and both markers
+Spec [0010](../specs/0010-live-research-mode/index.md) (Assumed, and the first real load corrected three of its assumptions: `feed=iex` not `sip`, and 2017-11-15 not 2016-01-04) · code in `engine/src/engine/live/`, `services/api/src/api/settings.py`
 
 ## Slice 5: Ship
 
@@ -247,10 +249,17 @@ Lane DI. Make the public demo dependable at $0: OIDC deploys, a $1 budget alarm,
 **Done when:** a merge to main deploys both apps without stored keys, the budget alarm exists, cold start is measured and recorded, and every response stays under the size limit.
 - [x] Build it: `/develop deploy hardening` (PR #73: OIDC deploys with no stored keys, the keep alive ping, the $1 budget and throttle alarms, response size guards in `scripts/smoke.sh`; cold start recorded in `infra/README.md` §6, 2.66 s on an idle function 2026-10-14)
 
-### 16. README, research note & GIF · planned
+### 16. README, research note & GIF · in-progress
 Lane orchestrator. The portfolio face of the project: the portfolio ready checklist, one research note run on the synthetic market, an ADR digest, the agent log, a GIF of the demo script, and the not investment advice and data licence statements.
 **Done when:** every item in doc 01's portfolio ready definition is ticked and the README links the live demo and the GIF.
-- [ ] Build it: `/develop readme & demo`
+- [x] Build it: `/develop readme & demo`, everything but the GIF (2026-10-16)
+  - [x] `README.md`: the idea, the demo script, a Mermaid architecture diagram, the honest tech list, the $0/month breakdown with the measured 2.66 s cold start, "Limits of the research" copied from doc 01 §8.1, the data licence statement, the not investment advice notice, the CI badge and the live demo link
+  - [x] [Research note 0001](../research-notes/0001-fixed-vs-trailing-stop-synthetic.md): a real run on the seed 42 market following doc 01 §4.3. The hypothesis (a 10% trailing stop beats a fixed 8% stop per bar) is **rejected**, and the note's own headline is that the chosen config's OOS expectancy quadrupled while its edge over random fell 78%
+  - [x] [ADR digest](../adr-digest.md): all 17 decisions tracked to what actually happened. 15 held, ADR-005's "p95 > 10 s" trigger fired and the deviation was accepted on purpose, ADR-016's checkpoint resolved against its own fallback
+  - [x] [Agent log](../agent-log.md): the four lanes, the five mechanisms that kept the agents honest, and what they got wrong (every failure was a number asserted without measuring it)
+  - [x] Doc 01 §4.1 portfolio ready checklist ticked, including correcting the stale 10 s exit lab figure it still carried
+- [ ] **Record the GIF** (you, at a screen recorder): the six steps of the demo script against `make dev` on the seed 42 market, 375 px wide, into `docs/assets/demo.gif`, under about 10 MB, with the synthetic banner legible in frame 1. The README has a pending notice in its place and a one line swap in a comment
+- [ ] Tag `v1.0` once the GIF lands
 
 ## Deferred
 

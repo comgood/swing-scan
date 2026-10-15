@@ -95,11 +95,11 @@ Prices are 2026 list prices from review sites, about ±20%. The full v1 research
 > "I built a swing-strategy research workbench in a week with AI agents, for $0. You compose an entry rule, see today's hits in a table, then compare up to six exit strategies on the exact same entries, each against random entries run through the same exit. Stops, targets, trailing and MA exits each have a hand-computed oracle test. IS and OOS sit side by side, but only IS is highlighted, so you pick on IS. A trial counter keyed on the rule's structure warns when parameter-tweaking piles up. The public demo runs on a synthetic market with planted delistings, so tests can prove survivorship and look-ahead handling. My real research runs locally on free data, and I'm explicit that it's survivors-only, so findings are hypotheses."
 
 ### 4.1 Definition of "portfolio-ready" (release v1.0)
-- [ ] The public URL loads with a **"Synthetic market: not real prices"** banner, no sign-up. A template rule → scan → exit-lab run works end to end. Cold start ≤ 10 s; warm backtest < 3 s; warm 6-config exit lab with random baseline < 10 s.
-- [ ] Every MUST acceptance criterion in §6 passes in CI (badge in README).
-- [ ] Oracle tests for **every MUST exit type** plus the poisoned-future test pass.
-- [ ] The README has: a **GIF** of the demo flow, the demo script (§7), an architecture diagram, ADRs, an agent log, an honest tech list, "$0/month" with how, the data-licence statement, and a **"Limits of the research"** section (copied from §8.1).
-- [ ] **One published research note run on the synthetic market** (in the repo, linked from the README). It follows the **research-note template (§4.3)**: IS-pick → OOS-once → single portfolio backtest, with trial count, edge vs random and caveats (including the synthetic market's planted edge). The owner keeps **live research notes private** in a gitignored local `research/` folder. Aggregate metrics from live data count as derived data and are **never published**.
+- [x] The public URL loads with a **"Synthetic market: not real prices"** banner, no sign-up. A template rule → scan → exit-lab run works end to end. Cold start ≤ 10 s; warm backtest < 3 s; warm 6-config exit lab with random baseline **< 25 s**. _The exit-lab figure was 10 s here until 2026-10-15, an assumption doc 02 A4 never measured. Measured on the deployed function it is 16.5–18.9 s warm, so the criterion (X-7) is now 25 s, set from that reading and clear of the 30 s timeout. Cold start measured 2.66 s._
+- [x] Every MUST acceptance criterion in §6 passes in CI (badge in README). _52 required, 0 pending as of 2026-10-16; D-4 and D-5 were the last two. D-4 can only assert where live data exists, so it skips in CI and the owner's local run is its evidence._
+- [x] Oracle tests for **every MUST exit type** plus the poisoned-future test pass. _26 owner-approved oracles in `tests/oracle/`._
+- [ ] The README has: a **GIF** of the demo flow, the demo script (§7), an architecture diagram, ADRs, an agent log, an honest tech list, "$0/month" with how, the data-licence statement, and a **"Limits of the research"** section (copied from §8.1). _Written 2026-10-16: everything but the GIF, which needs a screen recording. The ADRs are digested in `docs/adr-digest.md` (all 17 tracked to outcomes) and the log is `docs/agent-log.md`._
+- [x] **One published research note run on the synthetic market** (in the repo, linked from the README). It follows the **research-note template (§4.3)**: IS-pick → OOS-once → single portfolio backtest, with trial count, edge vs random and caveats (including the synthetic market's planted edge). The owner keeps **live research notes private** in a gitignored local `research/` folder. Aggregate metrics from live data count as derived data and are **never published**.
 - [ ] No real price data or keys in the repo; the guard passes. Tagged `v1.0`.
 
 ### 4.3 Research-note template (published synthetic note and private live notes)
@@ -185,7 +185,15 @@ Hours are the Architect's "v3-fit" figures (`02` §11.1), less the v3.2 deferral
 - Parquet baked into the image. Tickers never match real symbols.
 
 **Live mode (local only):**
-- `make load-live` fetches Alpaca free daily bars (`feed=sip`, `adjustment=all`) **from 2016-01-04 to the latest close** for ~500 current S&P 500 names plus **SPY** (the benchmark), into the same schema.
+- `make load-live` fetches Alpaca free daily bars (`adjustment=all`) **from 2016-01-04 to the
+  previous close** for ~500 current S&P 500 names plus **SPY** (the benchmark), into the same
+  schema. _Corrected 2026-10-15, from the first real load: the free plan does not include
+  `feed=sip`, so the default is `feed=iex` (`--feed sip` is there for a paid plan). The iex
+  feed has no history before **2017-11-15**, so the dataset starts there, not 2016-01-04, and
+  holds **770,552 bars** across 502 tickers plus SPY, not the ≈ 1.35M doc 02 A3 assumed. D-4
+  asks for first bars "on or after 2016-01-04", so it passes; there is simply 22 months less
+  history than this line used to imply. iex is also one exchange, so volume is a small share
+  of the consolidated tape and `vol_ratio` is not comparable across tickers._
 - `DATA_MODE=live` refuses non-localhost hosts.
 - `data/` is gitignored.
 - The UI shows **"Real data: survivors only, current S&P 500 members. Results are biased upward; treat them as hypotheses."**
@@ -503,7 +511,7 @@ project. Not investment advice."
 ## 8. Data (free-source angle)
 Details are in `01a-free-data-sources.md`.
 - **Public demo, GIF, CI and fixtures:** synthetic only.
-- **Live research (local):** Alpaca free plan, daily SIP bars since 2016-01-04, `adjustment=all`, 200 calls/min. ~500 names × ~2,700 bars ≈ 1.35M bars, a few minutes to fetch. **Personal, non-commercial use only.** Never committed, never hosted, never shown in the GIF.
+- **Live research (local):** Alpaca free plan, daily **iex** bars (sip needs a paid plan), `adjustment=all`, 200 calls/min. Measured 2026-10-15: 502 names plus SPY, 770,552 bars from 2017-11-15, about 90 seconds to fetch. **Personal, non-commercial use only.** Never committed, never hosted, never shown in the GIF.
 - **Known biases:** see §8.1 (shown in the UI badge and copied to the README).
 - **Path to stronger evidence (Later):**
   - **Massive free, 2-year Grouped Daily** (delisted-inclusive), plus nightly archiving to grow it;

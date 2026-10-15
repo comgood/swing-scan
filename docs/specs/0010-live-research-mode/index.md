@@ -34,6 +34,34 @@ Spec 0001 fixes the D-5 host rule and doc 02 A3 fixes the source (Alpaca free da
 - **D-5**: `DATA_MODE=live` refuses to start on Lambda, in CI, or bound to anything but `127.0.0.1`, with a clear error.
 - `research/` and `data/` stay gitignored; keys come only from the environment (or a local `.env`).
 
+## What the first real load showed (2026-10-15)
+
+`make load-live` was run for real with the owner's keys, and D-4 and D-5 were verified at their
+surfaces. Both criteria are now `required`. Three of the assumptions above need correcting when
+this spec is ratified:
+
+| Assumed | Measured |
+|---|---|
+| `feed=sip` (assumption 4, doc 02 A3, doc 01 §6.1) | The free plan has no `sip`; the shipped default is `iex` and `--feed sip` needs a paid plan |
+| `data_version="alpaca-sip-all:<date>"` (assumption 3) | `alpaca-iex-all:2026-10-14` |
+| History from 2016-01-04, ≈ 1.35M bars (doc 02 A3) | **2017-11-15 → 2026-10-14**, **770,552 bars**, 502 tickers plus SPY. The iex feed has no earlier history: asking for 2014 returns nothing at all, not even SPY |
+
+The load: 1 missing symbol (DOW, not served under that ticker), 97 bars (0.013%) dropped by the
+D-2 filter, about 90 seconds end to end. The dataset serves through the real API in live mode and
+a 52 week breakout scan on it returns real hits.
+
+D-4 still passes as written, because it asks for first bars "on or after 2016-01-04 (or its
+listing date)" and 2017-11-15 clears that. The gap is in the assumption, not the criterion: there
+is 22 months less history and 43% fewer bars than planned, over a window that is more bullish
+than the one doc 02 A3 described. Anything that reads the live set should expect that.
+
+Assumption 5 (the D-5 host rule) held exactly as written. Every path was driven against a real
+uvicorn and each exited 1 before opening a port: `--host 0.0.0.0`, `--host=0.0.0.0`,
+`UVICORN_HOST=0.0.0.0`, `CI=1` on loopback, `AWS_LAMBDA_FUNCTION_NAME` on loopback, and all three
+at once (the message names every reason, not just the first). Loopback still starts. Two notes:
+`localhost` and `::1` are refused too, since the compare is literal, and the error surfaces as a
+raw Python traceback whose last line is the message, so it is clear but not tidy.
+
 ## Ratify
 
 This decision was recorded by /develop, not deliberated. Run `/architect live research mode`

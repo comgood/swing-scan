@@ -54,14 +54,27 @@ D-3's "bear segment" is **ruled** (owner, 2026-10-07): the benchmark closes at l
 <a id="D-4"></a>
 ## D-4: checking the live load
 
-**Status:** owed (scope feature 14).
-D-4 needs Alpaca keys and real data, so it can never run in CI. The test reads the local dataset through a hook, `load_live_market()`, and stays `pending` in CI. The owner runs it locally after `make load-live` as part of `/check verify`.
+**Status:** resolved 2026-10-15, `required`.
+D-4 needs Alpaca keys and real data, so it can never run in CI. The hook it was owed turned out to be the entry point D-1 to D-3 already use: `load_live_market()` is `read_market(data/live)`, and it **skips** where there is no dataset. So the ID can be `required` honestly: CI is green because the test skips there, and the assertions run for real on the machine that has the data.
+
+What a `required` D-4 does and does not prove:
+- It does prove the shape every time the owner runs the suite after `make load-live`: every ticker's first bar on or after 2016-01-04 (or its `listed_from`), SPY present, `data_mode` live, `survivors_only` true.
+- It does **not** prove anything in CI. The gate row names `local` as the environment and the owner run as the evidence for exactly this reason. A green CI on D-4 means "skipped", not "passed".
+- Verified 2026-10-15 by a real `make load-live`: 502 tickers plus SPY, 770,552 bars, 2017-11-15 to 2026-10-14, one missing symbol (DOW), 97 bars dropped by the D-2 filter.
+
+One thing the measurement showed that the criterion does not: the free `iex` feed has no history before **2017-11-15**, so the dataset starts there, not at 2016-01-04. D-4 says "on or after 2016-01-04", so it passes, but there is 22 months less history than doc 01 implies. Recorded in [spec 0010](../specs/0010-live-research-mode/index.md).
 
 <a id="D-5"></a>
 ## D-5: how the API knows it is not on localhost
 
-**Status:** owed (scope feature 14).
-D-5 says the API exits with a clear error when `DATA_MODE=live` runs on a non localhost host. No doc fixes how the API learns its host (bind address, an environment variable, or the Lambda environment). The test is a pending placeholder until feature 14 decides.
+**Status:** resolved 2026-10-15, `required`.
+D-5 says the API exits with a clear error when `DATA_MODE=live` runs on a non localhost host. No doc fixed how the API learns its host, so the test stayed a placeholder until feature 14 decided. It decided in `api.settings`: `bound_host()` resolves the host the way uvicorn itself does (`--host`, then `--host=`, then `UVICORN_HOST`, then the `127.0.0.1` default), and `live_mode_problems()` adds the two markers that mean "not your machine" whatever the binding says, `AWS_LAMBDA_FUNCTION_NAME` and `CI`. `Settings.from_env()` raises at import, so uvicorn exits 1 before a port is open.
+
+The test drives `Settings.from_env` directly with `argv` and `env`, which the function takes as parameters for this purpose, and covers all three host spellings, both markers, and the loopback case that must still start. A real uvicorn was driven down every one of those paths on 2026-10-15 and exited 1 each time, which is the half the in process test cannot show.
+
+Two readings the rule settles, worth knowing:
+- The compare is literal against `127.0.0.1`, so `localhost` and `::1` are refused too. Strict is right for a guard, and `make dev-live` binds `127.0.0.1`, so the happy path is unaffected.
+- The message names every reason at once, not just the first, so a Lambda run bound to `0.0.0.0` in CI says all three.
 
 <a id="ui-tests"></a>
 ## UI halves of R-1, R-8, X-3, X-4, X-9 and U-1 to U-8

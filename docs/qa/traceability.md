@@ -30,8 +30,8 @@ Test files are under `tests/acceptance/`. "Oracle" means the owner's protected s
 | D-1 | Same seed gives identical frames | use case | `test_data.py` | `engine.synthetic.generate` seeds 42 (twice) and 7; the `python -m engine.synthetic` output read back by `read_market` (spec 0006) | `make data-check` | required | 2026-10-08 |
 | D-2 | Every bar sane, no bars after delisting | use case | `test_data.py` | `generate(42)`: bar bands, volume, positive finite prices, no bar outside `listed_from` to `delisted_on` | `make data-check` | required | 2026-10-08 |
 | D-3 | A bear segment and at least 20 delistings | use case | `test_data.py` | `generate(42)`: benchmark drawdown of at least 20%, 20 or more delistings | `make data-check` | required | 2026-10-08 |
-| D-4 | Live load from 2016-01-04, SPY present | local | `test_data.py` | local live data (owed hook) | owner run of `make load-live` | pending | |
-| D-5 | Live mode refuses a non localhost host | use case | `test_data.py` | owed: host detection rule | | pending | |
+| D-4 | Live load from 2016-01-04, SPY present | local | `test_data.py` | `read_market(data/live)`; skips where there is none, so CI is green and the owner's local run is the evidence | owner run of `make load-live`, 502 tickers plus SPY, 770,552 bars, verified 2026-10-15 | required | 2026-10-15 |
+| D-5 | Live mode refuses a non localhost host | use case | `test_data.py` | `Settings.from_env`: `--host`, `--host=`, `UVICORN_HOST`, `CI`, `AWS_LAMBDA_FUNCTION_NAME`, plus loopback still starting | real uvicorn exits 1 on each path, verified 2026-10-15 | required | 2026-10-15 |
 | D-6 | Data and keys are blocked at commit | guard | `test_data.py` | temp files under `data/` and a runtime built fake key | CI guards job | required | 2026-10-07 |
 | R-1 | Rule JSON and URL round trip | contract, UI | `test_rules.py`; Vitest `apps/web/tests/acceptance/rule-builder.test.tsx` | both templates plus one rule using every operand shape; on `/`, an edit switching the link to `?r=` and a reload of it, and a `?r=` in spec 0008's encoding (spec 0008 AC-1, AC-2) | | required | 2026-10-08 |
 | R-2 | Templates equal the golden reference on every date | golden | `test_rules.py` | 24 ticker seeded random walk, 330 bars, with listings and delistings | Oracle | required | 2026-10-08 |
@@ -80,7 +80,7 @@ Test files are under `tests/acceptance/`. "Oracle" means the owner's protected s
 | U-7 | 422 shows inline on the row or field | contract, UI | `test_ui.py`; Vitest `apps/web/tests/acceptance/errors-422.test.tsx` (shared helpers), `apps/web/tests/acceptance/rule-builder.test.tsx` (builder rows, one config exit form), Vitest `apps/web/tests/acceptance/exit-lab-report.test.tsx` (lab config editor) | bad `n` on row 2, bad exit param; the 422 mocks through `fieldErrorsFrom422`; real API paths on the builder rows (left, right `ind` and right `value` tags, [U-7-loc](ac-questions.md#U-7-loc) ruled (a)) and on `configs.2.exits.i.stop_pct.pct`, which marks config 3's "Stop loss (%)" and no other config or field (spec 0009 AC-20) | | required | 2026-10-10 |
 | U-8 | Procedure note under the exit lab table | UI | `test_ui.py`; Vitest `apps/web/tests/acceptance/honesty.test.tsx` (words), Vitest `apps/web/tests/acceptance/exit-lab-report.test.tsx` (placement) | `ProcedureNote` and the `/ui` gallery (spec 0004 AC-7, AC-9); the note word for word as the first thing after the lab table's scroll box, outside it (spec 0009 AC-18) | | required | 2026-10-10 |
 
-**Totals:** 52 MUST criteria, 50 required, 2 pending. Stretch criteria (S-5, B-4R, B-12, X-5S, X-6) get a row when they are picked up.
+**Totals:** 52 MUST criteria, 52 required, 0 pending. Stretch criteria (S-5, B-4R, B-12, X-5S, X-6) get a row when they are picked up.
 
 ## Golden reference
 
