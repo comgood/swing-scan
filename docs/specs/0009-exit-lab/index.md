@@ -155,24 +155,38 @@ the runner up is in [rationale.md](rationale.md).
     CI runner near 8.8 s (inside the budget in process) and the Lambda near 17 s, but **both are
     extrapolations**; the deployed figure comes from the next deploy's `make smoke`.
 
-    **How a local number becomes a deployed one.** There is one bridge: the 24.85 s Lambda run
-    and the 4.38 s local run measured the same six configs at the same commit, so the Lambda is
-    **5.7x** slower than that laptop on this workload. Every deployed figure below is a local
-    measurement times 5.7, which makes them estimates from a ratio measured once, not readings.
+    **After the loop work, 2026-10-15** (deploy run 38678838548 at commit `d172ca7`, the same
+    function). Three environments, the same six configs, warm:
 
-    Cost per config is uneven, so "fewer configs" needs a number too. Warm, local, post
-    optimisation, `SIX_CONFIGS[:n]`, the set the Lambda ran:
+    | | before | after | gain |
+    |---|---|---|---|
+    | laptop, Apple Silicon | 4.38 s | 3.07 s | 1.43x |
+    | CI runner, x86_64 Linux | 12.60 s | 6.04 s | 2.09x |
+    | **the deployed Lambda** | **24.85 s** | **18.94 s** | **1.31x** |
 
-    | configs | local | times 5.7 |
+    Removing object churn pays most on the slowest interpreter and least on the Lambda, so a
+    gain measured anywhere does not carry to anywhere else.
+
+    **Cost by config count, measured on the deployed function** rather than scaled into it
+    (`pullback_ema21`, `SIX_CONFIGS[:n]`, one call to warm each shape then two measured):
+
+    | configs | deployed, warm | inside 10 s |
     |---|---|---|
-    | 2 | 1.00 s | 5.7 s |
-    | 3 | 1.28 s | 7.3 s |
-    | 4 | 1.70 s | 9.6 s |
-    | 5 | 2.50 s | 14.2 s |
-    | 6 | 2.90 s | 16.4 s |
+    | 2 | 5.86 s, 6.31 s | yes |
+    | 3 | 7.41 s, 7.70 s | yes |
+    | 4 | 10.07 s, 10.25 s | no, and right on the line |
+    | 5 | 14.83 s, 14.90 s | no |
+    | 6 | 16.53 s, 16.60 s | no |
 
-    So doc 02 §14's "lower the exit lab to 2 to 4 configs" fallback does reach the budget at
-    four, though 9.6 s against 10 s is too close to call without measuring it deployed.
+    Two things to read off this. Four configs lands **at** the budget, not inside it, so doc 02
+    §14's "lower the exit lab to 2 to 4 configs" reaches X-7 only at three. And the function's
+    own spread matters: the same six configs answered in 18.94 s from the deploy's `make smoke`
+    and 16.5 s a few minutes later, about 15%, so no budget should be set within 15% of a
+    measured number.
+
+    Extrapolation has a poor record here. Of four predictions of this one figure, from a per
+    walk cost (43 s), from a mismatched config set (12.4 s), from the CI runner (11.9 s) and
+    from the laptop (16.4 s), only the last was close. Measure this number, never derive it.
 
     **The vectorisation, costed against a prototype rather than estimated.** `run_trade_mode()`
     is **90%** of the warm run (2.61 s of 2.90 s), so Amdahl allows a large win here, unlike the
@@ -191,8 +205,11 @@ the runner up is in [rationale.md](rationale.md).
 
     Projected: the walk stage falls to about 0.3 s of array work plus the roughly 0.39 s of
     building 222,792 `Trade` models, which the vectorisation does not remove, giving about 1.0 s
-    local and **about 5.7 s deployed**, inside the budget with roughly 1.75x of margin. Taking
-    metrics off the `Trade` objects too would reach about 3.4 s, and is not needed.
+    local. Times the laptop ratio that is the only one of four bridges to have predicted this
+    function correctly (16.4 s against 16.5 s measured), that is **about 6 s deployed** for all
+    six configs, inside the budget with enough margin to survive the 15% spread. Taking metrics
+    off the `Trade` objects too would reach about 3.4 s, and is not needed. It is still a
+    projection, and the only honest way to know is to build it and measure.
 
     The price is not the build time (about 4 to 5 h, against doc 02's 2 h estimate) but the
     second implementation of the exit precedence living beside `step()`, against the engine's

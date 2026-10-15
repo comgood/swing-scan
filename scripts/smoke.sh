@@ -93,10 +93,13 @@ call "backtest $template_id, 5 configs" 200 -H 'content-type: application/json' 
 echo "  mode $(jq -r '.mode' "$out")"
 
 # X-7 on the deployed API (spec 0009 AC-11): the slowest template with the six configs of
-# SIX_CONFIGS in engine/tests/sim/test_lab_budget.py. Reported, never gated: in process this run
-# is 11.39 s on a CI runner and the Lambda is about 3x slower per trade walk, so it may pass the
-# function's 30 s timeout and come back 502. A known budget gap must not turn every deploy red,
-# so this prints the number and the verdict and leaves the exit code alone. Budget 20 s warm.
+# SIX_CONFIGS in engine/tests/sim/test_lab_budget.py. Reported, never gated: it answers 200 in
+# about 17 s warm (6.04 s in process on a CI runner, so the Lambda is about 2.7x slower per trade
+# walk), which misses doc 01's 10 s but clears the function's 30 s timeout by over 10 s. A known
+# budget gap must not turn every deploy red, so this prints the number and the verdict and leaves
+# the exit code alone. The 20 s budget below is the "it still answers" line, not X-7's 10 s; the
+# same six configs have read 16.5 s and 18.94 s minutes apart, so keep the slack. Measured
+# numbers per config count live in spec 0009 AC-11.
 # shortcut: the six configs are duplicated from the Python test; move both to one JSON fixture
 # when anything about them changes (spec 0009 AC-11 rule 2).
 X7_BUDGET_S="${SMOKE_X7_BUDGET_S:-20}"
