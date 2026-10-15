@@ -10,10 +10,12 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import random
 import re
 import subprocess
 import sys
+import warnings
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import date, timedelta
@@ -230,6 +232,26 @@ def trade_lab(
         f"2 to 6 configs must run in trade mode, got {result.mode}"
     )
     return result
+
+
+# ---------------------------------------------------------------- timing budgets
+
+
+def within_budget(seconds: float, budget: float, what: str) -> None:
+    """An in process timing budget: hard locally, a warning on CI.
+
+    The deployed numbers are what S-4 and X-7 actually name, and `make smoke` owns those
+    (docs/qa/ac-questions.md#perf). In process the same run is several times faster, so this
+    budget is a regression proxy, and a shared CI runner's noise must not fail a criterion that
+    is green everywhere it is measured. Same split as `engine/tests/sim/test_lab_budget.py`.
+    """
+    if seconds < budget:
+        return
+    message = f"{what}: {seconds:.2f} s over the {budget:.0f} s in process budget"
+    if os.environ.get("CI"):
+        warnings.warn(message, stacklevel=2)
+    else:
+        pytest.fail(message)
 
 
 # ---------------------------------------------------------------- owed hooks

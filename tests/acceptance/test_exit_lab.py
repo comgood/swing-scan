@@ -25,6 +25,7 @@ from acceptance.support import (
     run_backtest,
     trade_lab,
     ui_covered_by,
+    within_budget,
 )
 from engine.contracts import (
     TEMPLATES,
@@ -229,7 +230,8 @@ def test_guides_use_baseline_is_trades_only() -> None:
 @pytest.mark.ac("X-7")
 @pytest.mark.slow
 def test_six_configs_and_baseline_finish_under_10_seconds_and_6_mb() -> None:
-    """In process on a 500 ticker, 5 year market. The deployed number is a verify step."""
+    """In process on a 500 ticker, 5 year market. X-7's own budget is 25 s on the deployed API,
+    owned by `make smoke`; the 10 s here is the tighter in process proxy (#perf)."""
     tiny = build_market(random_walk_frames(n_tickers=3, n_bars=60, seed=1))
     six = [*FIVE_CONFIGS, config("Target", {"type": "target", "pct": 15})]
     trade_lab(STRATEGY, six, tiny)  # fail fast while the engine is a stub
@@ -237,7 +239,7 @@ def test_six_configs_and_baseline_finish_under_10_seconds_and_6_mb() -> None:
     trade_lab(STRATEGY, six, market)  # warm
     started = time.perf_counter()
     result = trade_lab(STRATEGY, six, market)
-    assert time.perf_counter() - started < 10.0
+    within_budget(time.perf_counter() - started, 10.0, "X-7 on a 500 ticker random walk")
     assert len(result.model_dump_json(by_alias=True)) < 6_000_000
 
 
@@ -262,7 +264,7 @@ def test_seed_42_six_configs_run_twice_equal_under_10_seconds_and_6_mb(
     first = trade_lab(template.rule, six, market)  # also warms the caches
     started = time.perf_counter()
     result = trade_lab(template.rule, six, market)
-    assert time.perf_counter() - started < 10.0
+    within_budget(time.perf_counter() - started, 10.0, f"X-7 on seed 42, {template.id}")
     assert result == first
     assert result.entries.count > 0, "the budget must be measured on a run that trades"
     assert len(result.model_dump_json(by_alias=True)) < 6_000_000

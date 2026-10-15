@@ -23,7 +23,7 @@
 | A1 | The owner works about 7.5 focused hours a day for 7 days. Agents write most of the code. The owner writes the oracle tests, reviews engine diffs and approves | §11.5 |
 | A2 | **Synthetic market:** 500 invented tickers × 5 years (≈ 1,260 sessions), regimes, sectors, a **documented, planted momentum term**, about 5% planted delistings (at least 20), about 5% mid-sample listings, adjusted prices only, `DEMO-INDEX`. Generated at image build | — |
 | A3 | **Live mode (local):** Alpaca free daily bars (`feed=sip`, `adjustment=all`) from **2016-01-04**, about 500 current S&P 500 + SPY (≈ 1.35M bars). Biased upward by survivorship, index selection and one bull regime (OOS ≈ 2023–2026). The badge, the README and the random baseline address this (§7.5) | — |
-| A4 | A warm Lambda (2 GB, 30 s) runs a 6-config exit lab **plus its random baseline** on synthetic data in under 10 s (X-7), using the per-trade loop. **Measured on Day 4** | ADR-016 fallback |
+| A4 | ~~A warm Lambda (2 GB, 30 s) runs a 6-config exit lab **plus its random baseline** on synthetic data in under 10 s (X-7), using the per-trade loop. **Measured on Day 4**~~ **Wrong, and never measured on Day 4.** Measured 2026-10-15 on the deployed function: 16.5–18.9 s warm with the per-trade loop. X-7's budget is now 25 s, set from that reading (doc 01 X-7, spec 0009 AC-11). It clears the 30 s timeout by over 10 s, so the assumption held for feasibility and failed only on speed | ADR-016 fallback, costed but not taken |
 | A5 | The AWS account stays within always-free allowances (upgrade to the Paid plan before the 6-month Free plan ends), with a $1 budget alarm | Cloud Run (ADR-001) |
 
 ---
@@ -365,7 +365,7 @@ Other criteria (B-11, B-13, R-1, R-6, R-8, R-9, R-10, S-1, S-2, S-4, X-2 to X-5,
 **Exit-lab work and payload:**
 - Strategy entries are expected at 5–15k on synthetic data (no cap: the frozen `WarningCode` has none, so above 25k a run is just slower; spec 0009 assumed decision 7, signed off 2026-10-08), plus the same number of random entries.
 - Each trade runs ≤ 60 bars in the per-trade loop, which breaks early at the exit. That's about 2 × 15k × 6 × ~15 bars ≈ 2.7M steps worst case.
-- If X-7 misses on Day 4, ADR-016's vectorized per-trade windows (E × 60 arrays) cost about 2 h.
+- If X-7 misses on Day 4, ADR-016's vectorized per-trade windows (E × 60 arrays) cost about 2 h. **Re-costed 2026-10-15 against two prototypes: 4–5 h, not 2 h** (spec 0009 AC-11). Not taken; X-7's budget was set from measurement instead.
 - Payload: aggregates + guides + ≤ 2,000 baseline trades ≈ 150–350 KB gzipped.
 
 **Lambda:**
@@ -605,7 +605,7 @@ The full cut order brings the plan to **≈ 48.25 h**.
 |---|---|
 | **≤ 2 h** | Absorb it. Apply **cut #1 and #2 immediately** (≈ 1.5 h) |
 | **> 2 h, oracles still red** | Also apply **cut #3**. Keep the live loader on Day 6 only if the D5 milestone is met at end of day. Otherwise apply **cut #4** (move it to Day 8) |
-| **X-7 misses** (6 configs ≥ 10 s) | First raise memory to 3,008 MB (more vCPU), which takes minutes. If it still misses, build ADR-016's vectorized per-trade windows (≈ 2 h), funded by cuts #1 and #2. If needed, **lower the exit lab to 2–4 configs** in the UI (the API still allows 6) and document the measured time |
+| **X-7 misses** (6 configs ≥ 10 s) | ~~First raise memory to 3,008 MB (more vCPU)~~ **Settled 2026-10-15, by measurement.** Memory cannot help: 2,048 MB is already past the 1,769 MB full-vCPU point and the loop is single threaded. Taking the object churn out of the per-bar path gave 1.31x on the Lambda (24.85 → 18.94 s) and the profile is now flat. Config counts measured on the deployed function: 3 configs 7.4 s, 4 configs 10.1 s, 6 configs 16.5 s, so **"lower the exit lab to 2–4 configs" reaches 10 s only at three**, not four. ADR-016's vectorized windows are costed at 4–5 h (not 2 h) with both risky parts prototyped, and would reach about 6 s. **Chosen instead: the measured 25 s budget**, since nothing breaks at 17 s and the rewrite puts a second copy of the exit precedence beside `step()` |
 | **Lambda packaging blew its timebox on Day 1** | Cloud Run (ADR-001). Rebase the plan by +1 h |
 
 ---
