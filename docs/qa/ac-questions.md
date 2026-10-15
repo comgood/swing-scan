@@ -113,7 +113,18 @@ The criteria name the deployed API (S-4, X-7) or a warm run (B-13). CI never cal
 <a id="X-7-margin"></a>
 ## X-7: the budget passes locally, but how much margin does CI have?
 
-**Status:** QA reading (2026-10-10), no builder dispute; the owner can overrule it. X-7 stays `pending` for now.
+**Status:** resolved 2026-10-15 by the owner, the second of the two paths this question set out. X-7 is `required`.
+
+**Ruling:** the budget test is split, exactly as "what X-7 needs to flip" allowed. `make smoke` owns the criterion on the deployed API, and the in process tests keep a tighter budget as a regression proxy.
+
+- **X-7's own budget is 25 s on the deployed API**, set from measurement and not from drafting. The 10 s this criterion carried was never measured: doc 02 A4 promised a Day 4 measurement that never happened. The deployed function reads 16.5 s to 18.9 s warm for the six configs plus the baseline, and varies about 15% between runs, so 25 s fails a real regression and still clears the 30 s function timeout by 5 s. Measured numbers, the cost at every config count, and the vectorisation that would reach about 6 s are all in spec 0009 AC-11.
+- **In process the budget stays 10 s**, now a proxy rather than the criterion: the same run is 6.04 s on a CI runner and about 3 s locally, so it trips well before the deployed budget would.
+- **The flake risk this question raised is handled.** `support.within_budget()` fails locally and warns on CI, the split `engine/tests/sim/test_lab_budget.py` already used, so a noisy shared runner cannot turn `main` red over a criterion that is green everywhere it is measured. Body size, determinism and the entry counts still fail hard.
+
+The CI margin that this question originally asked for (a warm `pullback_ema21` "under 5 s of the 10 s") was never reached; 6.04 s is the best measured. It stopped mattering once the criterion moved to the call X-7's own wording names.
+
+**The original reading, kept for the record:**
+
 Feature 12's budget work (PR #63) is on `main`, and both X-7 tests pass: the gate prints X-7 as "pending and fully passing". Measured here through `engine.api.backtest` on the seed 42 market, 6 configs plus the baseline, warm, on an Apple Silicon dev machine: `breakout_52w` 0.81 s, `pullback_ema21` 4.48 s, body 0.64 MB each (the budget is 10 s and 6 MB).
 **Why it is not flipped:** the pullback template uses 4.5 s of the 10 s on the fastest machine this project runs on. A GitHub hosted runner is commonly 2x slower on plain Python, which puts that run at the limit, and X-7 is the one budget whose own criterion names the deployed API, where nothing has been timed yet. A flip now would make CI's slowest runner the gate, so a timing flake, not a regression, would turn `main` red.
 **What X-7 needs to flip:** a warm `pullback_ema21` number from CI (or the same machine class) with room to spare, say under 5 s of the 10 s budget, and ideally the deployed number from feature 15's `make smoke`. Either the margin shows on CI and X-7 flips as it stands, or the budget test is split so the CI gate times a fixed size market and `make smoke` owns the deployed number (a QA change, no contract change).

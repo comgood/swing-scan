@@ -1,9 +1,14 @@
 """The X-7 time budget on the seed 42 market (spec 0009, AC-11 and assumed decision 11).
 
 "Warm" is the second of two identical calls in one process: the first pays for indicators and
-the cache, the second is what a warm Lambda answers. It must finish, serialization included,
-in under 10 s with a body under 6 MB. A hard gate locally; on CI (shared runners are noisy) a
-slow run only warns, while the body size and the identical bodies still fail.
+the cache, the second is what a warm Lambda answers.
+
+The 10 s here is **not** X-7's criterion. X-7 names the deployed API, and its budget is 25 s,
+set from measurement and checked by `scripts/smoke.sh` (doc 01 X-7). This in process budget is
+deliberately tighter, a regression proxy that trips long before the deployed one would: the same
+run is 6.04 s on a CI runner and about 3 s locally, against the Lambda's 16.5 s to 18.9 s. A
+hard gate locally; on CI (shared runners are noisy) a slow run only warns, while the body size
+and the identical bodies still fail.
 """
 
 from __future__ import annotations
@@ -20,6 +25,7 @@ from engine.contracts import TEMPLATES, BacktestRequest, Market, TradeLabResult
 from engine.synthetic import generate
 
 BUDGET_S = 10.0
+"""In process regression proxy, not X-7's own budget (25 s on the deployed API)."""
 MAX_BODY_BYTES = 6_000_000
 
 # The five default configs of the lab (backtest.trade_lab.json) plus a sixth, every exit type.

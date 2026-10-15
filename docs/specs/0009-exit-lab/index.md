@@ -75,6 +75,16 @@ the runner up is in [rationale.md](rationale.md).
     locally and report only on CI (shared runners are noisy). The deployed check is feature 15's. A miss is reported to the owner, then fixed by
     profiling first and ADR-016's vectorized windows second.
 
+    **Settled 2026-10-15. X-7's budget is 25 s on the deployed API, in process 10 s.** The
+    owner retired the 10 s that X-7 carried from drafting, because it was never measured and
+    nothing breaks without it: the lab answers 200 with 11 s of room against the function's
+    30 s timeout and a 716 KB body against the 6 MB cap. The 25 s comes from the readings below
+    plus the function's own 15% spread. The in process budget stays 10 s as the tighter
+    regression proxy, now passing at 6.04 s on CI and about 3 s locally, and
+    `support.within_budget()` warns rather than fails on CI so a noisy runner cannot redden
+    `main`. ADR-016's vectorised windows stay costed and unbuilt (4 to 5 h, about 6 s
+    deployed); take them only if the wait becomes the thing worth fixing. X-7 is `required`.
+
     **Amended 2026-10-11, on the first real measurement.** The 10 s figure was an assumption
     (doc 02 A4 said "measured on Day 4" and it never was). Here is what the warm run actually
     costs, from the `run-slow` job on PR #93 (GitHub `ubuntu-latest`, in process through
