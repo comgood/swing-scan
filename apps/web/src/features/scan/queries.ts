@@ -3,8 +3,14 @@
 // The workspace's queries (spec 0005, spec 0008): the template list, the indicator catalog and
 // the scan of one rule. Errors reach the page as ApiRequestError, so ErrorState can say what went
 // wrong (spec 0003 AC-10); a 422 also carries its field errors for the builder (U-7).
-import type { IndicatorSpec, Rule, ScanResponse, TemplateOut } from "@swing-scan/api-client";
-import { useQuery } from "@tanstack/react-query";
+import type {
+  IndicatorSpec,
+  Rule,
+  SavedRule,
+  ScanResponse,
+  TemplateOut,
+} from "@swing-scan/api-client";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "@/lib/api";
 import { ApiRequestError, toApiError, type ApiError } from "@/lib/api-error";
@@ -88,5 +94,72 @@ export function useScan(rule: Rule | undefined) {
     enabled: rule !== undefined,
     staleTime: Infinity,
     retry: false,
+  });
+}
+
+// ---- Saved rules (spec 0014) -----------------------------------------------------------
+
+/** The list, whole rules, so loading one back needs no second request (spec 0014). */
+async function fetchSavedRules({ signal }: { signal: AbortSignal }): Promise<SavedRule[]> {
+  let result;
+  try {
+    result = await api.GET("/api/v1/rules", { signal });
+  } catch (error) {
+    throw new ApiRequestError(toApiError(error));
+  }
+  if (!result.data) throw new ApiRequestError(toApiError(result));
+  return result.data;
+}
+
+/**
+ * The saved rules, or an error the caller reads as "not available here". The feature is local
+ * only until accounts (scope feature 22): off the owner's machine the API answers 501 and the
+ * save control is hidden, which is the same thing the web app does for any other failure here
+ * (AC-6).
+ */
+export function useSavedRules() {
+  return useQuery({
+    queryKey: ["savedRules"],
+    queryFn: fetchSavedRules,
+    staleTime: Infinity,
+    retry: false,
+  });
+}
+
+/** Save a rule under its own name. 409 and 422 both arrive as an `ApiRequestError`. */
+export function useSaveRule() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (rule: Rule): Promise<SavedRule> => {
+      let result;
+      try {
+        result = await api.POST("/api/v1/rules", { body: rule });
+      } catch (error) {
+        throw new ApiRequestError(toApiError(error));
+      }
+      if (result.response.status === 422) {
+        throw new RuleRejectedError(toApiError(result), fieldErrorsFrom422(result.error));
+      }
+      if (!result.data) throw new ApiRequestError(toApiError(result));
+      return result.data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["savedRules"] }),
+  });
+}
+
+/** Delete one saved rule by id. */
+export function useDeleteRule() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string): Promise<void> => {
+      let result;
+      try {
+        result = await api.DELETE("/api/v1/rules/{rule_id}", { params: { path: { rule_id: id } } });
+      } catch (error) {
+        throw new ApiRequestError(toApiError(error));
+      }
+      if (result.error) throw new ApiRequestError(toApiError(result));
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["savedRules"] }),
   });
 }

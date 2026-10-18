@@ -11,6 +11,7 @@ import time
 from dataclasses import dataclass
 from datetime import date
 from typing import Literal
+from uuid import UUID
 
 import numpy as np
 import numpy.typing as npt
@@ -36,6 +37,7 @@ from .contracts import (
     PortfolioResult,
     PortfolioSplit,
     Rule,
+    SavedRule,
     ScanRequest,
     ScanResponse,
     ScanRow,
@@ -86,6 +88,7 @@ FEATURE_NAMES = {
     9: "Portfolio backtest core",
     11: "Exit types",
     12: "Exit lab",
+    21: "Saved rules",
 }
 
 
@@ -605,3 +608,28 @@ def backtest(request: BacktestRequest, market: Market) -> BacktestResponse:
     if len(request.configs) > 1:
         return _trade_lab(request, market)
     return _portfolio(request, market)
+
+
+def save_rule(rule: Rule) -> SavedRule | None:
+    """Save a rule under its own name, or `None` when that name is taken (spec 0014).
+
+    The repository is imported here, not at module scope, so the deployed function (where the
+    rules routes answer 501) never pays `psycopg`'s import for code it cannot reach.
+    """
+    from .data.rules import save_rule as repository_save
+
+    return repository_save(rule)
+
+
+def list_rules() -> list[SavedRule]:
+    """Every saved rule, newest first, whole, so loading one back needs no second request."""
+    from .data.rules import list_rules as repository_list
+
+    return repository_list()
+
+
+def delete_rule(rule_id: UUID) -> bool:
+    """Delete one saved rule. `False` when no rule has that id, which the route makes a 404."""
+    from .data.rules import delete_rule as repository_delete
+
+    return repository_delete(rule_id)

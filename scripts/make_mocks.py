@@ -525,12 +525,16 @@ def condition(ind: str, n: int | None = None) -> dict[str, Any]:
 
 
 def app_with_no_market() -> TestClient:
-    """The real app with no market loaded, whatever this machine has generated.
+    """The real app with no market loaded and no database, whatever this machine has.
 
     The app loads its market at import from `$SYNTHETIC_DATA_DIR` (spec 0005 AC-8) and
     `501.scan.json` is only reachable while none is loaded, so `api.main` is imported here,
     under a fresh empty directory, rather than at module scope. `make contracts` then writes
     the same mocks with or without a local `data/synthetic` from `make data`.
+
+    `DATABASE_URL` is dropped for the same reason: the rules routes read their gate once at
+    import (spec 0014), so `501.rules.json` would otherwise depend on whether the machine
+    running `make contracts` happens to have a database configured.
     """
     import os  # local, so the whole no market fix stays in one region of this file
     from tempfile import TemporaryDirectory
@@ -539,8 +543,15 @@ def app_with_no_market() -> TestClient:
 
     with TemporaryDirectory(prefix="swing-scan-no-market-") as empty:
         os.environ[DATA_DIR_ENV] = empty
+        os.environ.pop("DATABASE_URL", None)
         from api.main import app  # loads its market from `empty`, and so finds none
+        from api.routes.rules import ENABLED
         from api.state import market
+    if ENABLED:
+        raise RuntimeError(
+            "the rules 501 mock needs the rules routes disabled, but they are enabled: "
+            "`api.routes.rules` was imported before DATABASE_URL was dropped"
+        )
     if market is not None:
         raise RuntimeError(
             "the 501 mock needs an app with no market loaded, but one is: `api.main` was "
@@ -605,6 +616,7 @@ def error_mocks() -> None:
         422,
     )
     post("501.scan.json", "scan", {"rule": ok_rule}, 501)
+    post("501.rules.json", "rules", ok_rule, 501)  # the body is the `Rule` itself (spec 0014)
 
 
 # ---- Main ------------------------------------------------------------------------------

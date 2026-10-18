@@ -12,7 +12,7 @@ from engine.api import NotYetImplemented
 from engine.contracts import CONTRACT_VERSION
 
 from . import state
-from .routes import backtest, catalog, scan
+from .routes import backtest, catalog, rules, scan
 from .settings import Settings
 
 settings = Settings.from_env()
@@ -31,7 +31,9 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins,
     allow_origin_regex=settings.allowed_origin_regex,
-    allow_methods=["GET", "POST"],
+    # DELETE for removing a saved rule (spec 0014); without it the preflight fails
+    # before the request is ever made.
+    allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["Content-Type"],
 )
 
@@ -51,6 +53,7 @@ def health() -> dict[str, str]:
 v1.include_router(catalog.router)
 v1.include_router(scan.router)
 v1.include_router(backtest.router)
+v1.include_router(rules.router)
 app.include_router(v1)
 
 

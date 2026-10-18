@@ -324,13 +324,13 @@ Spec [0013](../specs/0013-live-refresh-push/index.md)
 Lane BE and FE. Save a rule you built under a name, list them, load one back into the builder, delete one. The first time anything writes to the store instead of only reading it. About 1 to 1.5 days.
 **Done when:** a saved rule survives a restart, loads back into the builder exactly as saved, keeps working after the rule format grows a field, and a malformed or oversized rule comes back as a 422 the form can show.
 - [x] Design it (spec): `/architect saved rules` (signed off by the owner 2026-10-18; this is where SQL arrives, on Neon, with writes gated to your own machine until feature 22)
-- [ ] Build it: `/develop saved rules`
-  - [ ] The database: Neon, Alembic with plain SQL migrations, one table holding the rule as `jsonb`, and the enablement gate (a database URL plus the D-5 host checks) (AC-5, AC-6, AC-7)
-  - [ ] The repository in `engine/data` plus the `engine.api` use cases the routers call: four plain SQL statements, no ORM, a connection per request (AC-1, AC-2, AC-9)
-  - [ ] One `contract-change` PR for all three endpoints at once, since CI fails on any client diff: the `Rule` body, the 409, `DELETE` added to CORS, the regenerated client, mocks and owner approval (AC-3, AC-4, AC-8, AC-11)
-  - [ ] The thread proved against the real database, and the skip that keeps `make ci` green without one (AC-2, AC-10)
-  - [ ] The builder's save control and saved list, loaded from the list payload, hidden when the API answers 501 (AC-6)
-  - [ ] Round trip tests across every operand shape (AC-2)
+- [x] Build it: `/develop saved rules` (`engine/data/rules.py`, `engine.api`, `services/api/src/api/routes/rules.py`, `apps/web/src/features/scan/saved-rules.tsx`)
+  - [x] The database: Neon, Alembic with plain SQL migrations, one table holding the rule as `jsonb`, and the enablement gate (a database URL plus the D-5 host checks) (AC-5, AC-6, AC-7)
+  - [x] The repository in `engine/data` plus the `engine.api` use cases the routers call: four plain SQL statements, no ORM, a connection per request (AC-1, AC-2, AC-9)
+  - [x] One `contract-change` PR for all three endpoints at once, since CI fails on any client diff: the `Rule` body, the 409, `DELETE` added to CORS, the regenerated client, mocks and owner approval (AC-3, AC-4, AC-8, AC-11)
+  - [x] The thread proved against the real database, and the skip that keeps `make ci` green without one (AC-2, AC-10)
+  - [x] The builder's save control and saved list, loaded from the list payload, hidden when the API answers 501 (AC-6)
+  - [x] Round trip tests across every operand shape (AC-2)
 - [ ] Verify it: `/check verify saved rules`
 - [ ] Test it: `/test saved rules`
 Spec [0014](../specs/0014-saved-rules/index.md)

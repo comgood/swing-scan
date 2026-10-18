@@ -31,6 +31,7 @@ import { formatDate } from "@/lib/format";
 import { operandColumns } from "./operands";
 import { RuleRejectedError, useIndicators, useScan, useTemplates } from "./queries";
 import { ResultsTable } from "./results-table";
+import { SavedRules } from "./saved-rules";
 import { useRuleLink, type RuleLink } from "./use-rule-link";
 
 /** The template a first visit opens on (spec 0005 value sourcing). */
@@ -228,6 +229,12 @@ function Editor({
           dispatch({ type: "ran" });
           run(state.rule);
         }}
+      />
+      <SavedRules
+        rule={state.rule}
+        // A loaded rule is yours to edit, exactly as the JSON panel loads one: the scan waits
+        // for "Run scan" so nothing runs behind your back.
+        onLoad={(loaded) => dispatch({ type: "load", rule: loaded, source: "custom", dirty: true })}
       />
       <section aria-labelledby="scan-hits" className="flex min-w-0 flex-col gap-3">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">

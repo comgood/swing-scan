@@ -1250,6 +1250,26 @@
         "title": "Rule",
         "type": "object"
       },
+      "SavedRule": {
+        "additionalProperties": false,
+        "description": "A rule saved under its own `name` (spec 0014). The name is `rule.name`, not a separate\nlabel: `Rule` already requires one, and two names for one thing is how a round trip loses\na field.",
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "rule": {
+            "$ref": "#/components/schemas/Rule"
+          }
+        },
+        "required": [
+          "id",
+          "rule"
+        ],
+        "title": "SavedRule",
+        "type": "object"
+      },
       "ScanRequest": {
         "additionalProperties": false,
         "properties": {
@@ -2194,6 +2214,130 @@
           }
         },
         "summary": "Meta"
+      }
+    },
+    "/api/v1/rules": {
+      "get": {
+        "description": "Every saved rule, whole: the list is what loads one back into the builder.",
+        "operationId": "saved_rules_api_v1_rules_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SavedRule"
+                  },
+                  "title": "Response Saved Rules Api V1 Rules Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotImplementedBody"
+                }
+              }
+            },
+            "description": "Not available here"
+          }
+        },
+        "summary": "Saved Rules"
+      },
+      "post": {
+        "description": "Save a rule under its own name. A name already taken is a 409, never an overwrite.",
+        "operationId": "create_rule_api_v1_rules_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Rule"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedRule"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotImplementedBody"
+                }
+              }
+            },
+            "description": "Not available here"
+          }
+        },
+        "summary": "Create Rule"
+      }
+    },
+    "/api/v1/rules/{rule_id}": {
+      "delete": {
+        "description": "Delete one saved rule. Unknown id is a 404, so a stale list says so rather than lying.",
+        "operationId": "remove_rule_api_v1_rules__rule_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rule Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotImplementedBody"
+                }
+              }
+            },
+            "description": "Not available here"
+          }
+        },
+        "summary": "Remove Rule"
       }
     },
     "/api/v1/scan": {

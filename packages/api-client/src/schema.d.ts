@@ -84,6 +84,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Saved Rules
+         * @description Every saved rule, whole: the list is what loads one back into the builder.
+         */
+        get: operations["saved_rules_api_v1_rules_get"];
+        put?: never;
+        /**
+         * Create Rule
+         * @description Save a rule under its own name. A name already taken is a 409, never an overwrite.
+         */
+        post: operations["create_rule_api_v1_rules_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/rules/{rule_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove Rule
+         * @description Delete one saved rule. Unknown id is a 404, so a stale list says so rather than lying.
+         */
+        delete: operations["remove_rule_api_v1_rules__rule_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/scan": {
         parameters: {
             query?: never;
@@ -524,6 +568,20 @@ export interface components {
             /** Name */
             name: string;
         };
+        /**
+         * SavedRule
+         * @description A rule saved under its own `name` (spec 0014). The name is `rule.name`, not a separate
+         *     label: `Rule` already requires one, and two names for one thing is how a round trip loses
+         *     a field.
+         */
+        SavedRule: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            rule: components["schemas"]["Rule"];
+        };
         /** ScanRequest */
         ScanRequest: {
             /** As Of */
@@ -941,6 +999,115 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MetaResponse"];
+                };
+            };
+        };
+    };
+    saved_rules_api_v1_rules_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedRule"][];
+                };
+            };
+            /** @description Not available here */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotImplementedBody"];
+                };
+            };
+        };
+    };
+    create_rule_api_v1_rules_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Rule"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedRule"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Not available here */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotImplementedBody"];
+                };
+            };
+        };
+    };
+    remove_rule_api_v1_rules__rule_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                rule_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Not available here */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotImplementedBody"];
                 };
             };
         };
