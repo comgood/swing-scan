@@ -7,6 +7,7 @@ import { useState, type ReactNode } from "react";
 import { Banner } from "@/components/banner";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { EmptyState } from "@/components/empty-state";
+import { NewerDataNotice } from "@/components/newer-data-notice";
 import { ErrorState } from "@/components/error-state";
 import { FormErrorSummary } from "@/components/form-error-summary";
 import { FormRow } from "@/components/form-row";
@@ -299,6 +300,20 @@ export function Gallery() {
           Prices are generated, not real. A long message wraps instead of widening the page:
           supercalifragilisticexpialidocious_long_identifier_without_spaces_0123456789.
         </Banner>
+      </GallerySection>
+
+      <GallerySection id="newer-data" title="Newer data notice">
+        <p className="text-sm text-muted-foreground">
+          Shown beside a result once the dataset poll finds a later trading day (spec 0013). It
+          tells you to reload and never changes the numbers you are reading. Built from{" "}
+          <code>Alert</code> rather than <code>Banner</code>, because it appears while you are
+          reading and so carries <code>role=&quot;status&quot;</code>.
+        </p>
+        <NewerDataNotice newer />
+        <p className="text-sm text-muted-foreground">
+          With no newer data, and with no dataset at all, it renders nothing:
+        </p>
+        <NewerDataNotice newer={false} />
       </GallerySection>
 
       <GallerySection id="honesty" title="Research honesty guards">

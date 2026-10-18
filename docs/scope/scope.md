@@ -308,12 +308,12 @@ Spec [0012](../specs/0012-market-clock-writer/index.md)
 Lane FE and BE. The site notices new data by itself: an as of marker that moves, and the server pushing the change rather than the browser asking again and again. Holding a stream open rules out some hosting shapes, so this decision reaches past the UI. About 1 day, now closer to 2: spec 0013 found the honest version needs a contract change.
 **Done when:** an open page updates within seconds of the writer appending a day, with no reload; the as of date and the data mode banner stay honest; the page recovers on its own when the stream drops; and the hosted demo either works or falls back to asking on a timer.
 - [x] Design it (spec): `/architect live refresh and push` (signed off by the owner 2026-10-18; the decision is polling, not push, because Lambda bills a held open stream for every second it is open)
-- [ ] Build it: `/develop live refresh and push`
-  - [ ] The contract change: `Assumptions` gains `data_end` and `data_version` so a result names its own data, then the regenerated client, mocks and owner approval (AC-3, AC-12)
-  - [ ] The as of marker beside each view's results, read straight off the result rather than from the poll, with no shared context (AC-2)
-  - [ ] The poll: one query on a 30 s focused interval, failures swallowed, a null dataset rendering nothing (AC-1, AC-6, AC-7, AC-8, AC-11)
-  - [ ] The notice: a new component rather than `Banner`, with its `/ui` gallery entry, telling the person to reload rather than re-running anything for them (AC-4, AC-5, AC-13)
-  - [ ] Trial counts labelled with the dataset ends in a sibling key so no count is wiped, and the banner's existing behaviour confirmed unchanged (AC-9, AC-10)
+- [x] Build it: `/develop live refresh and push` (`engine/contracts/backtest.py`, `engine/api.py`, `apps/web/src/components/shell/use-meta.ts`, `apps/web/src/components/newer-data-notice.tsx`, `apps/web/src/features/honesty/trial-store.ts`)
+  - [x] The contract change: `Assumptions` gains `data_end` and `data_version` so a result names its own data, then the regenerated client, mocks and owner approval (AC-3, AC-12) — `data_version` was already there, so only `data_end` is new; owner approval is still owed on the `contract-change` PR
+  - [x] The as of marker beside each view's results, read straight off the result rather than from the poll, with no shared context (AC-2)
+  - [x] The poll: one query on a 30 s focused interval, failures swallowed, a null dataset rendering nothing (AC-1, AC-6, AC-7, AC-8, AC-11)
+  - [x] The notice: a new component rather than `Banner`, with its `/ui` gallery entry, telling the person to reload rather than re-running anything for them (AC-4, AC-5, AC-13)
+  - [x] Trial counts labelled with the dataset ends in a sibling key so no count is wiped, and the banner's existing behaviour confirmed unchanged (AC-9, AC-10)
 - [ ] Verify it: `/check verify live refresh and push`
 - [ ] Test it: `/test live refresh and push`
 Spec [0013](../specs/0013-live-refresh-push/index.md)

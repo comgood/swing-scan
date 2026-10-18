@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { RunTrialCounter } from "@/features/honesty";
 import { memoryStores } from "@/features/honesty/memory-stores";
 
-import { SAMPLE_STRUCTURE_KEY } from "./sample";
+import { SAMPLE_DATA_END, SAMPLE_STRUCTURE_KEY } from "./sample";
 
 function Demo({ onReset }: { onReset: () => void }) {
   const [stores] = useState(memoryStores);
@@ -25,7 +25,7 @@ function Demo({ onReset }: { onReset: () => void }) {
           Reset the demo
         </Button>
       </div>
-      <RunTrialCounter trial={trial} stores={stores} />
+      <RunTrialCounter trial={trial} dataEnd={SAMPLE_DATA_END} stores={stores} />
     </div>
   );
 }

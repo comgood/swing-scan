@@ -10,6 +10,7 @@ import { Suspense, useEffect, useMemo, useReducer, useState } from "react";
 
 import { Banner } from "@/components/banner";
 import { ErrorState } from "@/components/error-state";
+import { ResultNewerDataNotice } from "@/components/newer-data-notice";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -248,6 +249,9 @@ function Editor({
             {STALE_TEXT}
           </p>
         )}
+        {/* The heading above is this view's as of marker, read off the scan result (AC-2), so
+            only the notice mounts here. */}
+        {shown && <ResultNewerDataNotice dataEnd={shown.data.as_of} />}
         {rejected
           ? !shown && <p className="text-sm text-muted-foreground">{REJECTED_TEXT}</p>
           : scan.isError && (

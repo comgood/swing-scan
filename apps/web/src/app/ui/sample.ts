@@ -177,16 +177,47 @@ export const SAMPLE_422 = {
   ],
 };
 
-/** Trial counter states for the honesty section (U-4, spec 0004). Invented counts. */
+/** The dataset an invented result was computed on, and the one a poll later finds (spec 0013). */
+export const SAMPLE_DATA_END = "2024-06-28";
+export const SAMPLE_NEWER_DATA_END = "2024-07-01";
+
+/**
+ * Trial counter states for the honesty section (U-4, spec 0004). Invented counts, and invented
+ * dataset ends for the warning's dataset sentence (spec 0013 AC-10). The last warning state
+ * spans two datasets, which is the case the sentence exists for.
+ */
 export const SAMPLE_TRIAL_STATES: { label: string; state: TrialCountState }[] = [
   {
     label: "First trial",
-    state: { status: "counted", count: { trialNumber: 1, sessionTotal: 1 } },
+    state: {
+      status: "counted",
+      count: { trialNumber: 1, sessionTotal: 1 },
+      dataEnds: [SAMPLE_DATA_END],
+    },
   },
-  { label: "Counting", state: { status: "counted", count: { trialNumber: 6, sessionTotal: 14 } } },
+  {
+    label: "Counting",
+    state: {
+      status: "counted",
+      count: { trialNumber: 6, sessionTotal: 14 },
+      dataEnds: [SAMPLE_DATA_END],
+    },
+  },
   {
     label: "Warning at 10",
-    state: { status: "counted", count: { trialNumber: 10, sessionTotal: 23 } },
+    state: {
+      status: "counted",
+      count: { trialNumber: 10, sessionTotal: 23 },
+      dataEnds: [SAMPLE_DATA_END],
+    },
+  },
+  {
+    label: "Warning across two datasets",
+    state: {
+      status: "counted",
+      count: { trialNumber: 12, sessionTotal: 31 },
+      dataEnds: [SAMPLE_DATA_END, SAMPLE_NEWER_DATA_END],
+    },
   },
   { label: "Storage unavailable", state: { status: "unavailable" } },
 ];
