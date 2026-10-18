@@ -51,7 +51,7 @@ AWS's distributed SQL, with a perpetual free allowance and availability in `ap-s
 - Less recognisable to a reader than Postgres, so the thing being shown needs more explaining.
 - Its differences would have to be learned at the same time as the project's first database work.
 
-### Option 3: Neon Postgres, normalised, Alembic, local only writes (chosen)
+### Option 3: Neon Postgres, normalised, Alembic, local only writes
 
 Managed Postgres on a free tier, two tables with real constraints, a migration chain, connecting per request over the pooled endpoint, and the whole surface disabled anywhere but your machine.
 
@@ -68,7 +68,7 @@ Managed Postgres on a free tier, two tables with real constraints, a migration c
 - Three new dependencies in an image whose cold start is a measured criterion.
 - The feature cannot be demonstrated on the public site until feature 22 exists.
 
-### Option 4: the database, but with a JSON column for the rule
+### Option 4: the database, but with a JSON column for the rule (chosen)
 
 Neon Postgres as above, with one `rules` table holding the `Rule` as `jsonb` rather than normalised conditions.
 
@@ -78,7 +78,7 @@ Neon Postgres as above, with one `rules` table holding the `Rule` as `jsonb` rat
 - Still gets the unique name, the timestamps and the migration chain.
 
 **Cons**:
-- The database stores a blob it cannot reason about, so the constraints that make option 3 worth choosing (the operand discriminator, condition ordering) have nowhere to live.
+- The database stores a blob it cannot reason about, so the constraints that are option 3's whole argument (the operand discriminator, condition ordering) have nowhere to live.
 - A schema that is one opaque column is a weaker thing to show than one that models the domain.
 
 ## Rationale
@@ -87,9 +87,11 @@ The engineer chose option 3 over my recommendation of option 1, and the reasonin
 
 Neon over Aurora DSQL was the engineer's call and it is defensible on the same grounds: the project's first database should be the one with the most documentation behind it, not the one with the most interesting consistency model. Neon's 5 minute idle suspend costs roughly half a second on the first request after a quiet spell, which for a local only feature nobody is benchmarking is immaterial. DSQL's perpetual free allowance and absence of idle pause are genuinely better properties, and if feature 22 or 23 ever makes idle resume matter, that is the moment to revisit rather than now.
 
-The normalised schema was also the engineer's choice over my recommendation of a JSON column, and it conflicts with the scope's own done when, which asks that a saved rule keep working after the rule format grows a field. A JSON column gives that for nothing; normalised columns give it only under a discipline. Rather than note the conflict and leave it, this spec resolves it: every migration that adds a field adds it nullable with a default, and the read path falls back to the `Rule` contract's own defaults. That makes AC-6 true and testable under the chosen schema, which is what the criterion actually asks for. The price, stated plainly in Consequences, is that the rule's shape now exists in three places and every field is a migration.
+**The normalised schema was chosen first and then dropped, which is why option 4 is the one marked chosen above.** The engineer picked option 3 over my recommendation of a JSON column, and the first draft of this spec specified it in full: a second `rule_conditions` table of fourteen columns, a `position` column to keep the conditions in order, a five way check constraint on the operand discriminator, and a cascade. It did not survive its own detail. The scope's own done when asks that a saved rule keep working after the rule format grows a field, and normalised columns give that only under a discipline, every new field nullable with a default, held to forever, while a JSON column gives it for nothing. The draft was also restating constraints the `Rule` contract already enforces, in a second place, for data nothing ever queries inside, and it cost four acceptance criteria and most of a round trip test matrix to do it.
 
-**Five corrections from a cross check, recorded because each was a confident claim the code contradicted.** They are worth keeping in the record because four of them would have produced a feature that fails its own round trip criterion.
+So option 4 is what shipped: one table, the contract's own JSON in one column. Option 3's pros above are the honest argument against that choice, and they lost to a stated requirement rather than to a preference. The price is in Consequences and is real: the database cannot reject a row written by hand, and nothing can ask which rules use a given indicator.
+
+**Five corrections from a cross check, recorded because each was a confident claim the code contradicted.** They are worth keeping in the record because four of them would have produced a feature that fails its own round trip criterion. Three of them (the right operand's columns, how `n` is stored, what the schema constrained) were fixes to the normalised draft and went when option 4 replaced it. They stay here because they are a large part of why that draft stopped looking worth its weight.
 
 - **The request body is the `Rule` itself, not `{name, rule}`.** The first draft invented a distinction between the name you file a rule under and the rule's own `name`, which `Rule` requires. That dropped `rule.name` on the way in, so AC-2's field for field round trip could not hold, and it also shifted every validation error path from `body.conditions.0...` to `body.rule.conditions.0...`, breaking the existing `fieldErrorsFrom422` mapping. One body shape fixes both.
 - **The right operand's columns must be constrained exactly like the left's.** The first draft left `right_offset` and `right_mult` nullable with no default while `IndOperand` requires both, and its check constraint covered only `right_ind` against `right_value`. The API could therefore have written a row it could not read back.
@@ -99,19 +101,19 @@ The normalised schema was also the engineer's choice over my recommendation of a
 
 **And one layering correction, which took two passes to get right.** The draft put the repository in `services/api`. Root `AGENTS.md` places Infrastructure at `engine/{data,synthetic}`, so persistence belongs beside the market store in `engine/data`. That fixed half of it: `services/api/AGENTS.md:32` says "Routers call `engine.api` use cases only", so the routes cannot call the repository either, and this feature needs thin use cases in `engine.api` between them. The boundary test bars FastAPI, Starlette and uvicorn from the engine, and `psycopg` and SQLAlchemy are none of those, so the documented architecture and this feature agree once all three layers are in place.
 
-**A second review round found six more, four of which would have stopped the build.** `main.py:34` sets `allow_methods=["GET", "POST"]`, so the `DELETE` endpoint's browser preflight would have failed with the route working perfectly in isolation. CI has no Postgres at all, so six criteria had nowhere to run while AC-9 deliberately disables the feature there; that is resolved by following D-4's existing precedent, where a test skips when its data source is absent and the owner's local run is the evidence, which `docs/qa/traceability.md` already records as acceptable for exactly this situation. Build steps 4 to 6 could not have been green separately, because CI fails on any `openapi.json` or generated client diff, so every endpoint has to land in one `contract-change` PR rather than routes first and the client after. And "deleted by the database" needed `passive_deletes=True` as well as `ondelete="CASCADE"`, or SQLAlchemy would quietly issue its own child deletes and the criterion would pass while being false.
+**A second review round found six more, four of which would have stopped the build.** `main.py:34` sets `allow_methods=["GET", "POST"]`, so the `DELETE` endpoint's browser preflight would have failed with the route working perfectly in isolation. CI has no Postgres at all, so five criteria had nowhere to run while AC-7 deliberately disables the feature there; that is resolved by following D-4's existing precedent, where a test skips when its data source is absent and the owner's local run is the evidence, which `docs/qa/traceability.md` already records as acceptable for exactly this situation. Build steps 4 to 6 could not have been green separately, because CI fails on any `openapi.json` or generated client diff, so every endpoint has to land in one `contract-change` PR rather than routes first and the client after. And "deleted by the database" needed `passive_deletes=True` as well as `ondelete="CASCADE"`, or SQLAlchemy would quietly issue its own child deletes and the criterion would pass while being false. That last one is moot in the shipped design, which has no child table to cascade.
 
 Two smaller ones. The 501 path reuses `NotYetImplemented`, whose body names a scope feature number, so the rules routes pass feature 21 and the generated 501 mocks gain an entry; the draft spoke of reusing the 501 "signal" without noticing it carries required content. And `live_mode_problems` is currently called only inside `Settings.from_env` when the data mode is live, so the draft's per request gate had no mechanism; it is a pure function of `argv` and `env`, neither of which changes while the process lives, so the router calls it once at import and caches the result.
 
-Two decisions I made rather than asked, with full design context. **Condition order is an explicit `position` column**, unique per rule, because a set of rows has no order and reading conditions back in primary key order would be a bug that appears only sometimes, which is the worst kind. **The connection is opened inside the request**, not at import, because the execution environment freezes between invocations and a module level connection is the standard way to get failures that only happen after an idle period; the handshake costs milliseconds in region, and the runner up, a module level connection with a reconnect path, buys that back at the cost of a retry branch on every query.
+Two decisions I made rather than asked, with full design context. **Condition order needed deciding**, because a set of rows has no order and reading conditions back in primary key order would be a bug that appears only sometimes, which is the worst kind. The normalised draft answered it with an explicit `position` column, unique per rule; the shipped design answers it by not decomposing the list at all, so the order is the JSON array's own. **The connection is opened inside the request**, not at import, because the execution environment freezes between invocations and a module level connection is the standard way to get failures that only happen after an idle period; the handshake costs milliseconds in region, and the runner up, a module level connection with a reconnect path, buys that back at the cost of a retry branch on every query.
 
 ## References
 
 **Project sources** (verifiable, in this repo):
-- `engine/src/engine/contracts/rule.py`: `Rule` (a bounded `Name` plus 1 to 8 `Condition`s), `Condition` (`left`, `op`, `right`), `IndOperand` with its per indicator `n` validator and the `offset` and `mult` bounds, and `ValueOperand`. This is the shape the schema normalises and the validator the 422 comes from.
-- `apps/web/src/features/rule-builder/url-codec.ts`: `MAX_ENCODED_LENGTH` of 8 KB, the existing size ceiling AC-4 matches, and `normaliseRule` as the precedent for treating a stored rule as untrusted input.
+- `engine/src/engine/contracts/rule.py`: `Rule` (a bounded `Name` plus 1 to 8 `Condition`s), `Condition` (`left`, `op`, `right`), `IndOperand` with its per indicator `n` validator and the `offset` and `mult` bounds, and `ValueOperand`. This is the shape the `jsonb` column stores whole, and the validator the 422 comes from.
+- `apps/web/src/features/rule-builder/url-codec.ts`: `MAX_ENCODED_LENGTH` of 8 KB, the existing size ceiling the dropped 413 would have matched, and `normaliseRule` as the precedent for treating a stored rule as untrusted input.
 - `apps/web/src/lib`: `fieldErrorsFrom422` and `errorAt`, the existing 422 handling the save form reuses.
-- `services/api/src/api/settings.py`: `live_mode_problems()`, the host check (not Lambda, not CI, bound to loopback) that AC-9 reuses to gate writes.
+- `services/api/src/api/settings.py`: `live_mode_problems()`, the host check (not Lambda, not CI, bound to loopback) that AC-7 reuses to gate writes.
 - `services/api/src/api/routes/scan.py` and `state.py`: the established meaning of 501 as "this is not available here", which the disabled rules endpoints reuse rather than inventing a new signal.
 - Spec `0008`: the rule builder and the frozen rule contract this feature saves.
 - Spec `0011`: the market data store, and its follow up expecting feature 21 to bring SQL, which this spec answers.
@@ -120,11 +122,10 @@ Two decisions I made rather than asked, with full design context. **Condition or
 
 **Practices & standards**:
 - One validator, at the boundary: the contract validates, the schema constrains, neither re-implements the other.
-- Explicit ordering for a stored list, never insertion order or key order.
+- Store what the validator produced, so reading a row back cannot reassemble it into something else.
 - Additive migrations only: a new column is nullable with a default, so existing rows stay valid.
 - Connection per invocation in a freezing runtime, rather than a cached connection with a reconnect path.
 - Defence in depth on a dangerous default: absent configuration and a host check, either of which alone would disable the write surface.
-- Foreign keys with cascade, so referential cleanup is the database's job.
 - Pooled endpoint for the application, direct endpoint for migrations, where the provider distinguishes them.
 
 **Measured in this repo**:

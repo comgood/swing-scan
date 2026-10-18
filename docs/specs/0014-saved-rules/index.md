@@ -1,11 +1,11 @@
-# 0014. Save rules as normalised rows in Neon Postgres, with writes that exist only on your machine
+# 0014. Save rules as one jsonb row in Neon Postgres, with writes that exist only on your machine
 
 **Date**: 2026-10-18
 **Status**: Accepted
 
 ## Summary
 
-You can save a rule you built under its name, list what you saved, load one back into the builder and delete it. The rows live in a managed Postgres (Neon), with a real migration chain run by Alembic, and the conditions are stored as proper columns rather than a blob. Saving works on your machine only: there are no accounts until feature 22, so on the public demo these endpoints answer 501 and the save control is hidden, the same way live data mode already exists locally and not in public. This is the first thing in the project that writes to a database.
+You can save a rule you built under its name, list what you saved, load one back into the builder and delete it. The rows live in a managed Postgres (Neon), with a real migration chain run by Alembic, and each rule is stored as the contract's own JSON in a single `jsonb` column. Saving works on your machine only: there are no accounts until feature 22, so on the public demo these endpoints answer 501 and the save control is hidden, the same way live data mode already exists locally and not in public. This is the first thing in the project that writes to a database.
 
 ## Requirements
 
@@ -31,9 +31,9 @@ You can save a rule you built under its name, list what you saved, load one back
 
 ## Decision
 
-**Chosen option**: Option 3: Neon Postgres, normalised conditions, Alembic migrations, local only writes.
+**Chosen option**: Option 4: Neon Postgres, the whole rule in one `jsonb` column, Alembic migrations, local only writes.
 
-Two tables with real columns and constraints, a migration chain in the repo, `psycopg` over Neon's pooled endpoint connecting per request, and the whole surface disabled anywhere but your own machine.
+One table holding the rule exactly as the contract produced it, a migration chain in the repo, `psycopg` over Neon's pooled endpoint connecting per request, and the whole surface disabled anywhere but your own machine. Option 3, the normalised version of the same database, was chosen first and dropped before the build; `rationale.md` records why.
 
 **Implementation skills**: `neon-postgres` (`neondatabase/agent-skills`, `.agents/skills/neon-postgres/`) · `postgresql-table-design` (`wshobson/agents`, `.agents/skills/postgresql-table-design/`) · `fastapi` (`fastapi/fastapi`, `.agents/skills/fastapi/`) · `pydantic` (`.agents/skills/pydantic/`) · `python-testing-patterns` (`wshobson/agents`, `.claude/skills/python-testing-patterns/`) · `aws-serverless` (`aws/agent-toolkit-for-aws`, `.claude/skills/aws-serverless/`)
 
@@ -87,7 +87,7 @@ The request body is **the `Rule` itself**, not a wrapper. `Rule` already carries
 | `/api/v1/rules` | GET | none | list of `id`, `name`, `rule`, `created_at` | none | 501 disabled |
 | `/api/v1/rules/{id}` | DELETE | `id` path | no body | none | 404, 501 disabled |
 
-New endpoints, so this is a **contract change**: new response models, a regenerated `packages/api-client`, updated mocks, and owner approval (AC-12).
+New endpoints, so this is a **contract change**: new response models, a regenerated `packages/api-client`, updated mocks, and owner approval (AC-11).
 
 **No request size limit, and why.** An earlier draft promised a 413. Nothing in FastAPI or Starlette produces one, so it would need custom middleware handling a missing `Content-Length`. It is also unnecessary: `Rule` bounds the body to at most 8 conditions of bounded numeric fields plus a 40 character name, so a valid body is tiny and an invalid one is a 422. The surface is local only, so a deliberately huge body is a problem you would be causing yourself. **Feature 22 must add a body limit when it opens this publicly**, and that is recorded in Follow-up rather than half built here.
 
@@ -101,18 +101,18 @@ New endpoints, so this is a **contract change**: new response models, a regenera
 | save | the write | one `INSERT` into one table, so it is genuinely a single statement and needs no explicit transaction |
 | save | the 422 body shape | the existing Pydantic validation error on a `Rule` body, whose paths match `/scan` because the body shape matches (AC-3) |
 | load | fields added to the contract after a row was written | Pydantic's own default when parsing the stored JSON, so no migration and no backfill |
-| whether the feature is on | enabled or 501 | both of: a `DATABASE_URL` being configured, and the host checks passing. Either failing means 501 (AC-7, AC-8) |
+| whether the feature is on | enabled or 501 | both of: a `DATABASE_URL` being configured, and the host checks passing. Either failing means 501 (AC-6, AC-7) |
 | the host check itself | how it is reached | `live_mode_problems(argv, env)` is currently called only inside `Settings.from_env`, and only when `data_mode == "live"` (`settings.py:57`), at import. It is a pure function of `argv` and `env`, so the rules router calls it directly at import time and caches the single boolean. Not per request: nothing it reads can change while the process lives, so a per request call would be waste dressed as caution |
 | the 501 response | its body | the existing `NotYetImplemented` helper, which produces "… is not implemented yet; it arrives with scope feature N (name)". That means the rules routes pass **feature 21** as the number. The wording is the house wording and is reused rather than invented, which also means `contracts/mocks/501.*.json` gains an entry, since those mocks are generated from the app |
 | the connection string | the pooled endpoint | `DATABASE_URL`, set to Neon's pooled (PgBouncer) host for the API |
 | the migration connection | a direct endpoint | `DATABASE_URL_DIRECT`, Neon's unpooled host, for Alembic only. Step 2 confirms whether the pooled endpoint can run migrations; if it can, this variable is dropped rather than kept for show |
 | psycopg against a transaction pooler | any required setting | confirmed in step 2. A transaction mode pooler commonly requires prepared statements to be disabled (`prepare_threshold=0` in psycopg 3); the step verifies it rather than this spec asserting it |
-| the web app's save control | shown or hidden | a 501 from `GET /api/v1/rules`, the same signal `/scan` already uses to mean "not available here" (AC-7) |
+| the web app's save control | shown or hidden | a 501 from `GET /api/v1/rules`, the same signal `/scan` already uses to mean "not available here" (AC-6) |
 
 **Key invariants**
 
 - Condition order is whatever the JSON array holds, which is the order the contract produced. Nothing reorders it because nothing decomposes it.
-- The connection is opened inside the request and closed with it. Never a module level connection, because the function freezes between invocations and a socket does not reliably survive that (AC-11).
+- The connection is opened inside the request and closed with it. Never a module level connection, because the function freezes between invocations and a socket does not reliably survive that (AC-9).
 - Writes are impossible anywhere but your machine, enforced by configuration absence **and** a host check, not by one of them.
 - The `Rule` contract is the only validator. The database stores and constrains identity (the unique name) and nothing about the rule's internals.
 
