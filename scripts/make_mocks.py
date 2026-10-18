@@ -527,7 +527,7 @@ def condition(ind: str, n: int | None = None) -> dict[str, Any]:
 def app_with_no_market() -> TestClient:
     """The real app with no market loaded and no database, whatever this machine has.
 
-    The app loads its market at import from `$SYNTHETIC_DATA_DIR` (spec 0005 AC-8) and
+    The app loads its market at import from `$MARKET_STORE_URI/$DATA_MODE` (spec 0011) and
     `501.scan.json` is only reachable while none is loaded, so `api.main` is imported here,
     under a fresh empty directory, rather than at module scope. `make contracts` then writes
     the same mocks with or without a local `data/synthetic` from `make data`.
@@ -539,10 +539,10 @@ def app_with_no_market() -> TestClient:
     import os  # local, so the whole no market fix stays in one region of this file
     from tempfile import TemporaryDirectory
 
-    from engine.data import DATA_DIR_ENV
+    from engine.data import STORE_URI_ENV
 
     with TemporaryDirectory(prefix="swing-scan-no-market-") as empty:
-        os.environ[DATA_DIR_ENV] = empty
+        os.environ[STORE_URI_ENV] = empty
         os.environ.pop("DATABASE_URL", None)
         from api.main import app  # loads its market from `empty`, and so finds none
         from api.routes.rules import ENABLED
@@ -555,7 +555,7 @@ def app_with_no_market() -> TestClient:
     if market is not None:
         raise RuntimeError(
             "the 501 mock needs an app with no market loaded, but one is: `api.main` was "
-            f"imported before {DATA_DIR_ENV} pointed at an empty directory"
+            f"imported before {STORE_URI_ENV} pointed at an empty directory"
         )
     return TestClient(app)
 

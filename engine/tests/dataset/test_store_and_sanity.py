@@ -10,14 +10,16 @@ import pytest
 
 from engine.contracts import Market, MarketError
 from engine.data import (
-    DATA_DIR_ENV,
+    DATA_MODE_ENV,
+    STORE_URI_ENV,
     bar_problems,
     check_market,
-    market_dir,
+    market_uri,
     read_market,
     write_market,
 )
 from engine.data.fixtures import FrameSpec, make_market
+from engine.data.store import DATASET_FILES
 from engine.synthetic import SyntheticConfig, generate
 from engine.synthetic.__main__ import main
 
@@ -48,7 +50,7 @@ def test_round_trip_is_equal(small: Market, tmp_path: Path) -> None:
 def test_files_are_byte_identical_for_the_same_seed(small: Market, tmp_path: Path) -> None:
     write_market(small, tmp_path / "a")
     write_market(generate(7, SMALL), tmp_path / "b")
-    for name in ("bars.parquet", "securities.parquet", "meta.json"):
+    for name in DATASET_FILES:
         assert (tmp_path / "a" / name).read_bytes() == (tmp_path / "b" / name).read_bytes()
 
 
@@ -57,18 +59,23 @@ def test_read_market_names_missing_files(tmp_path: Path) -> None:
         read_market(tmp_path)
 
 
-def test_market_dir_reads_the_environment(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    monkeypatch.delenv(DATA_DIR_ENV, raising=False)
-    assert market_dir() == Path("data/synthetic")
-    monkeypatch.setenv(DATA_DIR_ENV, str(tmp_path))
-    assert market_dir() == tmp_path
+def test_market_uri_joins_the_root_and_the_mode(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv(STORE_URI_ENV, raising=False)
+    monkeypatch.delenv(DATA_MODE_ENV, raising=False)
+    assert market_uri() == "data/synthetic"
+    monkeypatch.setenv(DATA_MODE_ENV, "live")
+    assert market_uri() == "data/live"
+    # A URI is joined as a string: pathlib would collapse `s3://b` to `s3:/b`.
+    monkeypatch.setenv(STORE_URI_ENV, "s3://bucket/")
+    assert market_uri() == "s3://bucket/live"
 
 
 def test_read_market_uses_the_environment_by_default(
     small: Market, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    write_market(small, tmp_path)
-    monkeypatch.setenv(DATA_DIR_ENV, str(tmp_path))
+    write_market(small, tmp_path / "synthetic")
+    monkeypatch.setenv(STORE_URI_ENV, str(tmp_path))
+    monkeypatch.delenv(DATA_MODE_ENV, raising=False)
     assert read_market().meta == small.meta
 
 

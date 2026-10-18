@@ -15,9 +15,8 @@ from pathlib import Path
 import polars as pl
 
 from engine.data import read_market, write_market
+from engine.data.store import DATASET_FILES as FILES
 from engine.synthetic import DEFAULT_SEED, generate
-
-FILES = ("bars.parquet", "securities.parquet", "meta.json")
 
 
 def digest(path: Path) -> str:

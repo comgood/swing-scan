@@ -10,7 +10,7 @@ API_BUILD_FLAGS ?=
 
 .PHONY: setup setup-py setup-web dev dev-api dev-web lint format typecheck test test-fast test-py test-py-fast \
         test-web test-acceptance test-acceptance-fast test-slow hooks guards build-web \
-        build-api build-api-local smoke smoke-image test-oracle migrate openapi gen-client mocks contracts contracts-check data data-check load-live dev-live ci
+        build-api build-api-local smoke smoke-image test-oracle migrate openapi gen-client mocks contracts contracts-check data data-check push-market load-live dev-live ci
 
 setup: setup-web setup-py ## Install all JS and Python dependencies from the lockfiles
 
@@ -136,8 +136,20 @@ data: ## Generate the synthetic market into data/synthetic (gitignored): make da
 data-check: ## CI: build the seed 42 market twice in a temp folder, same hashes, D-1 to D-3 hold
 	uv run python scripts/check_synthetic.py
 
+MODE ?= synthetic
+# ALLOW_LIVE=1 is required to push the live dataset (real vendor prices, spec 0011 AC-10).
+ALLOW_LIVE ?=
+
+push-market: ## Seed the store from data/$(MODE): make push-market STORE_URI=s3://bucket [MODE=live ALLOW_LIVE=1]
+	@set -a; [ -f .env ] && . ./.env; set +a; \
+	uv run python scripts/push_market.py --mode $(MODE) --from data --to "$(STORE_URI)" \
+	  $(if $(ALLOW_LIVE),--allow-live,)
+
 UNIVERSE ?= research/sp500.csv
-LIVE_DIR ?= data/live
+# The dataset root both modes live under: `$(STORE_URI)/synthetic` and `$(STORE_URI)/live`.
+# Set it to an s3:// prefix to read or seed the deployed store (spec 0011).
+STORE_URI ?= data
+LIVE_DIR ?= $(STORE_URI)/live
 # Alpaca feed override for load-live: iex (the default, free plan) or sip (paid). Unset, the
 # loader reads $ALPACA_FEED, else iex.
 FEED ?=
@@ -148,7 +160,7 @@ load-live: ## Local only: Alpaca daily bars into data/live (gitignored); keys fr
 	  $(if $(FEED),--feed $(FEED),)
 
 dev-live: ## Local only: run the API in live mode on 127.0.0.1 with the web app (D-5)
-	DATA_MODE=live SYNTHETIC_DATA_DIR=$(LIVE_DIR) $(MAKE) dev
+	DATA_MODE=live MARKET_STORE_URI=$(STORE_URI) $(MAKE) dev
 
 test-oracle: ## Run the owner approved oracles (not in the default testpaths)
 	uv run pytest tests/oracle

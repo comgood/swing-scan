@@ -114,7 +114,9 @@ def client() -> Iterator[TestClient]:
 
 @pytest.fixture(scope="session")
 def generated_api(tmp_path_factory: pytest.TempPathFactory) -> GeneratedApi:
-    data_dir = tmp_path_factory.mktemp("synthetic")
+    # The dataset sits under a `synthetic/` prefix, because the API resolves it as
+    # `$MARKET_STORE_URI/$DATA_MODE` (spec 0011).
+    data_dir = tmp_path_factory.mktemp("store") / "synthetic"
     subprocess.run(
         [sys.executable, "-m", "engine.synthetic", "--seed", "42", "--out", str(data_dir)],
         check=True,

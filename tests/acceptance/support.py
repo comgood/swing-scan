@@ -313,7 +313,7 @@ with open(out, "w", encoding="utf-8") as handle:
 
 
 class GeneratedApi:
-    """The real API in a fresh process, loading a seed 42 market from SYNTHETIC_DATA_DIR.
+    """The real API in a fresh process, loading a seed 42 market from MARKET_STORE_URI.
 
     The API loads its market at import (spec 0005 AC-8), so it cannot share the session
     `client`, which CI starts without data.
@@ -335,7 +335,7 @@ class GeneratedApi:
             [sys.executable, "-c", _API_RUNNER, json.dumps(list(calls)), str(out)],
             capture_output=True,
             text=True,
-            env={"SYNTHETIC_DATA_DIR": str(self.data_dir), "PATH": "/usr/bin:/bin"},
+            env={"MARKET_STORE_URI": str(self.data_dir.parent), "PATH": "/usr/bin:/bin"},
             timeout=300,
             check=False,
         )

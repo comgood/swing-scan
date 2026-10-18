@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from collections.abc import Mapping
 from datetime import date
 from pathlib import Path
@@ -188,7 +187,7 @@ def test_cli_writes_a_readable_dataset(tmp_path: Path, capsys: pytest.CaptureFix
     market = read_market(out)
     assert market.meta.data_mode == "live"
     assert market.meta.data_version == "alpaca-iex-all:2016-01-05"
-    assert json.loads((out / "meta.json").read_text())["seed"] is None
+    assert market.meta.seed is None
     printed = capsys.readouterr().out
     assert "loaded 2 tickers plus SPY" in printed and "missing symbols (1): CCC" in printed
     assert "feed iex, data_version alpaca-iex-all:2016-01-05" in printed
