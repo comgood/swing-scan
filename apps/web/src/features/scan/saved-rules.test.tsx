@@ -78,7 +78,7 @@ describe("SavedRules", () => {
     store([saved]);
     const onLoad = vi.fn();
     show(onLoad);
-    await userEvent.click(await screen.findByRole("button", { name: "Load" }));
+    await userEvent.click(await screen.findByRole("button", { name: `Load ${saved.rule.name}` }));
     expect(onLoad).toHaveBeenCalledWith(saved.rule);
   });
 

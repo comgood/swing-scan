@@ -64,7 +64,14 @@ export function SavedRules({ rule, onLoad }: { rule: Rule; onLoad: (rule: Rule) 
             <li key={item.id} className="flex flex-wrap items-center gap-2">
               <span className="min-w-0 flex-1 truncate text-sm">{item.rule.name}</span>
               {/* The list carries whole rules, so Load is local: no second request (spec 0014). */}
-              <Button variant="secondary" size="sm" onClick={() => onLoad(item.rule)}>
+              {/* Named per row: several rows of bare "Load" are indistinguishable to a screen
+                  reader, which is what the visible name beside them is doing for everyone else. */}
+              <Button
+                variant="secondary"
+                size="sm"
+                aria-label={`Load ${item.rule.name}`}
+                onClick={() => onLoad(item.rule)}
+              >
                 Load
               </Button>
               <Button
