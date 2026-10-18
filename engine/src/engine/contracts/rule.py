@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Annotated, Literal
+from uuid import UUID
 
 from pydantic import Field, ValidationInfo, field_validator
 from pydantic_core import PydanticCustomError
@@ -129,3 +130,12 @@ TEMPLATES: list[TemplateOut] = [
     ),
 ]
 """The two MUST templates from doc 02 §5.2, each with a visible `close > 5` (R-10)."""
+
+
+class SavedRule(ContractModel):
+    """A rule saved under its own `name` (spec 0014). The name is `rule.name`, not a separate
+    label: `Rule` already requires one, and two names for one thing is how a round trip loses
+    a field."""
+
+    id: UUID
+    rule: Rule

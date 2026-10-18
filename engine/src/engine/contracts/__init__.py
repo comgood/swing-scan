@@ -55,7 +55,17 @@ from .market import (
     validate_market,
 )
 from .meta import MetaResponse, NotImplementedBody
-from .rule import TEMPLATES, Condition, IndOperand, Op, Operand, Rule, TemplateOut, ValueOperand
+from .rule import (
+    TEMPLATES,
+    Condition,
+    IndOperand,
+    Op,
+    Operand,
+    Rule,
+    SavedRule,
+    TemplateOut,
+    ValueOperand,
+)
 from .scan import ScanRequest, ScanResponse, ScanRow, column_label, scan_columns
 from .trial import canonical_json, entries_hash, pair_key, structure_key
 
@@ -104,6 +114,7 @@ __all__ = [
     "PortfolioResult",
     "PortfolioSplit",
     "Rule",
+    "SavedRule",
     "ScanRequest",
     "ScanResponse",
     "ScanRow",
