@@ -31,6 +31,7 @@ describe("assumptionLines", () => {
       oos_fraction: "last 30% of sessions",
       data_mode: "synthetic",
       data_version: "synthetic:v1:seed42",
+      data_end: "2025-12-31",
       data_seed: "42",
     });
   });

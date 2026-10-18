@@ -191,6 +191,11 @@ export interface components {
              */
             cooldown_basis: "signal";
             /**
+             * Data End
+             * Format: date
+             */
+            data_end: string;
+            /**
              * Data Mode
              * @enum {string}
              */

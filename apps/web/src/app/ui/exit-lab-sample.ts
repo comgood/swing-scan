@@ -83,6 +83,7 @@ export const SAMPLE_TRADE_LAB: TradeLabResult = {
     oos_fraction: 0.3,
     data_mode: "synthetic",
     data_version: "synthetic:v1:demo",
+    data_end: "2024-06-28",
     data_seed: 7,
   },
   oos_start: "2024-01-02",

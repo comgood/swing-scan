@@ -29,6 +29,11 @@
             "title": "Cooldown Basis",
             "type": "string"
           },
+          "data_end": {
+            "format": "date",
+            "title": "Data End",
+            "type": "string"
+          },
           "data_mode": {
             "enum": [
               "synthetic",
@@ -151,6 +156,7 @@
           "oos_fraction",
           "data_mode",
           "data_version",
+          "data_end",
           "data_seed"
         ],
         "title": "Assumptions",

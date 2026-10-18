@@ -84,6 +84,7 @@
     "oos_fraction": 0.3,
     "data_mode": "synthetic",
     "data_version": "synthetic:v1:seed42",
+    "data_end": "2025-12-31",
     "data_seed": 42
   },
   "oos_start": "2024-07-03",
