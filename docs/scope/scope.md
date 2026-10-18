@@ -33,7 +33,7 @@ _Source of truth: acceptance criteria IDs (D, R, S, B, X, U) and settled default
 | 18 | One command local stack | Slice 6 | planned |
 | 19 | Market clock writer | Slice 6 | in-progress |
 | 20 | Live refresh and push | Slice 6 | in-progress |
-| 21 | Saved rules | Slice 7 | in-progress |
+| 21 | Saved rules | Slice 7 | done |
 | 22 | Accounts | Slice 7 | planned |
 | 23 | Backtest runs as jobs | Slice 7 | planned |
 | 24 | Infrastructure as code | Slice 8 | planned |
@@ -320,7 +320,7 @@ Spec [0013](../specs/0013-live-refresh-push/index.md)
 
 ## Slice 7: Your own saved work
 
-### 21. Saved rules · in-progress
+### 21. Saved rules · done
 Lane BE and FE. Save a rule you built under a name, list them, load one back into the builder, delete one. The first time anything writes to the store instead of only reading it. About 1 to 1.5 days.
 **Done when:** a saved rule survives a restart, loads back into the builder exactly as saved, keeps working after the rule format grows a field, and a malformed or oversized rule comes back as a 422 the form can show.
 - [x] Design it (spec): `/architect saved rules` (signed off by the owner 2026-10-18; this is where SQL arrives, on Neon, with writes gated to your own machine until feature 22)
@@ -331,8 +331,8 @@ Lane BE and FE. Save a rule you built under a name, list them, load one back int
   - [x] The thread proved against the real database, and the skip that keeps `make ci` green without one (AC-2, AC-10)
   - [x] The builder's save control and saved list, loaded from the list payload, hidden when the API answers 501 (AC-6)
   - [x] Round trip tests across every operand shape (AC-2)
-- [ ] Verify it: `/check verify saved rules`
-- [ ] Test it: `/test saved rules`
+- [x] Verify it: `/check verify saved rules` (2026-10-19, against the real Neon database and the real page in Chrome; every AC met)
+- [x] Test it: `/test saved rules`
 Spec [0014](../specs/0014-saved-rules/index.md)
 
 ### 22. Accounts · planned · needs a decision · GA

@@ -1,7 +1,7 @@
 # 0014. Save rules as normalised rows in Neon Postgres, with writes that exist only on your machine
 
 **Date**: 2026-10-18
-**Status**: In Progress
+**Status**: Accepted
 
 ## Summary
 

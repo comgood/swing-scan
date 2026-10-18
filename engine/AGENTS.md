@@ -13,9 +13,10 @@ The `swing-engine` Python package (import name `engine`): all trading logic, mea
 | `src/engine/live/` | Local only Alpaca loader (feature 14, spec 0010): `python -m engine.live`, writing the same market schema to `data/live`. The HTTP transport is injected, so tests never call a vendor |
 | `src/engine/synthetic/` | Seeded synthetic market: `generate(seed) -> Market`, CLI `python -m engine.synthetic --seed 42 --out DIR` (spec 0006) |
 | `src/engine/data/store.py` | `read_market()`, `write_market()`, `market_dir()` (reads `SYNTHETIC_DATA_DIR`, default `data/synthetic`) |
+| `src/engine/data/rules.py` | Saved rules in Postgres (spec 0014): four plain SQL statements, the whole `Rule` in one `jsonb` column, a connection opened per request |
 | `src/engine/data/sanity.py` | `check_market()`: `validate_market` plus the D-2 bar checks |
 | `src/engine/data/fixtures.py` | `load_fixture()` for bar numbered CSVs, `make_market()` from lists (spec 0002 fixture format) |
-| `src/engine/api.py` | The use cases: `scan()`, `scan_timed()`, `backtest()`, `warm()` (pins the template columns at startup), and `NotYetImplemented` for 501s. 2 to 6 exit configs go to the private `_trade_lab()` (exit lab, spec 0009) |
+| `src/engine/api.py` | The use cases: `scan()`, `scan_timed()`, `backtest()`, `warm()` (pins the template columns at startup), and `NotYetImplemented` for 501s. 2 to 6 exit configs go to the private `_trade_lab()` (exit lab, spec 0009). `save_rule()`, `list_rules()` and `delete_rule()` are the saved rules use cases (spec 0014); each imports the repository inside the call, so the deployed function never pays `psycopg`'s import |
 | `src/engine/indicators/cache.py` | `IndicatorCache` via `cache_for(market)`: one locked LRU of 64 columns per market; pinned columns are never evicted (spec 0005) |
 | `src/engine/rules/compile.py` | `compile_rule()`: the four comparisons, `offset`, `mult`, crosses; any null operand makes the rule false |
 | `src/engine/rules/signals.py` | `entry_signals()`: the rising edge plus the chained 10 bar cooldown, shared by the scan and the backtest so their signals match (S-3) |
@@ -54,6 +55,16 @@ make dev-live                  # local only: the API in live mode on 127.0.0.1, 
 - Alpaca's free Basic plan has no SIP history: `feed=sip` answers 403, so the loader reads the IEX feed. IEX is a small share of real volume, so volume rules (`vol_ratio`, `avg_volume`) are not comparable to a full tape.
 - Rule compilation never uses `eval` or `exec`.
 - Tests for `data/` live in `engine/tests/dataset/`, because `.gitignore` ignores every folder named `data/`.
+- Saved rules use `psycopg` with plain SQL and no ORM: the `Rule` contract is the only validator, and the database owns identity (one name, case insensitive) and nothing else. Alembic is in the repo for the migration chain, not for models (`migrations/`, run with `make migrate`).
+- Never hold a connection across requests. `psycopg.connect(..., prepare_threshold=0)`: `DATABASE_URL` is Neon's pooled endpoint, which is PgBouncer in transaction mode, where a reused prepared statement fails. Migrations use `DATABASE_URL_UNPOOLED`.
+- Tests that need a real database skip when no `DATABASE_URL` is set, so CI stays green and the owner's local run is their evidence (the D-4 precedent).
+
+## Agent skills
+
+- [neon-postgres](../.agents/skills/neon-postgres/): `neondatabase/agent-skills`, Neon pooling, psycopg and connection handling
+- [postgresql-table-design](../.agents/skills/postgresql-table-design/): `wshobson/agents`, table and index design
+- Declined: a SQLAlchemy with Alembic skill (there are no ORM models here, only plain SQL migrations)
+- MCP servers: `neondatabase/mcp-server-neon` (recommended, not connected; it would let a build read the real schema)
 
 ## Related specs
 
@@ -63,5 +74,6 @@ make dev-live                  # local only: the API in live mode on 127.0.0.1, 
 - [0006 synthetic market](../docs/specs/0006-synthetic-market/index.md)
 - [0007 portfolio backtest core](../docs/specs/0007-portfolio-backtest-core/index.md) (exits, `step()`, the simulator, metrics)
 - [0009 exit lab](../docs/specs/0009-exit-lab/index.md) (trade mode, the random baseline, edge)
+- [0014 saved rules](../docs/specs/0014-saved-rules/index.md) (`data/rules.py`, the use cases, the migration chain)
 
 _Drafted by /audit from the repo, worth a quick human pass. Edit freely: once a line stops matching this draft, later runs treat it as curated and will flag rather than overwrite it._
