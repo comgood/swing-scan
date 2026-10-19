@@ -3,4 +3,5 @@ export { conditionText, operandColumns, operandLabel } from "./operands";
 // The template list and the indicator catalog are shared with the report page: one query key,
 // one cache, one implementation.
 export { useIndicators, useTemplates } from "./queries";
+export { SavedRules } from "./saved-rules";
 export { DEFAULT_TEMPLATE_ID, pickTemplate, ScanWorkspace } from "./scan-workspace";

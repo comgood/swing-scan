@@ -10,6 +10,7 @@ import ruleNOutOfRange from "../../../../contracts/mocks/422.rule.n_out_of_range
 import ruleTooManyConditions from "../../../../contracts/mocks/422.rule.too_many_conditions.json";
 import ruleUnknownIndicator from "../../../../contracts/mocks/422.rule.unknown_indicator.json";
 import simOutOfRange from "../../../../contracts/mocks/422.sim.out_of_range.json";
+import rulesNotImplemented from "../../../../contracts/mocks/501.rules.json";
 import scanNotImplemented from "../../../../contracts/mocks/501.scan.json";
 import backtestNoEntries from "../../../../contracts/mocks/backtest.no_entries.json";
 import backtestPortfolio from "../../../../contracts/mocks/backtest.portfolio.json";
@@ -35,6 +36,12 @@ export const mocks = {
   backtestTruncated: backtestTruncated as Schemas["PortfolioResult"],
   backtestTradeLab: backtestTradeLab as Schemas["TradeLabResult"],
   backtestNoEntries: backtestNoEntries as Schemas["PortfolioResult"],
+  // Saved rules have no generated mock: a saved rule is whatever was saved, so the list is
+  // built from the template mock rather than inventing a second rule to keep in step.
+  savedRules: (templates as Schemas["TemplateOut"][]).map((t, i) => ({
+    id: `0000000${i}-0000-4000-8000-000000000000`,
+    rule: t.rule,
+  })) as Schemas["SavedRule"][],
 };
 
 const errors = {
@@ -45,6 +52,7 @@ const errors = {
   "422.exits.too_many_configs": exitsTooManyConfigs,
   "422.sim.out_of_range": simOutOfRange,
   "501.scan": scanNotImplemented,
+  "501.rules": rulesNotImplemented,
 } satisfies Record<string, JsonBodyType>;
 
 export type ErrorMock = keyof typeof errors;
@@ -118,6 +126,40 @@ export function backtestHandler(variant: BacktestVariant = "auto", options: Mock
   });
 }
 
+/** `501.rules` is the deployed API and any machine with no database: the UI hides the feature. */
+export type SavedRulesVariant = "ok" | "empty" | ErrorMock;
+
+export function savedRulesHandler(variant: SavedRulesVariant = "ok", options: MockOptions = {}) {
+  const body = variant === "empty" ? [] : mocks.savedRules;
+  return http.get(`${API}/rules`, () => errorOrBody(variant, body, options));
+}
+
+/**
+ * Saving echoes the posted rule back with an id, as the API does. `duplicate` is the 409, whose
+ * body is written here rather than generated: the API only produces it against a real database
+ * with the name already taken, which `make mocks` has no way to reach (spec 0014 AC-10).
+ */
+export type SaveRuleVariant = "ok" | "duplicate" | ErrorMock;
+
+export function saveRuleHandler(variant: SaveRuleVariant = "ok", options: MockOptions = {}) {
+  return http.post(`${API}/rules`, async ({ request }) => {
+    const rule = (await request.json()) as Schemas["Rule"];
+    if (variant === "duplicate") {
+      return respond({ detail: `A rule named '${rule.name}' is already saved.` }, 409, options);
+    }
+    return errorOrBody(variant, { id: "99999999-0000-4000-8000-000000000000", rule }, options);
+  });
+}
+
+export function deleteRuleHandler(variant: "ok" | ErrorMock = "ok", options: MockOptions = {}) {
+  return http.delete(`${API}/rules/:id`, async () => {
+    if (variant !== "ok") return errorOrBody(variant, {}, options);
+    if (options.delayMs !== undefined) await delay(options.delayMs);
+    // 204, so no body: `HttpResponse.json` would attach one, which fetch rejects.
+    return new HttpResponse(null, { status: 204 });
+  });
+}
+
 export const handlers = [
   healthHandler(),
   metaHandler(),
@@ -125,4 +167,9 @@ export const handlers = [
   templatesHandler(),
   scanHandler(),
   backtestHandler(),
+  // 501 by default, so every test that does not opt in sees the app as the deployed demo looks:
+  // no accounts yet, so no saved rules (spec 0014 AC-6).
+  savedRulesHandler("501.rules"),
+  saveRuleHandler("501.rules"),
+  deleteRuleHandler("501.rules"),
 ];

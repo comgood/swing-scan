@@ -29,6 +29,14 @@ _Source of truth: acceptance criteria IDs (D, R, S, B, X, U) and settled default
 | 14 | Live research mode (local) | Slice 4 | done |
 | 15 | Deploy hardening & demo readiness | Slice 5 | done |
 | 16 | README, research note & GIF | Slice 5 | in-progress |
+| 17 | Market data store | Slice 6 | in-progress |
+| 18 | One command local stack | Slice 6 | planned |
+| 19 | Market clock writer | Slice 6 | in-progress |
+| 20 | Live refresh and push | Slice 6 | in-progress |
+| 21 | Saved rules | Slice 7 | done |
+| 22 | Accounts | Slice 7 | planned |
+| 23 | Backtest runs as jobs | Slice 7 | planned |
+| 24 | Infrastructure as code | Slice 8 | planned |
 
 ## Parallel work
 
@@ -261,6 +269,89 @@ Lane orchestrator. The portfolio face of the project: the portfolio ready checkl
 - [ ] **Record the GIF** (you, at a screen recorder): the six steps of the demo script against `make dev` on the seed 42 market, 375 px wide, into `docs/assets/demo.gif`, under about 10 MB, with the synthetic banner legible in frame 1. The README has a pending notice in its place and a one line swap in a comment
 - [ ] Tag `v1.0` once the GIF lands
 
+## Slice 6: Live data
+
+Slices 6 to 8 are the post `v1.0` pass. The one week build baked the market into the container image (`services/api/Dockerfile` generates the seeded market at build time into `/data`), so the only way the numbers change is a rebuild and a redeploy. This slice moves the data into a store that can change while the site is running. Lanes below are kept for habit; post `v1.0` you are every lane.
+
+### 17. Market data store · in-progress
+Lane BE. Move the bars out of the container image and into a database the API reads, so the data can change without a rebuild. Everything else in these three slices stands on this one. About 2 days.
+**Done when:** the API serves scans and backtests from the store in both synthetic and live mode, the image no longer ships a generated market, schema changes run as versioned migrations you can review, the engine's store access stays inside its infrastructure layer (`engine/data`) so the boundary test still passes, and the whole thing still costs nothing at rest.
+- [x] Design it (spec): `/architect market data store` (signed off by the owner 2026-10-18)
+- [ ] Build it: `/develop market data store`
+  - [ ] The store reader: `MARKET_STORE_URI` replaces `SYNTHETIC_DATA_DIR`, `meta.parquet` carries `layout_version` and is written last, and a rerunnable push script seeds the store (AC-2, AC-5, AC-9, AC-10)
+  - [ ] Deployed on the store, bake removed: the bucket by hand, the deployed URI pointed at it, cold start measured, then the Dockerfile generation step out and the image smoke test given a dataset (AC-1, AC-6, AC-11, AC-15)
+  - [ ] Change check and inline reload: one middleware comparing `meta.parquet` contents on a 10 s floor, the noticing request reloading before it is served, and recovery when the store was absent at start (AC-7, AC-8, AC-13, AC-14)
+  - [ ] Local stack, CI cover and the live prefix: MinIO in compose and reused as the CI service, the execution role scoped to synthetic only, and the live dataset pushed (AC-3, AC-4, AC-12)
+- [ ] Verify it: `/check verify market data store`
+- [ ] Test it: `/test market data store`
+Spec [0011](../specs/0011-market-data-store/index.md)
+
+### 18. One command local stack · planned
+Lane DI. Bring the store, the API, the web app and the writer up together, so you or a reviewer runs the whole project with one command. Nothing is left to decide once feature 17's spec names the services. About half a day.
+**Done when:** one command brings the full stack up from a clean clone with no manual setup, `make dev` still works for day to day coding, and the README says which to use when.
+- [ ] Build it: `/develop one command local stack`
+
+### 19. Market clock writer · in-progress
+Lane BE. A small job on a timer that appends one more simulated trading day to the store, so there is always something new to refresh into. About 1 day.
+**Done when:** a tick appends exactly one trading day without rewriting history, the series stays deterministic and continuous from the seed, a tick that fails halfway or runs twice leaves the data correct, and the synthetic banner stays truthful about what the data is.
+- [x] Design it (spec): `/architect market clock writer` (signed off by the owner 2026-10-18)
+- [ ] Build it: `/develop market clock writer`
+  - [ ] The published window: `n_sessions` to 1818, `delisting_fraction` to 0.08, `synthetic-2`, and the truncation that nulls the delist pair together and hides everything past the cursor (AC-5, AC-6, AC-10)
+  - [ ] Re-baseline and re-seed: D-3 verified at both ends of the runway, the four `generate(42)` test files and X-7's timing re measured, the store seeded at the initial cursor (AC-7, AC-13)
+  - [ ] The tick: derive the session and seed from meta, regenerate, verify the published prefix, write bars then securities then meta, handle already current and runway exhausted (AC-1, AC-2, AC-3, AC-4, AC-8)
+  - [ ] The schedule: the writer Lambda from the API image with its own write scoped role, an EventBridge daily schedule, and one real tick watched end to end (AC-9, AC-11, AC-12)
+- [ ] Verify it: `/check verify market clock writer`
+- [ ] Test it: `/test market clock writer`
+Spec [0012](../specs/0012-market-clock-writer/index.md)
+
+### 20. Live refresh and push · in-progress
+Lane FE and BE. The site notices new data by itself: an as of marker that moves, and the server pushing the change rather than the browser asking again and again. Holding a stream open rules out some hosting shapes, so this decision reaches past the UI. About 1 day, now closer to 2: spec 0013 found the honest version needs a contract change.
+**Done when:** an open page updates within seconds of the writer appending a day, with no reload; the as of date and the data mode banner stay honest; the page recovers on its own when the stream drops; and the hosted demo either works or falls back to asking on a timer.
+- [x] Design it (spec): `/architect live refresh and push` (signed off by the owner 2026-10-18; the decision is polling, not push, because Lambda bills a held open stream for every second it is open)
+- [ ] Build it: `/develop live refresh and push`
+  - [ ] The contract change: `Assumptions` gains `data_end` and `data_version` so a result names its own data, then the regenerated client, mocks and owner approval (AC-3, AC-12)
+  - [ ] The as of marker beside each view's results, read straight off the result rather than from the poll, with no shared context (AC-2)
+  - [ ] The poll: one query on a 30 s focused interval, failures swallowed, a null dataset rendering nothing (AC-1, AC-6, AC-7, AC-8, AC-11)
+  - [ ] The notice: a new component rather than `Banner`, with its `/ui` gallery entry, telling the person to reload rather than re-running anything for them (AC-4, AC-5, AC-13)
+  - [ ] Trial counts labelled with the dataset ends in a sibling key so no count is wiped, and the banner's existing behaviour confirmed unchanged (AC-9, AC-10)
+- [ ] Verify it: `/check verify live refresh and push`
+- [ ] Test it: `/test live refresh and push`
+Spec [0013](../specs/0013-live-refresh-push/index.md)
+
+## Slice 7: Your own saved work
+
+### 21. Saved rules · done
+Lane BE and FE. Save a rule you built under a name, list them, load one back into the builder, delete one. The first time anything writes to the store instead of only reading it. About 1 to 1.5 days.
+**Done when:** a saved rule survives a restart, loads back into the builder exactly as saved, keeps working after the rule format grows a field, and a malformed or oversized rule comes back as a 422 the form can show.
+- [x] Design it (spec): `/architect saved rules` (signed off by the owner 2026-10-18; this is where SQL arrives, on Neon, with writes gated to your own machine until feature 22)
+- [x] Build it: `/develop saved rules` (`engine/data/rules.py`, `engine.api`, `services/api/src/api/routes/rules.py`, `apps/web/src/features/scan/saved-rules.tsx`)
+  - [x] The database: Neon, Alembic with plain SQL migrations, one table holding the rule as `jsonb`, and the enablement gate (a database URL plus the D-5 host checks) (AC-5, AC-6, AC-7)
+  - [x] The repository in `engine/data` plus the `engine.api` use cases the routers call: four plain SQL statements, no ORM, a connection per request (AC-1, AC-2, AC-9)
+  - [x] One `contract-change` PR for all three endpoints at once, since CI fails on any client diff: the `Rule` body, the 409, `DELETE` added to CORS, the regenerated client, mocks and owner approval (AC-3, AC-4, AC-8, AC-11)
+  - [x] The thread proved against the real database, and the skip that keeps `make ci` green without one (AC-2, AC-10)
+  - [x] The builder's save control and saved list, loaded from the list payload, hidden when the API answers 501 (AC-6)
+  - [x] Round trip tests across every operand shape (AC-2)
+- [x] Verify it: `/check verify saved rules` (2026-10-19, against the real Neon database and the real page in Chrome; every AC met)
+- [x] Test it: `/test saved rules`
+Spec [0014](../specs/0014-saved-rules/index.md)
+
+### 22. Accounts · planned · needs a decision · GA
+Lane BE and FE. Real sign in, with saved rules and saved runs belonging to whoever made them. Local demo only, so there is no public login to attack and no real person's data to lose. About 2 days, and the item an interviewer is most likely to dig into.
+**Done when:** you can register, sign in, sign out and stay signed in across a restart; passwords are never stored or logged in readable form; one account cannot read or delete another's rows; and the hosted demo runs with accounts switched off.
+- [ ] Design it (spec): `/architect accounts`
+
+### 23. Backtest runs as jobs · planned · needs a decision
+Lane BE and FE. Submit a backtest, get a run id back immediately, watch it progress, then find it again in a history table beside the exact rule and settings that produced it. About 2 days. This is what turns the app from request and response into a system with work in flight.
+**Done when:** a submitted run returns before it finishes, its status and result are readable by id, a failed run says why, the history table shows past runs with their inputs, and the same rule and seed replay to the same numbers.
+- [ ] Design it (spec): `/architect backtest runs as jobs`
+
+## Slice 8: Operations
+
+### 24. Infrastructure as code · planned · needs a decision
+Lane DI. Describe the AWS pieces as code instead of console clicks, including whatever the data store turns out to need. Promoted out of the deferred list. About 1.5 days.
+**Done when:** an apply from scratch builds the whole stack, state lives somewhere safe to share, no secret sits in the files, a plan against an unchanged stack reports no drift, and a destroy leaves nothing billable behind.
+- [ ] Design it (spec): `/architect infrastructure as code`
+
 ## Deferred
 
 Out of scope for the one week build, kept so the plan stays honest. Picked up in this order once the MUST list ships.
@@ -274,8 +365,12 @@ Out of scope for the one week build, kept so the plan stays honest. Picked up in
 8. **Parameter sweep** · needs a decision
 9. **Walk forward testing** · needs a decision
 10. **Free history that includes delisted names** · needs a decision
-11. **Infrastructure as code** for the AWS pieces
+11. ~~**Infrastructure as code** for the AWS pieces~~ promoted to feature 24
+16. **Prefix stable generator** · from spec 0012. `generate(seed)` cannot extend a market: the regime schedule, the bear planting, the per ticker draws and the OHLCV blocks all depend on `n_sessions`, so one more session reshuffles everything. Feature 19 works around it with a published window over a longer master, which is why its runway ends after 558 ticks. Fixing it properly is a rewrite of the model's randomness (independent per session streams, an absolute schedule) plus a dataset re-baseline, and it removes the runway limit. Blocks nothing today; decide before the runway runs out, around the start of 2029.
 12. **OR groups in the rule builder** · needs a decision
+13. **Read cache in front of the store**, only once a measurement shows the store is the slow part · needs a decision
+14. **Browser tests in CI** driving the real pages on every pull request
+15. **Self hosted deploy** of the whole stack on one small machine
 
 If the week runs behind, cut in this order: close below MA exit, then ATR stop, then the trial counter becomes a static warning, then live research mode moves to Day 8. The rule builder, the backtest, the exit lab with IS and OOS, the oracle tests, the deploy, and the README are never cut.
 

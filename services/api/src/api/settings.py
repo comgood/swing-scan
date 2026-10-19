@@ -26,6 +26,19 @@ def bound_host(argv: Sequence[str], env: Mapping[str, str]) -> str:
     return env.get("UVICORN_HOST", LOOPBACK)
 
 
+def saved_rules_problems(argv: Sequence[str], env: Mapping[str, str]) -> list[str]:
+    """Why saved rules may not run here; empty only on your own machine (spec 0014).
+
+    Two gates on purpose. Without a database there is nothing to write to, and the same host
+    rules that keep live prices off the public API keep the write surface off it too, so a
+    `DATABASE_URL` set on Lambda by accident cannot open an unauthenticated write endpoint.
+    Accounts (scope feature 22) are what open this up.
+    """
+    if not env.get("DATABASE_URL"):
+        return ["no DATABASE_URL is configured"]
+    return live_mode_problems(argv, env)
+
+
 def live_mode_problems(argv: Sequence[str], env: Mapping[str, str]) -> list[str]:
     """Why live mode may not start here; empty only on your own machine (D-5, spec 0001)."""
     problems = []

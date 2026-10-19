@@ -10,7 +10,7 @@ API_BUILD_FLAGS ?=
 
 .PHONY: setup setup-py setup-web dev dev-api dev-web lint format typecheck test test-fast test-py test-py-fast \
         test-web test-acceptance test-acceptance-fast test-slow hooks guards build-web \
-        build-api build-api-local smoke smoke-image test-oracle openapi gen-client mocks contracts contracts-check data data-check load-live dev-live ci
+        build-api build-api-local smoke smoke-image test-oracle migrate openapi gen-client mocks contracts contracts-check data data-check load-live dev-live ci
 
 setup: setup-web setup-py ## Install all JS and Python dependencies from the lockfiles
 
@@ -24,7 +24,16 @@ dev: ## Run the API on 127.0.0.1:8000 and the web app on :3000 together
 	$(MAKE) -j2 dev-api dev-web
 
 dev-api:
+	@set -a; [ -f .env ] && . ./.env; set +a; \
 	uv run uvicorn api.main:app --host 127.0.0.1 --port 8000 --reload
+
+migrate: ## Local only: bring the database up to the latest migration (spec 0014)
+	@set -a; [ -f .env ] && . ./.env; set +a; \
+	if [ -z "$$DATABASE_URL_UNPOOLED$$DATABASE_URL" ]; then \
+		echo "No database configured. Put DATABASE_URL_UNPOOLED in .env (see .env.example)."; \
+		exit 1; \
+	fi; \
+	uv run alembic upgrade head && uv run alembic current
 
 dev-web:
 	pnpm --filter web dev

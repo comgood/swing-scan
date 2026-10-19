@@ -6,6 +6,7 @@ requires-python = ">=3.12,<3.13"
 dependencies = [
     "numpy>=2.2",
     "polars>=1.30",
+    "psycopg[binary]>=3.2",
     "pydantic>=2.11",
 ]
 

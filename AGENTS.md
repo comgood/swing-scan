@@ -8,7 +8,7 @@ A $0 swing trading scanner and backtester (portfolio project, not investment adv
 - **Framework**: Next.js App Router, static export on Vercel Hobby · FastAPI + Pydantic v2 in a Lambda container (`ap-southeast-1`)
 - **Key dependencies**: Polars + NumPy (engine), Tailwind + shadcn/ui, TanStack Query/Table, openapi-typescript + openapi-fetch, Lightweight Charts
 - **Package manager**: pnpm (JS workspaces) + uv (Python workspace), one root `Makefile` for both
-- **No database, no auth, no background jobs.** Source of truth: [spec 0001](docs/specs/0001-stack-architecture/index.md)
+- **Neon Postgres for saved rules (local only writes), no auth, no background jobs.** Source of truth: [spec 0001](docs/specs/0001-stack-architecture/index.md), [spec 0014](docs/specs/0014-saved-rules/index.md)
 
 ## Build approach
 
@@ -37,7 +37,7 @@ Stored in `docs/specs/`. Format: `docs/specs/NNNN-title/index.md`. Criteria IDs 
 
 ## Rules
 
-- **Clean Architecture, mapped to the spec layout.** Domain: `engine/{indicators,rules,exits,sim,baseline,metrics}` (pure logic; Polars and NumPy allowed, no I/O, no web code). Application: `engine.api` use cases (`scan`, `backtest`), thin orchestrators. Infrastructure: `engine/{data,synthetic}`, Parquet and vendor I/O. Presentation: `services/api` routers and `apps/web`.
+- **Clean Architecture, mapped to the spec layout.** Domain: `engine/{indicators,rules,exits,sim,baseline,metrics}` (pure logic; Polars and NumPy allowed, no I/O, no web code). Application: `engine.api` use cases (`scan`, `backtest`), thin orchestrators. Infrastructure: `engine/{data,synthetic}`, Parquet, Postgres and vendor I/O. Presentation: `services/api` routers and `apps/web`.
 - Dependencies point inward: `engine` never imports FastAPI, Starlette or uvicorn (`engine/tests/test_engine_boundary.py`); `services/api` depends on `engine`, never the reverse.
 - Cross boundary data uses Pydantic models or plain DTOs; domain objects never reach the web app. Domain and use cases are unit tested without mocking infrastructure.
 - Folders: engine by domain module, API by router, web by feature (`apps/web/src/features/<name>/`).

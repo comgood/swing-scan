@@ -73,6 +73,7 @@ MODELS: dict[str, Any] = {
     "422.exits.too_many_configs.json": ValidationBody,
     "422.sim.out_of_range.json": ValidationBody,
     "501.scan.json": NotImplementedBody,
+    "501.rules.json": NotImplementedBody,
 }
 
 
