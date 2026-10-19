@@ -130,8 +130,8 @@ ci: lint typecheck test build-web contracts-check data-check guards ## Every che
 
 SEED ?= 42
 
-data: ## Generate the synthetic market into data/synthetic (gitignored): make data SEED=42
-	uv run python -m engine.synthetic --seed $(SEED) --out data/synthetic
+data: ## Generate the published synthetic market into data/synthetic (gitignored): make data SEED=42
+	uv run python -m engine.synthetic --seed $(SEED) --out data/synthetic --published
 
 data-check: ## CI: build the seed 42 market twice in a temp folder, same hashes, D-1 to D-3 hold
 	uv run python scripts/check_synthetic.py

@@ -9,6 +9,11 @@ deliberately tighter, a regression proxy that trips long before the deployed one
 run is 6.04 s on a CI runner and about 3 s locally, against the Lambda's 16.5 s to 18.9 s. A
 hard gate locally; on CI (shared runners are noisy) a slow run only warns, while the body size
 and the identical bodies still fail.
+
+Re measured on 2026-10-19 for spec 0012 AC-13, because `generate(42)` now returns the 1818
+session master rather than 1260 sessions: warm 0.62 s for `breakout_52w` and 4.29 s for
+`pullback_ema21` locally, against the same 10 s budget. The deployed API still serves the
+published 1260 session window, so X-7's own 25 s budget is unaffected.
 """
 
 from __future__ import annotations

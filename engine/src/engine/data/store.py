@@ -9,6 +9,7 @@ here knows about S3 and no object store client enters the engine.
 from __future__ import annotations
 
 import os
+from datetime import date
 from pathlib import Path
 
 import polars as pl
@@ -65,6 +66,36 @@ def dataset_key(root: str | Path, name: str) -> str:
 def change_key(meta: DataMeta) -> str:
     """The dataset's identity, as stored in `meta.parquet` and compared by the change check."""
     return meta.model_dump_json()
+
+
+def session_dates(market: Market) -> list[date]:
+    """Every session in the market, in order. The clock's cursor is a position in this list."""
+    return list(market.bars["date"].unique().sort().to_list())
+
+
+def truncate_market(market: Market, cursor: date) -> Market:
+    """The published prefix of `market` at `cursor`: nothing in it is dated after that day.
+
+    Only filtering and nulling, never computing, so the prefix inherits the master's
+    correctness (spec 0012). `check_market` runs here, so a cursor that would publish a broken
+    dataset raises before anything is written.
+    """
+    bars = market.bars.filter(pl.col("date") <= cursor)
+    future_delist = pl.col("delisted_on") > cursor
+    securities = market.securities.with_columns(
+        pl.when(pl.col("listed_from") > cursor)
+        .then(None)
+        .otherwise(pl.col("listed_from"))
+        .alias("listed_from"),
+        # The delist pair is nulled together: check_market refuses one without the other.
+        pl.when(future_delist).then(None).otherwise(pl.col("delisted_on")).alias("delisted_on"),
+        pl.when(future_delist).then(None).otherwise(pl.col("delist_reason")).alias("delist_reason"),
+    )
+    prefix = Market(
+        bars=bars, securities=securities, meta=market.meta.model_copy(update={"end": cursor})
+    )
+    check_market(prefix)
+    return prefix
 
 
 def write_market(market: Market, out_dir: str | Path) -> str:
