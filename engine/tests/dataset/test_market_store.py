@@ -7,6 +7,7 @@ the messages Polars raises for a cloud read.
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -20,6 +21,13 @@ from engine.data.fixtures import FrameSpec, make_market
 from engine.data.store import DATASET_FILES, LAYOUT_VERSION_COLUMN, META_FILE, dataset_key
 
 PUSH_SCRIPT = Path(__file__).parents[3] / "scripts" / "push_market.py"
+
+TEST_STORE_ENV = "SWING_SCAN_TEST_STORE_URI"
+"""An existing bucket prefix to exercise the `s3://` branch against, MinIO locally.
+
+Absent, that one test skips, the way the saved rules tests skip without a `DATABASE_URL`:
+CI stays green and a real run is the evidence.
+"""
 
 
 def tiny() -> Market:
@@ -119,3 +127,20 @@ def test_push_refuses_a_live_dataset_without_the_flag(tmp_path: Path) -> None:
     allowed = push("--mode", "live", "--from", str(source), "--to", str(dest), "--allow-live")
     assert allowed.returncode == 0, allowed.stderr
     assert read_market(dest / "live").meta.data_mode == "live"
+
+
+@pytest.mark.skipif(
+    not os.environ.get(TEST_STORE_ENV),
+    reason=f"no {TEST_STORE_ENV}: the s3:// branch needs a bucket (MinIO locally, spec 0011)",
+)
+def test_a_store_and_a_directory_hold_the_same_dataset(tmp_path: Path) -> None:
+    store = os.environ[TEST_STORE_ENV]
+    write_market(tiny(), tmp_path / "synthetic")
+    pushed = push("--from", str(tmp_path), "--to", store)
+    assert pushed.returncode == 0, pushed.stderr
+
+    from_store = read_market(dataset_key(store, "synthetic"))
+    from_directory = read_market(tmp_path / "synthetic")
+    assert from_store.bars.equals(from_directory.bars)
+    assert from_store.securities.equals(from_directory.securities)
+    assert from_store.meta == from_directory.meta

@@ -1,7 +1,7 @@
 # 0011. Serve the market from Parquet objects in S3, read whole and reloaded on change
 
 **Date**: 2026-10-18
-**Status**: Proposed
+**Status**: In Progress
 
 ## Summary
 
