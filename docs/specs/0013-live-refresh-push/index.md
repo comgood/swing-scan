@@ -1,7 +1,7 @@
 # 0013. Notice new data by polling meta, and let the result name the dataset that produced it
 
 **Date**: 2026-10-18
-**Status**: In Progress
+**Status**: Accepted
 
 ## Summary
 
