@@ -250,7 +250,12 @@ function Editor({
           </p>
         )}
         {/* The heading above is this view's as of marker, read off the scan result (AC-2), so
-            only the notice mounts here. */}
+            only the notice mounts here. `as_of` is the right thing to compare: the web app never
+            sends one, and the API then defaults it to the dataset's last session (`engine/api.py`,
+            `as_of = request.as_of if ... else last`), which settles spec 0013's follow up 2, so
+            the scan needs no `data_end` of its own.
+            shortcut: a scan of an explicitly older `as_of` would read as permanently behind;
+            give the scan its own `data_end` if the UI ever lets you pick a date. */}
         {shown && <ResultNewerDataNotice dataEnd={shown.data.as_of} />}
         {rejected
           ? !shown && <p className="text-sm text-muted-foreground">{REJECTED_TEXT}</p>

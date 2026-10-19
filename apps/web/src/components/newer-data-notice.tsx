@@ -10,7 +10,6 @@
 import { Database } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { cn } from "@/lib/utils";
 
 import { useMeta } from "./shell/use-meta";
 
@@ -26,15 +25,10 @@ export function isNewerThan(dataEnd: string, latestEnd: string | null | undefine
 }
 
 /** Presentational, so the `/ui` gallery can show both states without a request (AC-13). */
-export function NewerDataNotice({ newer, className }: { newer: boolean; className?: string }) {
+export function NewerDataNotice({ newer }: { newer: boolean }) {
   if (!newer) return null;
   return (
-    <Alert
-      variant="info"
-      role="status"
-      data-slot="newer-data-notice"
-      className={cn("min-w-0", className)}
-    >
+    <Alert variant="info" role="status" data-slot="newer-data-notice" className="min-w-0">
       <Database aria-hidden="true" />
       <AlertDescription>{NEWER_DATA_TEXT}</AlertDescription>
     </Alert>
@@ -45,15 +39,7 @@ export function NewerDataNotice({ newer, className }: { newer: boolean; classNam
  * The notice for a result on screen. `dataEnd` is read straight off that result, never off the
  * poll, so a tick landing between a request and its response cannot make this wrong (AC-2).
  */
-export function ResultNewerDataNotice({
-  dataEnd,
-  className,
-}: {
-  dataEnd: string;
-  className?: string;
-}) {
+export function ResultNewerDataNotice({ dataEnd }: { dataEnd: string }) {
   const meta = useMeta();
-  return (
-    <NewerDataNotice newer={isNewerThan(dataEnd, meta.data?.data?.end)} className={className} />
-  );
+  return <NewerDataNotice newer={isNewerThan(dataEnd, meta.data?.data?.end)} />;
 }
