@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, FastAPI, Request
+from collections.abc import Awaitable, Callable
+
+from fastapi import APIRouter, FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
@@ -36,6 +38,19 @@ app.add_middleware(
     allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["Content-Type"],
 )
+
+
+@app.middleware("http")
+async def check_the_store(
+    request: Request, call_next: Callable[[Request], Awaitable[Response]]
+) -> Response:
+    """The one place a request can notice the store's dataset changed (spec 0011, AC-7).
+
+    Feature 20's refresh extends this hook rather than adding a second mechanism.
+    """
+    state.refresh_if_changed()
+    return await call_next(request)
+
 
 v1 = APIRouter(prefix="/api/v1")
 

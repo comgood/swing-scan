@@ -33,9 +33,13 @@ def live_market() -> Market:
 
 @pytest.fixture
 def live_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    out = tmp_path / "live"
+    # Under the synthetic prefix on purpose: with the mode now picking the prefix, the
+    # dataset level check is what catches a live dataset sitting where it should not be
+    # (spec 0011 AC-3).
+    out = tmp_path / "synthetic"
     write_market(live_market(), out)
-    monkeypatch.setenv("SYNTHETIC_DATA_DIR", str(out))
+    monkeypatch.setenv("MARKET_STORE_URI", str(tmp_path))
+    monkeypatch.delenv("DATA_MODE", raising=False)
     return out
 
 

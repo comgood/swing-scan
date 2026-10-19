@@ -278,13 +278,13 @@ Lane BE. Move the bars out of the container image and into a database the API re
 **Done when:** the API serves scans and backtests from the store in both synthetic and live mode, the image no longer ships a generated market, schema changes run as versioned migrations you can review, the engine's store access stays inside its infrastructure layer (`engine/data`) so the boundary test still passes, and the whole thing still costs nothing at rest.
 - [x] Design it (spec): `/architect market data store` (signed off by the owner 2026-10-18)
 - [ ] Build it: `/develop market data store`
-  - [ ] The store reader: `MARKET_STORE_URI` replaces `SYNTHETIC_DATA_DIR`, `meta.parquet` carries `layout_version` and is written last, and a rerunnable push script seeds the store (AC-2, AC-5, AC-9, AC-10)
-  - [ ] Deployed on the store, bake removed: the bucket by hand, the deployed URI pointed at it, cold start measured, then the Dockerfile generation step out and the image smoke test given a dataset (AC-1, AC-6, AC-11, AC-15)
-  - [ ] Change check and inline reload: one middleware comparing `meta.parquet` contents on a 10 s floor, the noticing request reloading before it is served, and recovery when the store was absent at start (AC-7, AC-8, AC-13, AC-14)
-  - [ ] Local stack, CI cover and the live prefix: MinIO in compose and reused as the CI service, the execution role scoped to synthetic only, and the live dataset pushed (AC-3, AC-4, AC-12)
+  - [x] The store reader: `MARKET_STORE_URI` replaces `SYNTHETIC_DATA_DIR`, `meta.parquet` carries `layout_version` and is written last, and a rerunnable push script seeds the store (AC-2, AC-5, AC-9, AC-10)
+  - [ ] Deployed on the store, bake removed: the bucket by hand, the deployed URI pointed at it, cold start measured, then the Dockerfile generation step out and the image smoke test given a dataset (AC-1, AC-6, AC-11, AC-15). **Owner:** the build did the spec's migration phase 1 only (the image now generates into `/data/synthetic` and sets `MARKET_STORE_URI=/data`, so the baked copy still matches the layout the reader expects and the rollback works). Removing the bake is the one way door and stays unticked until the bucket exists and the deployed URI points at it
+  - [x] Change check and inline reload: one middleware comparing `meta.parquet` contents on a 10 s floor, the noticing request reloading before it is served, and recovery when the store was absent at start (AC-7, AC-8, AC-13, AC-14)
+  - [ ] Local stack, CI cover and the live prefix: MinIO in compose and reused as the CI service, the execution role scoped to synthetic only, and the live dataset pushed (AC-3, AC-4, AC-12). **Owner:** needs a bucket and AWS credentials; the build left `.env.example` documenting the four store variables (Polars reads them from the environment, verified) and an `s3://` parity test that skips until `SWING_SCAN_TEST_STORE_URI` names a bucket
 - [ ] Verify it: `/check verify market data store`
 - [ ] Test it: `/test market data store`
-Spec [0011](../specs/0011-market-data-store/index.md)
+Spec [0011](../specs/0011-market-data-store/index.md) (In Progress) · code in `engine/src/engine/data/store.py`, `services/api/src/api/state.py`, `scripts/push_market.py`
 
 ### 18. One command local stack · planned
 Lane DI. Bring the store, the API, the web app and the writer up together, so you or a reviewer runs the whole project with one command. Nothing is left to decide once feature 17's spec names the services. About half a day.
