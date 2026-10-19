@@ -53,6 +53,7 @@ def test_assumptions_echo_every_portfolio_setting() -> None:  # AC-10, U-3
         "oos_fraction": 0.3,
         "data_mode": "synthetic",
         "data_version": "fixture:built",
+        "data_end": market.meta.end.isoformat(),  # the dataset the result was computed on
         "data_seed": None,  # a fixture market has no seed
     }
     assert result.oos_start == result.assumptions.oos_start

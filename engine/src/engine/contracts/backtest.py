@@ -127,6 +127,8 @@ class Assumptions(ContractModel):
     oos_fraction: float
     data_mode: Literal["synthetic", "live"]
     data_version: str
+    data_end: IsoDate
+    """The last session in the dataset this result was computed on (spec 0013 AC-3)."""
     data_seed: int | None
 
 

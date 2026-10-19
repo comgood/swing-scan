@@ -423,6 +423,7 @@ def _portfolio(request: BacktestRequest, market: Market) -> PortfolioResult:
         oos_fraction=OOS_FRACTION,
         data_mode=market.meta.data_mode,
         data_version=market.meta.data_version,
+        data_end=market.meta.end,
         data_seed=market.meta.seed,
     )
     return PortfolioResult(
@@ -570,6 +571,7 @@ def _trade_lab(request: BacktestRequest, market: Market) -> TradeLabResult:
         oos_fraction=OOS_FRACTION,
         data_mode=market.meta.data_mode,
         data_version=market.meta.data_version,
+        data_end=market.meta.end,
         data_seed=market.meta.seed,
     )
     return TradeLabResult(

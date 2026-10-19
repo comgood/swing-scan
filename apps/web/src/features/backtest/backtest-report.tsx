@@ -10,6 +10,7 @@ import type { BacktestRequest } from "@swing-scan/api-client";
 import { useMemo, useState } from "react";
 
 import { Banner } from "@/components/banner";
+import { ResultNewerDataNotice } from "@/components/newer-data-notice";
 import { EmptyState } from "@/components/empty-state";
 import { ErrorState } from "@/components/error-state";
 import { FormErrorSummary } from "@/components/form-error-summary";
@@ -154,6 +155,7 @@ function Report({ result, stores }: { result: PortfolioResult; stores?: TrialSto
   return (
     <>
       <AssumptionsHeader result={result} stores={stores} />
+      <ResultNewerDataNotice dataEnd={result.assumptions.data_end} />
       {others.map((w) => (
         <Banner key={w.code} variant="info">
           {w.message}
@@ -207,6 +209,7 @@ function LabReport({ result, stores }: { result: TradeLabResult; stores?: TrialS
   return (
     <>
       <AssumptionsHeader result={result} stores={stores} />
+      <ResultNewerDataNotice dataEnd={result.assumptions.data_end} />
       {others.map((w) => (
         <Banner key={w.code} variant="info">
           {w.message}

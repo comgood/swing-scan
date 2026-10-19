@@ -11,13 +11,21 @@ import { useCallback, useEffect, useSyncExternalStore } from "react";
 import {
   browserStores,
   recordTrial,
+  recordTrialData,
   type Trial,
   type TrialCount,
   type TrialStores,
 } from "./trial-store";
 
 export type TrialCountState =
-  { status: "pending" } | { status: "counted"; count: TrialCount } | { status: "unavailable" };
+  | { status: "pending" }
+  | {
+      status: "counted";
+      count: TrialCount;
+      /** Every dataset these trials ran on, oldest first (spec 0013 AC-10). */
+      dataEnds: string[];
+    }
+  | { status: "unavailable" };
 
 const PENDING: TrialCountState = { status: "pending" };
 
@@ -39,22 +47,38 @@ function cacheFor(stores: TrialStores): Map<string, TrialCountState> {
   return cache;
 }
 
-function runId(trial: Trial): string {
-  return `${trial.structure_key}|${trial.pair_keys.join(",")}`;
+function runId(trial: Trial, dataEnd: string | undefined): string {
+  // The dataset is part of the run: the same pairs on a newer dataset record again, which is how
+  // the warning comes to name both datasets (spec 0013 AC-10).
+  return `${trial.structure_key}|${trial.pair_keys.join(",")}|${dataEnd ?? ""}`;
 }
 
 /** `stores` must be a stable object (module level); a new one each render would loop. */
-export function useTrialCount(trial: Trial, stores: TrialStores = browserStores): TrialCountState {
-  const id = runId(trial);
+export function useTrialCount(
+  trial: Trial,
+  dataEnd?: string,
+  stores: TrialStores = browserStores,
+): TrialCountState {
+  const id = runId(trial, dataEnd);
   const getSnapshot = useCallback(() => cacheFor(stores).get(id) ?? PENDING, [stores, id]);
   const state = useSyncExternalStore(subscribe, getSnapshot, () => PENDING);
 
   useEffect(() => {
     // Always record on mount: an identical re run adds nothing but shows the current totals.
     const count = recordTrial(trial, stores);
-    cacheFor(stores).set(id, count ? { status: "counted", count } : { status: "unavailable" });
+    cacheFor(stores).set(
+      id,
+      count
+        ? {
+            status: "counted",
+            count,
+            dataEnds: dataEnd === undefined ? [] : recordTrialData(trial, dataEnd, stores),
+          }
+        : { status: "unavailable" },
+    );
     for (const listener of listeners) listener();
-    // `id` captures everything in `trial` that matters; a new object for the same run is a no op.
+    // `id` captures all of `trial` and `dataEnd` that matters; a new object for the same run
+    // is a no op.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, stores]);
 

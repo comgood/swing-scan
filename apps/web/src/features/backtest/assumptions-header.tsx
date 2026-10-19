@@ -4,6 +4,7 @@
 // (U-4, spec 0009 AC-18), for a portfolio backtest and an exit lab run alike.
 // Honesty copy is never collapsed or styled as fine print (design.md).
 import { RunTrialCounter, type TrialStores } from "@/features/honesty";
+import { formatDate } from "@/lib/format";
 
 import { assumptionLines } from "./assumption-labels";
 import type { BacktestResult } from "./queries";
@@ -21,10 +22,22 @@ export function AssumptionsHeader({ result, stores }: AssumptionsHeaderProps) {
       className="flex min-w-0 flex-col gap-4 rounded-lg border bg-card p-4"
     >
       <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-start md:justify-between">
-        <h2 id="assumptions-title" className="text-lg font-semibold">
-          Assumptions
-        </h2>
-        <RunTrialCounter trial={result.trial} stores={stores} className="md:max-w-md" />
+        <div className="flex min-w-0 flex-col gap-1">
+          <h2 id="assumptions-title" className="text-lg font-semibold">
+            Assumptions
+          </h2>
+          {/* The dataset that actually produced these numbers, read off the result itself and
+              never from the poll, which is what makes this marker honest (spec 0013 AC-2). */}
+          <p className="text-sm text-muted-foreground tabular-nums">
+            Data as of {formatDate(result.assumptions.data_end)}
+          </p>
+        </div>
+        <RunTrialCounter
+          trial={result.trial}
+          dataEnd={result.assumptions.data_end}
+          stores={stores}
+          className="md:max-w-md"
+        />
       </div>
       <dl className="grid min-w-0 grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
         {assumptionLines(result.assumptions, result.mode).map((line) => (

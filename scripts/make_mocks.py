@@ -295,6 +295,7 @@ def assumptions(configs: list[ExitConfig], portfolio: bool) -> Assumptions:
         oos_fraction=OOS_FRACTION,
         data_mode=META.data_mode,
         data_version=META.data_version,
+        data_end=META.end,
         data_seed=META.seed,
     )
 

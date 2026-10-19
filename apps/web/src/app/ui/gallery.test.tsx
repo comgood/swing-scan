@@ -18,6 +18,7 @@ const SECTIONS = [
   "Numbers and badges",
   "Data table",
   "Banners",
+  "Newer data notice",
   "Research honesty guards",
   "Backtest report",
   "Exit lab",

@@ -97,6 +97,7 @@ export const ASSUMPTION_LABELS = {
   },
   data_mode: { label: "Data mode", text: (v) => v },
   data_version: { label: "Data version", text: (v) => v },
+  data_end: { label: "Data through", text: (v) => formatDate(v) },
   data_seed: { label: "Data seed", text: (v) => String(v) },
 } satisfies { [K in keyof Assumptions]: AssumptionLabel<K> };
 
