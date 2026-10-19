@@ -1,7 +1,7 @@
 # 0012. Generate a longer market once, publish it one session at a time behind a cursor
 
 **Date**: 2026-10-18
-**Status**: Proposed
+**Status**: In Progress
 
 ## Summary
 
