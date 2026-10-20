@@ -48,9 +48,10 @@ def test_bound_host_follows_uvicorn_precedence() -> None:
     assert bound_host([*UVICORN, "--host", "::1"], {"UVICORN_HOST": "10.0.0.1"}) == "::1"
 
 
-# ---- Saved rules: two gates, not one (spec 0014 AC-6, AC-7) ----------------------------
+# ---- Saved rules and accounts: three gates, not one (spec 0014 AC-6/AC-7, spec 0015 AC-4/AC-5) --
 
-DB = {"DATABASE_URL": "postgresql://user:pw@host/db"}
+SECRET = {"AUTH_SECRET": "x" * 32}
+DB = {"DATABASE_URL": "postgresql://user:pw@host/db", **SECRET}
 
 
 def test_saved_rules_run_on_your_machine_with_a_database() -> None:
@@ -58,7 +59,29 @@ def test_saved_rules_run_on_your_machine_with_a_database() -> None:
 
 
 def test_saved_rules_need_a_database() -> None:
-    assert saved_rules_problems(UVICORN, {}) == ["no DATABASE_URL is configured"]
+    assert saved_rules_problems(UVICORN, SECRET) == ["no DATABASE_URL is configured"]
+
+
+def test_accounts_need_a_signing_key() -> None:
+    """spec 0015 AC-4: a rule belongs to an account now, so no key means no rules surface
+    either. The two share one gate rather than drifting apart."""
+    db_only = {"DATABASE_URL": DB["DATABASE_URL"]}
+    assert saved_rules_problems(UVICORN, db_only) == ["no AUTH_SECRET is configured"]
+
+
+def test_a_short_signing_key_counts_as_absent() -> None:
+    """A weak key is worse than no feature, so it refuses rather than signing with it."""
+    problems = saved_rules_problems(UVICORN, {**DB, "AUTH_SECRET": "x" * 31})
+    assert len(problems) == 1
+    assert "shorter than 32 characters" in problems[0]
+
+
+def test_every_missing_piece_is_named_at_once() -> None:
+    """The 501 body should name what you actually have to fix, not just the first thing."""
+    assert saved_rules_problems(UVICORN, {}) == [
+        "no DATABASE_URL is configured",
+        "no AUTH_SECRET is configured",
+    ]
 
 
 @pytest.mark.parametrize(

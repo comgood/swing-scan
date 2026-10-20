@@ -22,8 +22,15 @@ def _url() -> str:
 
 
 def run_migrations_online() -> None:
+    # One transaction per migration, not one for the whole upgrade (spec 0015). The accounts
+    # chain needs it: `0003` makes `rules.account_id` NOT NULL and refuses while any rule is
+    # still unowned, and under a single transaction that refusal would roll `0002` back too.
+    # You would then have no `accounts` table to register into, so the backfill `0003` is
+    # waiting for could never run. With this on, `0002` stays applied and the fix is forward.
     with create_engine(_url(), future=True).connect() as connection:
-        context.configure(connection=connection, target_metadata=None)
+        context.configure(
+            connection=connection, target_metadata=None, transaction_per_migration=True
+        )
         with context.begin_transaction():
             context.run_migrations()
 

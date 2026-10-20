@@ -1,7 +1,7 @@
 # 0015. Hand roll accounts on the existing Neon database, with a signed cookie that only your machine can issue
 
 **Date**: 2026-10-20
-**Status**: Proposed
+**Status**: In Progress
 
 ## Summary
 

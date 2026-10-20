@@ -35,6 +35,14 @@ migrate: ## Local only: bring the database up to the latest migration (spec 0014
 	fi; \
 	uv run alembic upgrade head && uv run alembic current
 
+claim-rules: ## Local only: give rules saved before accounts an owner (spec 0015)
+	@set -a; [ -f .env ] && . ./.env; set +a; \
+	if [ -z "$$EMAIL" ]; then \
+		echo "Usage: make claim-rules EMAIL=you@example.com"; \
+		exit 1; \
+	fi; \
+	uv run python scripts/claim_rules.py --email "$$EMAIL"
+
 dev-web:
 	pnpm --filter web dev
 

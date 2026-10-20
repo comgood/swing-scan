@@ -10,6 +10,16 @@ from dataclasses import dataclass
 DATA_MODES = ("synthetic", "live")
 LOOPBACK = "127.0.0.1"
 
+DEFAULT_ORIGINS = "http://127.0.0.1:3000,http://localhost:3000"
+"""Both spellings of the dev server, on purpose (spec 0015).
+
+The session cookie is `SameSite=Lax`, and a browser compares hostnames while ignoring ports:
+`localhost` and `127.0.0.1` are different sites, so a page served from `localhost:3000` never
+sends the cookie to the API on `127.0.0.1:8000`. **Sign in works only from
+`http://127.0.0.1:3000`.** `localhost` stays allowed because dropping it would break scanning
+and backtesting for anyone who opens the old address, which has nothing to do with accounts.
+"""
+
 
 def _split(value: str) -> list[str]:
     return [item.strip() for item in value.split(",") if item.strip()]
@@ -26,17 +36,37 @@ def bound_host(argv: Sequence[str], env: Mapping[str, str]) -> str:
     return env.get("UVICORN_HOST", LOOPBACK)
 
 
-def saved_rules_problems(argv: Sequence[str], env: Mapping[str, str]) -> list[str]:
-    """Why saved rules may not run here; empty only on your own machine (spec 0014).
+AUTH_SECRET_ENV = "AUTH_SECRET"  # noqa: S105  # the variable's name, not a secret
+AUTH_SECRET_MIN = 32
+"""Shortest `AUTH_SECRET` worth having, in characters: `openssl rand -hex 32` gives 64."""
 
-    Two gates on purpose. Without a database there is nothing to write to, and the same host
-    rules that keep live prices off the public API keep the write surface off it too, so a
-    `DATABASE_URL` set on Lambda by accident cannot open an unauthenticated write endpoint.
-    Accounts (scope feature 22) are what open this up.
+
+def saved_rules_problems(argv: Sequence[str], env: Mapping[str, str]) -> list[str]:
+    """Why saved rules and accounts may not run here; empty only on your own machine.
+
+    Three gates now, not two (spec 0014, then spec 0015). Without a database there is nothing
+    to write to. Without a signing key nobody can be signed in, and a rule now belongs to an
+    account, so the two surfaces share one gate rather than drifting apart; a key too short to
+    be worth signing with counts as absent, because a weak key is worse than no feature. And
+    the same host rules that keep live prices off the public API keep the write surface off it
+    too, so a `DATABASE_URL` set on Lambda by accident cannot open a write endpoint.
+
+    Every reason is collected rather than the first one returned, so the 501 body can name the
+    thing you actually have to fix.
     """
+    problems = []
     if not env.get("DATABASE_URL"):
-        return ["no DATABASE_URL is configured"]
-    return live_mode_problems(argv, env)
+        problems.append("no DATABASE_URL is configured")
+    secret = env.get(AUTH_SECRET_ENV, "")
+    if not secret:
+        problems.append(f"no {AUTH_SECRET_ENV} is configured")
+    elif len(secret) < AUTH_SECRET_MIN:
+        problems.append(
+            f"{AUTH_SECRET_ENV} is shorter than {AUTH_SECRET_MIN} characters, so it is treated "
+            "as absent"
+        )
+    # Host checks only once the configuration is there, so the message names one thing at a time.
+    return problems or live_mode_problems(argv, env)
 
 
 def live_mode_problems(argv: Sequence[str], env: Mapping[str, str]) -> list[str]:
@@ -74,6 +104,6 @@ class Settings:
             )
         return cls(
             data_mode=data_mode,
-            allowed_origins=_split(env.get("ALLOWED_ORIGINS", "http://localhost:3000")),
+            allowed_origins=_split(env.get("ALLOWED_ORIGINS", DEFAULT_ORIGINS)),
             allowed_origin_regex=env.get("ALLOWED_ORIGIN_REGEX") or None,
         )
