@@ -1,7 +1,7 @@
 # 0012. Generate a longer market once, publish it one session at a time behind a cursor
 
 **Date**: 2026-10-18
-**Status**: Proposed
+**Status**: In Progress
 
 ## Summary
 
@@ -108,7 +108,7 @@ None. The writer has no HTTP surface. Two existing surfaces reflect its work:
 | tick | the initial cursor | `PUBLISHED_START_SESSIONS` = 1260, a new constant in `engine/synthetic/config.py`, used only by the seed step |
 | tick | which tickers have a bar that session | the master, unchanged. The generator already decides listings and delistings |
 | tick | `data_version` | `GENERATOR_VERSION = "synthetic-2"`, bumped because `n_sessions` and `delisting_fraction` changed and the config file's own rule is to bump on any change to the model or its defaults |
-| tick | how it writes to the store | `write_market()` takes a local directory today, so the writer writes to a temp directory and uploads, reusing the same upload path as spec `0011`'s `scripts/push_market.py`. Spec `0011` specified reads from `s3://` but not writes, and this is the gap it left |
+| tick | how it writes to the store | `write_market()` on `market_uri()` directly, with no temp directory and no separate upload step, which is the same call `scripts/push_market.py` already makes against the store. **Amended 2026-10-19, after the build**: this row first described a temp directory plus an upload. Polars 2.0's `write_parquet` writes to a cloud URI and reads its credentials from the environment, so the upload step was never needed. Spec `0011` specified reads from `s3://` but not writes, and that gap is still open in one respect: the `mkdir=True` in `write_market()` is unverified against an object store, which has no directories. The first `make push-market STORE_URI=s3://...` settles it for the tick and the seed step at once; if it errors, `mkdir` goes behind a local path check |
 | tick | its exit status and log line | the function's own stdout, collected by CloudWatch Logs. No metric and no alarm, which keeps this at $0 |
 | schedule | the cron expression | the schedule's definition, created by hand now and adopted by feature 24. Once a day at `00:00` UTC |
 | AC-12's cost figure | the measured cost | your AWS bill after the first week; recorded once known rather than estimated |
@@ -157,7 +157,7 @@ Tracer Bullet. The thread is one real appended day visible on the deployed site,
 2. `engine.data` gains the truncation function: filter bars at a cursor date, null the three securities columns with the delist pair kept together, run `check_market()` on the result, satisfies **AC-5**, **AC-6**
 3. A test that the truncated market satisfies D-3 at the initial cursor and at the end of the runway, satisfies **AC-7**
 4. Re-baseline: run the four `generate(42)` test files, re measure X-7's warm exit lab timing, update `docs/specs/0006-synthetic-market/index.md`'s recorded bar count, record the new numbers, satisfies **AC-13**
-5. Extend `scripts/push_market.py` to seed the store at the initial cursor (generate the master, truncate at 1260, upload), satisfies **AC-10**
+5. The truncation gets one home, a `--published` flag on the existing `python -m engine.synthetic` CLI, and `make data` plus `services/api/Dockerfile` both pass it. `scripts/push_market.py` is left alone and still just copies `data/<mode>` into the store, so `make push-market STORE_URI=...` seeds the initial cursor. **Amended 2026-10-19, after the build**: this step first said to put the truncation inside `push_market.py`. That would have left the Dockerfile generating the full master, baking all 1,818 sessions into the image and publishing the future there, against this spec's own "the future is nowhere" invariant. One truncation path rather than two, same AC-10 outcome. Satisfies **AC-10**
 6. The tick command (`python -m engine.synthetic.tick`): read meta, derive `N` and the seed from it, regenerate, verify the prefix, truncate at `N+1`, write bars then securities then meta, handle the already current and exhausted cases, satisfies **AC-1**, **AC-2**, **AC-3**, **AC-4**, **AC-8**
 7. Run the tick locally against MinIO, confirm one session appended and the API picking it up through `0011`'s change check, satisfies **AC-1**, **AC-10**
 8. You create the writer Lambda by hand from the existing API image with the tick command, `2048 MB`, `300 s`, and its own execution role scoped to write the synthetic prefix, satisfies **AC-9**, **AC-11**

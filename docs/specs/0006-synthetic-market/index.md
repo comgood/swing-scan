@@ -118,9 +118,9 @@ Reasoning and options: see [rationale.md](rationale.md).
 
 | Output | Rows | Content |
 |---|---|---|
-| `bars` | 602,776 at seed 42 | `ticker, date, open, high, low, close, volume`, sorted by ticker then date |
+| `bars` | 855,762 at seed 42, of which 595,499 are published at the initial cursor (spec 0012) | `ticker, date, open, high, low, close, volume`, sorted by ticker then date |
 | `securities` | 501 | 500 tickers plus `DEMO-INDEX` (sector `Index`, never delisted) |
-| `meta` | 1 | `data_mode="synthetic"`, `seed`, `data_version="synthetic-1"`, `start`, `end`, `n_tickers=500`, `survivors_only=false`, `benchmark="DEMO-INDEX"` |
+| `meta` | 1 | `data_mode="synthetic"`, `seed`, `data_version="synthetic-2"`, `start`, `end`, `n_tickers=500`, `survivors_only=false`, `benchmark="DEMO-INDEX"` |
 
 **Model, per session t and ticker i**:
 `r[i, t] = beta_i × market[t] + sector[s_i, t] + idio_vol_i × t4 + momentum[i, t]`, then the
@@ -132,9 +132,9 @@ ones marked *fixed* are constants in `generator.py`. A change to either kind bum
 | Part | Value |
 |---|---|
 | Regimes (drift, vol per day) | `bull` +0.06%, 0.9% · `chop` 0, 1.1% · `bear` −0.15%, 1.9% · `recovery` +0.10%, 1.4% |
-| Calendar | 1,260 weekdays, Mon 2021-01-04 to Fri 2025-10-31 |
+| Calendar | 1,818 weekdays, Mon 2021-01-04 to Wed 2027-12-22. The market clock publishes a prefix of it: 1,260 sessions to Fri 2025-10-31 at the initial cursor, one more per tick (spec 0012) |
 | Regime schedule | runs of 40 to 160 sessions (the first run after the bear and the runs cut by the bear or the end can be shorter); calm runs drawn bull 55%, chop 25%, recovery 20% (*fixed*); a recovery always follows the bear |
-| Planted bear | length 0.095 to 0.143 of `n_sessions` (120 to 180), start 0.24 to 0.55 (302 to 693), noise demeaned, total log return in [−0.45, −0.30] |
+| Planted bear | length 0.095 to 0.143 of `n_sessions` (173 to 260), start 0.24 to 0.55 (436 to 1,000), noise demeaned, total log return in [−0.45, −0.30] |
 | Sectors | 10 invented, round robin after a seeded shuffle, factor vol 0.7% |
 | Beta | uniform [0.6, 1.6] |
 | Idiosyncratic | Student t, 4 degrees of freedom, scaled to unit variance, then to a vol in [1.0%, 3.0%] |
@@ -143,8 +143,8 @@ ones marked *fixed* are constants in `generator.py`. A change to either kind bum
 | Open | previous close × exp(0.3 × return + 0.25 σ × normal) (*fixed*) |
 | High, low | past max/min(open, close) by a half normal wick of 0.5 σ (*fixed*), then clamped exact |
 | Volume | base log normal (median 1M, sigma 0.8; index 500M) × exp(0.35 × normal) × (1 + 3 × abs(return) / σ), at least 1 (sigmas, 0.35 and 3 *fixed*) |
-| Listings | round(5% × 500) = 25, first bar in sessions round(0.2n) to round(0.8n), 252 to 1,008 inclusive (*fixed* fractions) |
-| Delistings | max(20, round(5% × 500)) = 25, disjoint, last bar in round(0.16n) to n − 21, 202 to 1,239 inclusive (*fixed* bounds); each is `bankruptcy` with probability 0.6, else `acquired` |
+| Listings | round(5% × 500) = 25, first bar in sessions round(0.2n) to round(0.8n), 364 to 1,454 inclusive (*fixed* fractions) |
+| Delistings | max(20, round(8% × 500)) = 40, disjoint, last bar in round(0.16n) to n − 21, 291 to 1,797 inclusive (*fixed* bounds); 26 of them fall inside the published window at the initial cursor (spec 0012); each is `bankruptcy` with probability 0.6, else `acquired` |
 | `bankruptcy` | extra −0.6% a day over the last 40 sessions |
 | `acquired` | jump of +25% to +40% at 20 sessions before the last bar, then 0.2% daily noise (*fixed*), no momentum |
 | Tickers | 4 letters, consonant vowel consonant vowel (18 × 5 × 18 × 5 = 8,100 possible), drawn without replacement |

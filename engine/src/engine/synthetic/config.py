@@ -5,11 +5,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 
-GENERATOR_VERSION = "synthetic-1"
+GENERATOR_VERSION = "synthetic-2"
 """Written to `meta.data_version`. Bump it on any change to the model or its defaults."""
 
 BENCHMARK = "DEMO-INDEX"
 DEFAULT_SEED = 42
+
+PUBLISHED_START_SESSIONS = 1260
+"""Sessions published when the store is first seeded; the market clock's initial cursor
+(spec 0012). The master is `n_sessions` long, so the runway is the difference."""
 
 
 @dataclass(frozen=True)
@@ -59,12 +63,17 @@ class SyntheticConfig:
     """The model's knobs. The defaults are the published demo market (spec 0006)."""
 
     n_tickers: int = 500
-    n_sessions: int = 1260
+    n_sessions: int = 1818
+    """The master's length. Longer than the published window on purpose: the generator cannot
+    extend a market, so the clock publishes a prefix of this and moves the boundary (spec 0012).
+    1818 keeps the planted bear inside the first `PUBLISHED_START_SESSIONS` sessions."""
     start: date = date(2021, 1, 4)
     """A Monday. Every weekday after it is a session; there are no holidays."""
 
     listing_fraction: float = 0.05
-    delisting_fraction: float = 0.05
+    delisting_fraction: float = 0.08
+    """0.08 rather than 0.05 so that truncating at the cursor still leaves D-3's 20 delisted
+    inside the published window: delistings are spread over the whole master (spec 0012)."""
     min_delisted: int = 20
 
     bear_start_range: tuple[float, float] = (0.24, 0.55)

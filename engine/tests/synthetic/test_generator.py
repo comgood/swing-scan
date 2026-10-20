@@ -16,6 +16,8 @@ from engine.data import bar_problems
 from engine.synthetic import BENCHMARK, GENERATOR_VERSION, SyntheticConfig, generate, sessions
 
 SMALL = SyntheticConfig(n_tickers=40, n_sessions=400, min_delisted=3)
+MASTER_SESSIONS = 1818
+"""`generate(42)` returns the master, which is longer than the published window (spec 0012)."""
 
 
 @pytest.fixture(scope="module")
@@ -46,7 +48,7 @@ def test_the_published_defaults_are_pinned_to_the_generator_version() -> None:  
     (and this digest) rather than let every published number shift under the same version."""
     fields = json.dumps(asdict(SyntheticConfig()), default=str, sort_keys=True)
     digest = hashlib.sha256(fields.encode()).hexdigest()[:16]
-    assert (GENERATOR_VERSION, digest) == ("synthetic-1", "073c7b80b9d0576c")
+    assert (GENERATOR_VERSION, digest) == ("synthetic-2", "21eb8570a8ad13a5")
 
 
 def test_different_seeds_give_different_markets() -> None:
@@ -92,15 +94,15 @@ def test_universe_shape_and_meta(demo: Market) -> None:
     assert demo.securities.height == 501
     assert demo.bars["ticker"].n_unique() == 501
     assert meta.start == date(2021, 1, 4)
-    assert meta.end == sessions(date(2021, 1, 4), 1260)[-1]
+    assert meta.end == sessions(date(2021, 1, 4), MASTER_SESSIONS)[-1]
 
 
-def test_calendar_is_1260_weekdays_and_the_benchmark_covers_it(demo: Market) -> None:
+def test_the_calendar_is_every_weekday_and_the_benchmark_covers_it(demo: Market) -> None:
     dates = demo.bars["date"].unique().sort()
-    assert dates.len() == 1260
+    assert dates.len() == MASTER_SESSIONS
     assert all(d.weekday() < 5 for d in dates.to_list())
     bench = demo.bars.filter(pl.col("ticker") == BENCHMARK)
-    assert bench.height == 1260
+    assert bench.height == MASTER_SESSIONS
     assert bench["close"][0] == pytest.approx(1000.0)
 
 
@@ -195,12 +197,15 @@ def test_bankrupt_tickers_slide_into_their_last_bar(demo: Market) -> None:
 
 
 def test_demo_index_holds_the_planted_bear_window(demo: Market) -> None:
-    # Spec 0006: one bear of 120 to 180 sessions starting at session 300 to 700, whose
-    # total log return is in [-0.45, -0.30]. The index is the market factor itself.
+    # Spec 0006: one bear whose length and start are fractions of n_sessions (spec 0012 made
+    # the master longer), total log return in [-0.45, -0.30]. The index is the market factor.
+    config = SyntheticConfig()
+    lengths = [round(f * MASTER_SESSIONS) for f in config.bear_length_range]
+    first, last = (round(f * MASTER_SESSIONS) for f in config.bear_start_range)
     log_close = np.log(closes(demo, BENCHMARK))
     found = False
-    for length in range(120, 181):
-        starts = np.arange(300, 701)
+    for length in range(lengths[0], lengths[1] + 1):
+        starts = np.arange(first, last + 1)
         move = log_close[starts + length - 1] - log_close[starts - 1]
         if np.any((move >= -0.45 - 1e-4) & (move <= -0.30 + 1e-4)):
             found = True
@@ -219,10 +224,10 @@ def test_prices_keep_four_decimals_and_volumes_are_whole(demo: Market) -> None:
 
 
 def test_delisting_count_has_a_floor_of_min_delisted() -> None:
-    # max(min_delisted, round(5% x n)): 40 tickers would give 2, the floor lifts it to 3.
+    # max(min_delisted, round(8% x n)): 40 tickers would give 3, the same as the floor here.
     market = generate(5, SMALL)
     assert delisted(market).height == 3
-    assert SyntheticConfig().n_delisted == 25
+    assert SyntheticConfig().n_delisted == 40
 
 
 def test_generate_does_not_touch_global_numpy_random_state() -> None:

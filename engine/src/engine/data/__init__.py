@@ -9,6 +9,8 @@ from .store import (
     market_uri,
     read_market,
     read_meta,
+    session_dates,
+    truncate_market,
     write_market,
 )
 
@@ -22,5 +24,7 @@ __all__ = [
     "market_uri",
     "read_market",
     "read_meta",
+    "session_dates",
+    "truncate_market",
     "write_market",
 ]

@@ -296,9 +296,9 @@ Lane BE. A small job on a timer that appends one more simulated trading day to t
 **Done when:** a tick appends exactly one trading day without rewriting history, the series stays deterministic and continuous from the seed, a tick that fails halfway or runs twice leaves the data correct, and the synthetic banner stays truthful about what the data is.
 - [x] Design it (spec): `/architect market clock writer` (signed off by the owner 2026-10-18)
 - [ ] Build it: `/develop market clock writer`
-  - [ ] The published window: `n_sessions` to 1818, `delisting_fraction` to 0.08, `synthetic-2`, and the truncation that nulls the delist pair together and hides everything past the cursor (AC-5, AC-6, AC-10)
-  - [ ] Re-baseline and re-seed: D-3 verified at both ends of the runway, the four `generate(42)` test files and X-7's timing re measured, the store seeded at the initial cursor (AC-7, AC-13)
-  - [ ] The tick: derive the session and seed from meta, regenerate, verify the published prefix, write bars then securities then meta, handle already current and runway exhausted (AC-1, AC-2, AC-3, AC-4, AC-8)
+  - [x] The published window: `n_sessions` to 1818, `delisting_fraction` to 0.08, `synthetic-2`, and the truncation that nulls the delist pair together and hides everything past the cursor (AC-5, AC-6, AC-10) — `engine/synthetic/config.py`, `truncate_market()` and `session_dates()` in `engine/data/store.py`
+  - [ ] Re-baseline and re-seed: D-3 verified at both ends of the runway, the four `generate(42)` test files and X-7's timing re measured, the store seeded at the initial cursor (AC-7, AC-13) — re-baseline done (all four files pass untouched, X-7 warm 0.62 s and 4.29 s recorded in `test_lab_budget.py`, spec 0006's surface numbers updated); the seeding path is `make data` plus `make push-market`, and the push itself is still owed because it needs your store credentials
+  - [x] The tick: derive the session and seed from meta, regenerate, verify the published prefix, write bars then securities then meta, handle already current and runway exhausted (AC-1, AC-2, AC-3, AC-4, AC-8) — `engine/synthetic/tick.py`, run end to end against a local store with the API reloading on its own
   - [ ] The schedule: the writer Lambda from the API image with its own write scoped role, an EventBridge daily schedule, and one real tick watched end to end (AC-9, AC-11, AC-12)
 - [ ] Verify it: `/check verify market clock writer`
 - [ ] Test it: `/test market clock writer`
