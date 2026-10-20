@@ -13,7 +13,7 @@ _Source of truth: acceptance criteria IDs (D, R, S, B, X, U) and settled default
 
 | # | Feature | Phase | Status |
 |---|---------|-------|--------|
-| 1 | Stack & architecture | Foundation | in-progress |
+| 1 | Stack & architecture | Foundation | done |
 | 2 | Coding standards & tooling | Foundation | done |
 | 3 | Contracts & data model | Foundation | done |
 | 4 | Design system & UI foundation | Foundation | done |
@@ -34,7 +34,7 @@ _Source of truth: acceptance criteria IDs (D, R, S, B, X, U) and settled default
 | 19 | Market clock writer | Slice 6 | in-progress |
 | 20 | Live refresh and push | Slice 6 | done |
 | 21 | Saved rules | Slice 7 | done |
-| 22 | Accounts | Slice 7 | planned |
+| 22 | Accounts | Slice 7 | in-progress |
 | 23 | Backtest runs as jobs | Slice 7 | planned |
 | 24 | Infrastructure as code | Slice 8 | planned |
 
@@ -89,13 +89,13 @@ From here on, features run in parallel across the four agent lanes of doc 02 §1
 
 Done in order on Day 1 before the lanes fan out. Feature 3 ends with the `contracts-v1` tag and your sign offs (SO-1 to SO-3); feature 6 must be approved before engine work in feature 9 starts.
 
-### 1. Stack & architecture · in-progress
+### 1. Stack & architecture · done
 Lane DI. Record the stack already chosen in doc 02 (Next.js on Vercel Hobby, FastAPI with Polars and NumPy in a Lambda container, GitHub Actions with OIDC) and scaffold a runnable monorepo with a hello world deploy of both apps.
 **Done when:** the stack is captured in a spec, the empty web app and API both run locally, and both are reachable on their free tier hosts.
 - [x] Decide the stack (spec): `/architect stack & architecture`
 - [x] Scaffold from the decision: `/develop stack & architecture` (local scaffold done; first deploy done 2026-10-09: the API on a Lambda Function URL in `ap-southeast-1`, the web app on `https://swing-scan-one.vercel.app`, `make smoke` passes, the throttle alarm emails you; no reserved concurrency because the account quota is 10). Cold start, the number doc 01's "cold start ≤ 10 s" is about, is **2.66 s measured 2026-10-14** on an idle function (3.1 s on the first deploy). The first call right after a deploy is a different and much slower number, 9.33 s then 13.94 s, because Lambda optimises each newly pushed image; `infra/README.md` §6 keeps both apart
-- [ ] Verify it: `/check verify stack & architecture`
-- [ ] Test it: `/test stack & architecture`
+- [x] Verify it: `/check verify stack & architecture` (2026-10-20, all 8 steps of `verify.md` run against the real app: the three "Done when" conditions are proven, `make dev` reads "API ready (data: synthetic, version 0.1.0)", `make smoke` passes against the Function URL with X-7 warm at 16.76 s of a 25 s budget, and the Vercel production site reaches the live Lambda. Two steps pass only through their documented substitutes: `make build-api` still segfaults under amd64 emulation on Apple Silicon, so CI's `api-image` job covers the real build while `make build-api-local` plus `make smoke-image` pass locally (deploy image 422 MB, under the 500 MB target); and the preview URL render is blocked by Vercel deployment protection, so the preview CORS pattern was confirmed directly on the deployed function instead. Cold start was not re measured because the function never went cold and forcing it needs an `aws` write; the recorded 2.66 s stands. `make test` is red on this machine on **D-4**, which belongs to features 14 and 19, not here)
+- [x] Test it: `/test stack & architecture` (8 tests added in `services/api/tests/test_health.py` pinning the **deployed** CORS configuration, which only the localhost default covered before: the production domain by name, previews by pattern, and the unanchored regex trap that a `swing-scan-one.vercel.app.evil.com` lookalike would walk through. The suite follows `main.py`'s own kwargs rather than a copy, so dropping `allow_origin_regex` or `DELETE` fails it. 619 python tests pass, Ruff and mypy clean)
 Spec [0001](../specs/0001-stack-architecture/index.md) · code in `./` (`apps/web`, `services/api`, `engine`)
 
 ### 2. Coding standards & tooling · done
@@ -335,10 +335,21 @@ Lane BE and FE. Save a rule you built under a name, list them, load one back int
 - [x] Test it: `/test saved rules`
 Spec [0014](../specs/0014-saved-rules/index.md)
 
-### 22. Accounts · planned · needs a decision · GA
+### 22. Accounts · in-progress · GA
 Lane BE and FE. Real sign in, with saved rules and saved runs belonging to whoever made them. Local demo only, so there is no public login to attack and no real person's data to lose. About 2 days, and the item an interviewer is most likely to dig into.
 **Done when:** you can register, sign in, sign out and stay signed in across a restart; passwords are never stored or logged in readable form; one account cannot read or delete another's rows; and the hosted demo runs with accounts switched off.
-- [ ] Design it (spec): `/architect accounts`
+- [x] Design it (spec): `/architect accounts` (2026-10-20: hand rolled on spec 0014's Neon database and migration chain, Argon2id hashing, a signed cookie, no third vendor, gated off anywhere but your machine by three checks instead of two. A cross check on a different model found 14 unsettled decisions, four of which broke a criterion, all now settled in the spec)
+- [ ] Build it: `/develop accounts`
+  - [ ] The gate and the schema: `argon2-cffi` and PyJWT, `AUTH_SECRET` in `Settings` and `.env.example` with its 32 character floor folded into the shared `saved_rules_problems` gate, `transaction_per_migration`, and migration `0002` with the named foreign key and indexes plus a `downgrade` that refuses rather than restoring a global name index that cannot hold (AC-4, AC-5, AC-9, AC-11)
+  - [ ] The identity thread, proven end to end before anything is widened: the accounts repository and use cases, the token helpers with pinned algorithms, the 422 handler that stops a rejected password travelling back, the cookie plumbing and the move to one hostname, then register, sign in and one owned rule read back in a real browser (AC-1, AC-2, AC-6, AC-7, AC-8, AC-10)
+  - [ ] The contract change and ownership: five auth endpoints, the three rules endpoints gaining 401, the account dependency that checks enabled before the token so the demo still answers 501 and returns 503 on a database failure, the regenerated `api-client` and mocks, and every rules statement filtered by owner (AC-3, AC-4, AC-8, AC-14)
+  - [ ] The backfill, in the only order that works: `make claim-rules EMAIL=...`, then migration `0003` behind its own orphan row check, with `make migrate` stopping at `0002` until it is done (AC-11)
+  - [ ] The web surface and a green CI: the two routes with the 501 notice and no nav link, the header's signed in state and sign out, the save control hidden on 501 and disabled on 401, the cache cleared on all three transitions, the deletion dialog, the retry notice, the skips when nothing is configured, and the research path confirmed untouched (AC-1, AC-3, AC-9, AC-12, AC-13, AC-15)
+- [ ] Verify it: `/check verify accounts`
+- [ ] Test it: `/test accounts`
+- [ ] Review it (fresh model): `/check review accounts`
+- [ ] Document it: `/document accounts`
+Spec [0015](../specs/0015-accounts/index.md) · code in `engine/src/engine/data/accounts.py`, `engine.api`, `services/api/src/api/routes/auth.py`, `apps/web/src/features/auth/`
 
 ### 23. Backtest runs as jobs · planned · needs a decision
 Lane BE and FE. Submit a backtest, get a run id back immediately, watch it progress, then find it again in a history table beside the exact rule and settings that produced it. About 2 days. This is what turns the app from request and response into a system with work in flight.
