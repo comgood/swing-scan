@@ -186,7 +186,7 @@ Lanes BE and FE. The portfolio simulator with next open fills, % stop and time e
 - [x] Verify it: `/check verify portfolio backtest core` (2026-10-14, real browser on the seed 42 market: all 17 ACs met, including the truncation line at 2,382 trades. AC-17's "axe clean" failed first: the chart's TradingView attribution link sat inside its `role="img"` box, fixed here and re-checked clean)
 - [x] Test it: `/test portfolio backtest core` (engine response assembly, metric nulls, thinning and ranking gaps in PR #83; report page states, metrics table, exit form and chart in PR #85; no bugs found)
 - [x] Review it (fresh model): `/check review portfolio backtest core` ([findings](../reviews/2026-10-09-review-9-backtest-engine.md); the two major findings are fixed)
-- [ ] Document it: `/document portfolio backtest core`
+- [x] Document it: `/document portfolio backtest core` (changelog entry in [CHANGELOG.md](../../CHANGELOG.md), 2026-10-20)
 Spec [0007](../specs/0007-portfolio-backtest-core/index.md)
 
 ## Slice 2: Rule builder
@@ -226,7 +226,7 @@ Lanes BE and FE. Hold one entry rule fixed and compare 2 to 6 exit setups on ide
 - [ ] Verify it: `/check verify exit lab`
 - [x] Test it: `/test exit lab`
 - [x] Review it (fresh model): `/check review exit lab` ([findings](../reviews/2026-10-09-review-11-12-exits-and-lab.md), shared with feature 11; both majors fixed in PR #75)
-- [ ] Document it: `/document exit lab`
+- [x] Document it: `/document exit lab` (changelog entry in [CHANGELOG.md](../../CHANGELOG.md), 2026-10-20)
 Spec [0009](../specs/0009-exit-lab/index.md)
 
 ### 13. Research honesty guards · done
