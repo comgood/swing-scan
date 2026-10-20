@@ -7,6 +7,7 @@ import { useState, type ReactNode } from "react";
 import { Banner } from "@/components/banner";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { EmptyState } from "@/components/empty-state";
+import { AccountsNotHere, AuthForm } from "@/features/auth";
 import { NewerDataNotice } from "@/components/newer-data-notice";
 import { ErrorState } from "@/components/error-state";
 import { FormErrorSummary } from "@/components/form-error-summary";
@@ -422,6 +423,23 @@ export function Gallery() {
             <p className="pt-3">Card body text.</p>
           </CardContent>
         </Card>
+      </GallerySection>
+
+      {/* Accounts (spec 0015). `AuthForm` and `AccountsNotHere` are the presentational halves
+          on purpose: QA mounts this page with no QueryClient, so the connected routes cannot
+          appear here. The 422 shape is the one `fieldErrorsFrom422` produces. */}
+      <GallerySection id="auth" title="Sign in, register, and where accounts do not run">
+        <AuthForm mode="sign-in" onSubmit={() => undefined} />
+        <Separator />
+        <AuthForm
+          mode="register"
+          pending
+          message="That email already has an account."
+          fieldErrors={{ fields: { password: "Value should have at least 12 items" }, form: [] }}
+          onSubmit={() => undefined}
+        />
+        <Separator />
+        <AccountsNotHere />
       </GallerySection>
     </div>
   );

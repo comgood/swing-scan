@@ -3,6 +3,8 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { AccountStatus } from "@/features/auth";
+
 import { ApiStatus } from "./api-status";
 import { DataModeBanner } from "./data-mode-banner";
 import { ShellWarmup } from "./shell-warmup";
@@ -23,7 +25,12 @@ export function AppShell({ children }: { children: ReactNode }) {
             Swing Scan
           </Link>
           <SiteNav />
-          <ApiStatus />
+          <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1">
+            {/* Nothing at all where accounts do not run, so the deployed demo's header is
+                unchanged and never offers a link to a page that has no sign in. */}
+            <AccountStatus />
+            <ApiStatus />
+          </div>
         </div>
       </header>
       <main

@@ -42,6 +42,13 @@ export const mocks = {
     id: `0000000${i}-0000-4000-8000-000000000000`,
     rule: t.rule,
   })) as Schemas["SavedRule"][],
+  // Accounts have no generated mock either: `make mocks` runs with the surface switched off,
+  // so there is no real 200 to capture. The shape is the `Account` contract, and the generated
+  // types below are what keep it honest.
+  account: {
+    id: "aaaaaaaa-0000-4000-8000-000000000000",
+    email: "you@example.com",
+  } as Schemas["Account"],
 };
 
 const errors = {
@@ -160,6 +167,65 @@ export function deleteRuleHandler(variant: "ok" | ErrorMock = "ok", options: Moc
   });
 }
 
+/**
+ * Accounts (spec 0015). `me` has three real answers and the UI reads each differently:
+ * `signed_in`, `signed_out` (401, the ordinary case, not an error) and `501.rules` (accounts
+ * do not run here, which is the deployed demo). Getting those three confused is how a header
+ * ends up claiming you are signed in on a site with no login.
+ */
+export type MeVariant = "signed_in" | "signed_out" | ErrorMock;
+
+export function meHandler(variant: MeVariant = "signed_out", options: MockOptions = {}) {
+  return http.get(`${API}/auth/me`, () => {
+    if (variant === "signed_in") return respond(mocks.account, 200, options);
+    if (variant === "signed_out")
+      return respond({ detail: "You are not signed in." }, 401, options);
+    return errorOrBody(variant, {}, options);
+  });
+}
+
+/** `taken` is the 409 on register; `wrong` is the one 401 both credential failures share. */
+export type SignInVariant = "ok" | "taken" | "wrong" | ErrorMock;
+
+function credentialsHandler(
+  path: "register" | "login",
+  variant: SignInVariant,
+  options: MockOptions,
+) {
+  return http.post(`${API}/auth/${path}`, () => {
+    if (variant === "taken") {
+      return respond({ detail: "That email already has an account." }, 409, options);
+    }
+    if (variant === "wrong") {
+      return respond({ detail: "That email and password do not match an account." }, 401, options);
+    }
+    return errorOrBody(variant, mocks.account, options);
+  });
+}
+
+export function registerHandler(variant: SignInVariant = "ok", options: MockOptions = {}) {
+  return credentialsHandler("register", variant, options);
+}
+
+export function loginHandler(variant: SignInVariant = "ok", options: MockOptions = {}) {
+  return credentialsHandler("login", variant, options);
+}
+
+export function logoutHandler(options: MockOptions = {}) {
+  return http.post(`${API}/auth/logout`, async () => {
+    if (options.delayMs !== undefined) await delay(options.delayMs);
+    return new HttpResponse(null, { status: 204 });
+  });
+}
+
+export function deleteAccountHandler(variant: "ok" | ErrorMock = "ok", options: MockOptions = {}) {
+  return http.delete(`${API}/auth/account`, async () => {
+    if (variant !== "ok") return errorOrBody(variant, {}, options);
+    if (options.delayMs !== undefined) await delay(options.delayMs);
+    return new HttpResponse(null, { status: 204 });
+  });
+}
+
 export const handlers = [
   healthHandler(),
   metaHandler(),
@@ -168,8 +234,13 @@ export const handlers = [
   scanHandler(),
   backtestHandler(),
   // 501 by default, so every test that does not opt in sees the app as the deployed demo looks:
-  // no accounts yet, so no saved rules (spec 0014 AC-6).
+  // accounts are off there, so saved rules are unreachable (spec 0014 AC-6, spec 0015 AC-4).
   savedRulesHandler("501.rules"),
   saveRuleHandler("501.rules"),
   deleteRuleHandler("501.rules"),
+  meHandler("501.rules"),
+  registerHandler("501.rules"),
+  loginHandler("501.rules"),
+  logoutHandler(),
+  deleteAccountHandler("501.rules"),
 ];

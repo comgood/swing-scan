@@ -16,6 +16,7 @@ from fastapi.testclient import TestClient
 
 from api import auth
 from api.main import app
+from api.settings import AUTH_SECRET_ENV
 from engine import api as use_cases
 from engine.contracts import Account
 
@@ -30,7 +31,7 @@ SECRET = "x" * 64
 def enabled(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     """Accounts running, as they do only on your own machine."""
     monkeypatch.setattr(auth, "ENABLED", True)
-    monkeypatch.setenv(auth.AUTH_SECRET_ENV, SECRET)
+    monkeypatch.setenv(AUTH_SECRET_ENV, SECRET)
     yield
     client.cookies.clear()
 
@@ -211,10 +212,13 @@ def test_logout_clears_the_cookie_without_needing_a_valid_one() -> None:
 @pytest.mark.usefixtures("enabled")
 def test_delete_account_signs_the_browser_out(monkeypatch: pytest.MonkeyPatch) -> None:
     deleted: list[uuid.UUID] = []
+
+    def record_delete(account_id: uuid.UUID) -> bool:
+        deleted.append(account_id)
+        return True
+
     monkeypatch.setattr(use_cases, "account_by_id", lambda _id: ACCOUNT)
-    monkeypatch.setattr(
-        use_cases, "delete_account", lambda account_id: bool(deleted.append(account_id)) or True
-    )
+    monkeypatch.setattr(use_cases, "delete_account", record_delete)
     client.cookies.set(auth.COOKIE_NAME, auth.issue_token(ACCOUNT.id))
     res = client.delete("/api/v1/auth/account")
     assert res.status_code == 204

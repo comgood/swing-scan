@@ -1,17 +1,29 @@
 "use client";
 
-// Saved rules (spec 0014): save the rule on screen under its name, load one back, delete one.
-// The whole section is hidden unless `GET /rules` answers, which is how the deployed demo looks:
-// there are no accounts yet, so the API answers 501 there and nothing here is reachable (AC-6).
+// Saved rules (specs 0014, 0015): save the rule on screen under its name, load one back,
+// delete one. Three states, and telling them apart is the point:
+//
+//   501  the surface does not exist here (the deployed demo) -> show nothing at all
+//   401  it exists and you are signed out -> say so, and link to sign in
+//   200  your rules
+//
+// The old version hid the section on any failure, which was right while there were no accounts.
+// Now hiding it when you are merely signed out would read as "this feature is gone" on the one
+// machine where it works (spec 0015, AC-12).
 import type { Rule, SavedRule } from "@swing-scan/api-client";
+import Link from "next/link";
 
+import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
-import { ApiRequestError } from "@/lib/api-error";
+import { ApiRequestError, httpStatus } from "@/lib/api-error";
 
 import { RuleRejectedError, useDeleteRule, useSavedRules, useSaveRule } from "./queries";
 
 export const EMPTY_TEXT = "Nothing saved yet. Save the rule above to keep it.";
 export const SAVE_FAILED = "The rule could not be saved.";
+export const SIGNED_OUT_TITLE = "Sign in to save rules";
+export const SIGNED_OUT_HINT =
+  "Saved rules belong to an account. Everything else on this page works without one.";
 
 /**
  * What to show when a save is refused: the API's own words, so a duplicate name reads as the
@@ -33,7 +45,30 @@ export function SavedRules({ rule, onLoad }: { rule: Rule; onLoad: (rule: Rule) 
   const save = useSaveRule();
   const remove = useDeleteRule();
 
-  // No list means no feature here: 501 off your machine, and the same when the API is down.
+  // Signed out, but the feature is here: say which, rather than vanishing (AC-12).
+  if (httpStatus(saved.error) === 401) {
+    return (
+      <section aria-labelledby="saved-rules" className="flex min-w-0 flex-col gap-3">
+        <h2 id="saved-rules" className="text-lg font-semibold">
+          Saved rules
+        </h2>
+        <EmptyState
+          title={SIGNED_OUT_TITLE}
+          hint={
+            <>
+              {SIGNED_OUT_HINT}{" "}
+              <Link href="/sign-in" className="text-primary underline underline-offset-4">
+                Sign in
+              </Link>
+            </>
+          }
+        />
+      </section>
+    );
+  }
+
+  // No list and not a 401: the surface is not here (501 off your machine), or the API is down.
+  // Both look the same on purpose, because in both cases there is nothing you can do here.
   if (!saved.data) return null;
 
   return (

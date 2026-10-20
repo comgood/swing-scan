@@ -39,3 +39,16 @@ export class ApiRequestError extends Error {
     this.name = "ApiRequestError";
   }
 }
+
+/**
+ * The HTTP status behind a thrown query error, or `undefined` when it never reached the API.
+ *
+ * Accounts made this worth sharing: the difference between 501 ("not available here"), 401
+ * ("sign in") and a network failure decides what three different surfaces render, and each of
+ * them was about to narrow the `ApiError` union by hand (spec 0015).
+ */
+export function httpStatus(error: unknown): number | undefined {
+  return error instanceof ApiRequestError && error.apiError.kind === "http"
+    ? error.apiError.status
+    : undefined;
+}

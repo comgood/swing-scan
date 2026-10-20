@@ -189,11 +189,17 @@ def test_every_statement_is_scoped_to_the_signed_in_account(
         seen.append(account_id)
         return SavedRule(id=uuid.uuid4(), rule=rule)
 
+    def record_list(account_id: uuid.UUID) -> list[SavedRule]:
+        seen.append(account_id)
+        return []
+
+    def record_delete(_rule_id: uuid.UUID, account_id: uuid.UUID) -> bool:
+        seen.append(account_id)
+        return True
+
     monkeypatch.setattr(use_cases, "save_rule", record_save)
-    monkeypatch.setattr(use_cases, "list_rules", lambda account_id: seen.append(account_id) or [])
-    monkeypatch.setattr(
-        use_cases, "delete_rule", lambda _id, account_id: bool(seen.append(account_id)) or True
-    )
+    monkeypatch.setattr(use_cases, "list_rules", record_list)
+    monkeypatch.setattr(use_cases, "delete_rule", record_delete)
 
     client.post("/api/v1/rules", json=RULE)
     client.get("/api/v1/rules")

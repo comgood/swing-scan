@@ -19,6 +19,8 @@ export type IndicatorSpec = Schemas["IndicatorSpec"];
 export type TemplateOut = Schemas["TemplateOut"];
 export type MetaResponse = Schemas["MetaResponse"];
 export type SavedRule = Schemas["SavedRule"];
+export type Account = Schemas["Account"];
+export type Credentials = Schemas["Credentials"];
 
 export type ApiClient = ReturnType<typeof createFetchClient<paths>>;
 
