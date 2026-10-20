@@ -74,8 +74,15 @@ jobs:
               - '.nvmrc'
             image:
               - *shared
-              - 'engine/**'
-              - 'services/api/**'
+              # Everything in those two trees except their markdown. Building the image means
+              # an anonymous pull of the Lambda Web Adapter from public.ecr.aws, and that
+              # quota is metered per source IP, shared with every other project on GitHub's
+              # runners, so doc only pull requests were failing on a 429 for no reason.
+              # `!(*.md)` rather than a `'!engine/**/*.md'` line: this action ORs one matcher
+              # per pattern, so a `!` pattern matches everything the glob does not, which
+              # would make this filter true for every file in the repo.
+              - 'engine/**/!(*.md)'
+              - 'services/api/**/!(*.md)'
               - '.dockerignore'
               - '.python-version'
             # The code whose speed S-4, B-13 and X-7 measure. A pull request that touches it runs
