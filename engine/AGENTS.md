@@ -11,8 +11,9 @@ The `swing-engine` Python package (import name `engine`): all trading logic, mea
 | `src/engine/__init__.py` | Package root and `__version__` |
 | `tests/test_engine_boundary.py` | Proves the engine imports no web framework |
 | `src/engine/live/` | Local only Alpaca loader (feature 14, spec 0010): `python -m engine.live`, writing the same market schema to `data/live`. The HTTP transport is injected, so tests never call a vendor |
-| `src/engine/synthetic/` | Seeded synthetic market: `generate(seed) -> Market`, CLI `python -m engine.synthetic --seed 42 --out DIR` (spec 0006) |
-| `src/engine/data/store.py` | `read_market()`, `read_meta()`, `write_market()`, `market_uri()` (spec 0011): the dataset at `$MARKET_STORE_URI/$DATA_MODE`, default `data/synthetic`, a local directory or an `s3://` prefix read by the same code |
+| `src/engine/synthetic/` | Seeded synthetic market: `generate(seed) -> Market` returns the **master**, 1,818 sessions. CLI `python -m engine.synthetic --seed 42 --out DIR [--published]`, where `--published` writes only the first `PUBLISHED_START_SESSIONS` (1,260), which is what `make data` and the API image do (specs 0006, 0012) |
+| `src/engine/synthetic/tick.py` | The market clock (spec 0012): `python -m engine.synthetic.tick [--to DATE]` publishes one more session of the master into the store at `market_uri()`. Regenerates the master from the published `meta.seed` every run, which doubles as an integrity check on what is already published |
+| `src/engine/data/store.py` | `read_market()`, `read_meta()`, `write_market()`, `market_uri()` (spec 0011): the dataset at `$MARKET_STORE_URI/$DATA_MODE`, default `data/synthetic`, a local directory or an `s3://` prefix read by the same code. Plus `truncate_market(market, cursor)` and `session_dates(market)`, the published window (spec 0012) |
 | `src/engine/data/rules.py` | Saved rules in Postgres (spec 0014): four plain SQL statements, the whole `Rule` in one `jsonb` column, a connection opened per request |
 | `src/engine/data/sanity.py` | `check_market()`: `validate_market` plus the D-2 bar checks |
 | `src/engine/data/fixtures.py` | `load_fixture()` for bar numbered CSVs, `make_market()` from lists (spec 0002 fixture format) |
@@ -29,9 +30,10 @@ The `swing-engine` Python package (import name `engine`): all trading logic, mea
 
 ```bash
 uv run pytest engine/tests     # engine tests only
-make data                      # write the seed 42 market to data/synthetic
+make data                      # write the seed 42 published window (1,260 sessions) to data/synthetic
 make data-check                # CI: rebuild twice, same hashes, D-1 to D-3 hold
 make push-market STORE_URI=s3://bucket  # seed the store from data/synthetic (MODE=live needs ALLOW_LIVE=1)
+uv run python -m engine.synthetic.tick   # publish one more session into $MARKET_STORE_URI (spec 0012)
 make load-live                 # local only: Alpaca daily bars into data/live, keys from env
 make dev-live                  # local only: the API in live mode on 127.0.0.1, with the web app
 ```
@@ -52,6 +54,8 @@ make dev-live                  # local only: the API in live mode on 127.0.0.1, 
 - The per bar path is on a clock (spec 0009 AC-11: 6 configs plus the baseline under 10 s). `BarArrays` holds plain Python lists, `BarView` and `Position` are `slots=True` and deliberately not frozen, and `step()` uses plain comparisons rather than `min()` and `max()`. Keep it that way; `engine/tests/sim/test_lab_budget.py` is the check.
 - `walk_trade()` reuses **one** `BarView` for the whole walk (`BarArrays.into_view`), so never keep a view past its own `step()` call: the next bar overwrites it in place. `open_position()` splits the config's exits into `Position.stops`, `targets`, `timed` and `mas` so a bar scans only the exits each precedence step reads; `step()` still decides, and the order there is unchanged.
 - The random baseline seed default changes only with an ADR.
+- **The generator cannot extend a market.** `generate(seed)` at 1,261 sessions is a different market from 1,260, not that market plus a day: the bear window and the regime runs are drawn from fractions of `n_sessions`, and the returns, noise and OHLCV draws are all `(m, n)` blocks whose every cell shifts when `n` changes. So the market is generated longer than it is published (1,818 against 1,260) and the clock moves the boundary. Never try to append a session by regenerating at `n + 1`.
+- The master is never stored. A tick regenerates it from the published `meta.seed` and refuses to write when the published bars do not match it, so the published data is its own integrity check. `truncate_market` only filters and nulls, never computes, so a prefix inherits the master's correctness.
 - Change a `SyntheticConfig` default and bump `GENERATOR_VERSION` with it: `engine/tests/synthetic/test_generator.py` pins the defaults by digest, so it fails until both move. Otherwise every published number shifts under the same `data_version`.
 - Alpaca's free Basic plan has no SIP history: `feed=sip` answers 403, so the loader reads the IEX feed. IEX is a small share of real volume, so volume rules (`vol_ratio`, `avg_volume`) are not comparable to a full tape.
 - Rule compilation never uses `eval` or `exec`.
@@ -76,6 +80,7 @@ make dev-live                  # local only: the API in live mode on 127.0.0.1, 
 - [0002 contracts & data model](../docs/specs/0002-contracts-data-model/index.md)
 - [0005 template scan](../docs/specs/0005-template-scan/index.md) (indicators, rules, entry signals)
 - [0006 synthetic market](../docs/specs/0006-synthetic-market/index.md)
+- [0012 market clock writer](../docs/specs/0012-market-clock-writer/index.md) (the published window, `truncate_market`, the tick)
 - [0007 portfolio backtest core](../docs/specs/0007-portfolio-backtest-core/index.md) (exits, `step()`, the simulator, metrics)
 - [0009 exit lab](../docs/specs/0009-exit-lab/index.md) (trade mode, the random baseline, edge)
 - [0011 market data store](../docs/specs/0011-market-data-store/index.md) (`MARKET_STORE_URI`, `meta.parquet`, `scripts/push_market.py`)
