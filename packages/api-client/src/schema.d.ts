@@ -4,6 +4,117 @@
  */
 
 export interface paths {
+    "/api/v1/auth/account": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Account
+         * @description Delete your account and, by the database's cascade, every rule you saved.
+         *
+         *     No password re prompt: the only person who can reach this is already the only person who
+         *     can reach the machine it runs on.
+         */
+        delete: operations["delete_account_api_v1_auth_account_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Login
+         * @description Sign in. A wrong address and a wrong password give the identical 401.
+         */
+        post: operations["login_api_v1_auth_login_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Logout
+         * @description Sign out by discarding the cookie.
+         *
+         *     Deliberately needs no valid token: a browser holding an expired or corrupt one must still
+         *     be able to clear it, rather than being stuck signed in to nothing it can reach.
+         */
+        post: operations["logout_api_v1_auth_logout_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Me
+         * @description Who you are signed in as. The web app reads this to decide what to show.
+         */
+        get: operations["me_api_v1_auth_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/register": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Register
+         * @description Register and sign in, in one step. An email already taken is a 409.
+         *
+         *     A 409 does tell you that an address is registered. That is the honest trade: the
+         *     alternative is to accept a registration and say nothing, which for a single user system
+         *     with no email to confirm through is a worse experience than the disclosure is a risk.
+         *     Sign in, where it would matter, says nothing (AC-7).
+         */
+        post: operations["register_api_v1_auth_register_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/backtest": {
         parameters: {
             query?: never;
@@ -93,13 +204,16 @@ export interface paths {
         };
         /**
          * Saved Rules
-         * @description Every saved rule, whole: the list is what loads one back into the builder.
+         * @description Your saved rules, whole: the list is what loads one back into the builder.
          */
         get: operations["saved_rules_api_v1_rules_get"];
         put?: never;
         /**
          * Create Rule
-         * @description Save a rule under its own name. A name already taken is a 409, never an overwrite.
+         * @description Save a rule under its own name. A name you already used is a 409, never an overwrite.
+         *
+         *     The owner comes from `account`, never from the body, so there is no request that writes a
+         *     rule onto somebody else. Uniqueness is per account, so two accounts may each have a "Foo".
          */
         post: operations["create_rule_api_v1_rules_post"];
         delete?: never;
@@ -120,7 +234,10 @@ export interface paths {
         post?: never;
         /**
          * Remove Rule
-         * @description Delete one saved rule. Unknown id is a 404, so a stale list says so rather than lying.
+         * @description Delete one of your saved rules. Unknown id is a 404, so a stale list says so.
+         *
+         *     Another account's rule id is also a 404, not a 403: a 403 would confirm that the rule
+         *     exists, which is the disclosure AC-3 closes.
          */
         delete: operations["remove_rule_api_v1_rules__rule_id__delete"];
         options?: never;
@@ -172,6 +289,19 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * Account
+         * @description Who you are signed in as. No hash, no token: the token lives in the cookie.
+         */
+        Account: {
+            /** Email */
+            email: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+        };
         /**
          * Assumptions
          * @description Every setting that shaped the result, echoed so a run can be reproduced.
@@ -332,6 +462,19 @@ export interface components {
             name: string;
             random: components["schemas"]["TradeSplit"];
             strategy: components["schemas"]["TradeSplit"];
+        };
+        /**
+         * Credentials
+         * @description What register and sign in take. The only place a password appears in the contracts.
+         */
+        Credentials: {
+            /** Email */
+            email: string;
+            /**
+             * Password
+             * Format: password
+             */
+            password: string;
         };
         /**
          * DataMeta
@@ -904,6 +1047,173 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    delete_account_api_v1_auth_account_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not available here */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotImplementedBody"];
+                };
+            };
+        };
+    };
+    login_api_v1_auth_login_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Credentials"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Account"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Not available here */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotImplementedBody"];
+                };
+            };
+        };
+    };
+    logout_api_v1_auth_logout_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not available here */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotImplementedBody"];
+                };
+            };
+        };
+    };
+    me_api_v1_auth_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Account"];
+                };
+            };
+            /** @description Not available here */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotImplementedBody"];
+                };
+            };
+        };
+    };
+    register_api_v1_auth_register_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Credentials"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Account"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Not available here */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotImplementedBody"];
+                };
+            };
+        };
+    };
     backtest_api_v1_backtest_post: {
         parameters: {
             query?: never;

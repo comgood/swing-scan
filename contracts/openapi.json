@@ -1,6 +1,27 @@
 {
   "components": {
     "schemas": {
+      "Account": {
+        "additionalProperties": false,
+        "description": "Who you are signed in as. No hash, no token: the token lives in the cookie.",
+        "properties": {
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "email"
+        ],
+        "title": "Account",
+        "type": "object"
+      },
       "Assumptions": {
         "additionalProperties": false,
         "description": "Every setting that shaped the result, echoed so a run can be reproduced.",
@@ -469,6 +490,32 @@
           "edge"
         ],
         "title": "ConfigRow",
+        "type": "object"
+      },
+      "Credentials": {
+        "additionalProperties": false,
+        "description": "What register and sign in take. The only place a password appears in the contracts.",
+        "properties": {
+          "email": {
+            "maxLength": 254,
+            "minLength": 1,
+            "title": "Email",
+            "type": "string"
+          },
+          "password": {
+            "format": "password",
+            "maxLength": 128,
+            "minLength": 12,
+            "title": "Password",
+            "type": "string",
+            "writeOnly": true
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "Credentials",
         "type": "object"
       },
       "DataMeta": {
@@ -2093,6 +2140,177 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/auth/account": {
+      "delete": {
+        "description": "Delete your account and, by the database's cascade, every rule you saved.\n\nNo password re prompt: the only person who can reach this is already the only person who\ncan reach the machine it runs on.",
+        "operationId": "delete_account_api_v1_auth_account_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotImplementedBody"
+                }
+              }
+            },
+            "description": "Not available here"
+          }
+        },
+        "summary": "Delete Account"
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "description": "Sign in. A wrong address and a wrong password give the identical 401.",
+        "operationId": "login_api_v1_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Credentials"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Account"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotImplementedBody"
+                }
+              }
+            },
+            "description": "Not available here"
+          }
+        },
+        "summary": "Login"
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "description": "Sign out by discarding the cookie.\n\nDeliberately needs no valid token: a browser holding an expired or corrupt one must still\nbe able to clear it, rather than being stuck signed in to nothing it can reach.",
+        "operationId": "logout_api_v1_auth_logout_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotImplementedBody"
+                }
+              }
+            },
+            "description": "Not available here"
+          }
+        },
+        "summary": "Logout"
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "description": "Who you are signed in as. The web app reads this to decide what to show.",
+        "operationId": "me_api_v1_auth_me_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Account"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotImplementedBody"
+                }
+              }
+            },
+            "description": "Not available here"
+          }
+        },
+        "summary": "Me"
+      }
+    },
+    "/api/v1/auth/register": {
+      "post": {
+        "description": "Register and sign in, in one step. An email already taken is a 409.\n\nA 409 does tell you that an address is registered. That is the honest trade: the\nalternative is to accept a registration and say nothing, which for a single user system\nwith no email to confirm through is a worse experience than the disclosure is a risk.\nSign in, where it would matter, says nothing (AC-7).",
+        "operationId": "register_api_v1_auth_register_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Credentials"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Account"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotImplementedBody"
+                }
+              }
+            },
+            "description": "Not available here"
+          }
+        },
+        "summary": "Register"
+      }
+    },
     "/api/v1/backtest": {
       "post": {
         "description": "1 config runs a portfolio backtest; 2 to 6 configs run the exit lab (trade mode).",
@@ -2224,7 +2442,7 @@
     },
     "/api/v1/rules": {
       "get": {
-        "description": "Every saved rule, whole: the list is what loads one back into the builder.",
+        "description": "Your saved rules, whole: the list is what loads one back into the builder.",
         "operationId": "saved_rules_api_v1_rules_get",
         "responses": {
           "200": {
@@ -2255,7 +2473,7 @@
         "summary": "Saved Rules"
       },
       "post": {
-        "description": "Save a rule under its own name. A name already taken is a 409, never an overwrite.",
+        "description": "Save a rule under its own name. A name you already used is a 409, never an overwrite.\n\nThe owner comes from `account`, never from the body, so there is no request that writes a\nrule onto somebody else. Uniqueness is per account, so two accounts may each have a \"Foo\".",
         "operationId": "create_rule_api_v1_rules_post",
         "requestBody": {
           "content": {
@@ -2304,7 +2522,7 @@
     },
     "/api/v1/rules/{rule_id}": {
       "delete": {
-        "description": "Delete one saved rule. Unknown id is a 404, so a stale list says so rather than lying.",
+        "description": "Delete one of your saved rules. Unknown id is a 404, so a stale list says so.\n\nAnother account's rule id is also a 404, not a 403: a 403 would confirm that the rule\nexists, which is the disclosure AC-3 closes.",
         "operationId": "remove_rule_api_v1_rules__rule_id__delete",
         "parameters": [
           {

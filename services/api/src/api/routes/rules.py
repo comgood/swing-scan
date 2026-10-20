@@ -1,64 +1,63 @@
-"""Saved rules (spec 0014): save one, list them, delete one. 501 anywhere but your machine.
+"""Saved rules (specs 0014, 0015): save one, list them, delete one. 501 anywhere but your
+machine, and 401 until you sign in.
 
-Two gates, both in `saved_rules_problems`: no `DATABASE_URL` means there is nothing to write
-to, and the D-5 host rules mean a `DATABASE_URL` set on Lambda by accident still cannot open an
-unauthenticated write endpoint. Accounts (scope feature 22) are what open this up.
+A rule belongs to an account now, so every statement is scoped to the owner the signed cookie
+resolved to, never to anything the caller sends. Isolation is a `where` clause rather than a
+filter applied afterwards, so the failure mode is an empty list, not somebody else's rules.
 
-The check runs once at import, not per request: it is a pure function of `sys.argv` and the
-environment, and neither changes while the process lives.
+The three gates live in `saved_rules_problems` and are shared with the auth routes, so the two
+surfaces cannot drift apart: a rule you cannot sign in to own would be unreachable anyway.
 """
 
 from __future__ import annotations
 
-import os
-import sys
-from typing import Any
+from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Response
 
 from engine import api as use_cases
-from engine.api import NotYetImplemented
-from engine.contracts import NotImplementedBody, Rule, SavedRule
+from engine.contracts import Account, NotImplementedBody, Rule, SavedRule
 
-from ..settings import saved_rules_problems
+from ..auth import current_account
 
 router = APIRouter()
-
-ENABLED = not saved_rules_problems(sys.argv, os.environ)
-"""False on the deployed API, in CI, and locally until a `DATABASE_URL` is configured."""
 
 NOT_HERE: dict[int | str, dict[str, Any]] = {
     501: {"model": NotImplementedBody, "description": "Not available here"}
 }
 
-
-def _require_enabled() -> None:
-    if not ENABLED:
-        raise NotYetImplemented(21, "Saving rules")
+SignedIn = Annotated[Account, Depends(current_account)]
+"""Resolving this is what enforces the gates: 501 where accounts do not run, then 401, then
+the lookup proving the account still exists."""
 
 
 @router.post("/rules", response_model=SavedRule, responses=NOT_HERE)
-def create_rule(rule: Rule) -> SavedRule:
-    """Save a rule under its own name. A name already taken is a 409, never an overwrite."""
-    _require_enabled()
-    saved = use_cases.save_rule(rule)
+def create_rule(rule: Rule, account: SignedIn) -> SavedRule:
+    """Save a rule under its own name. A name you already used is a 409, never an overwrite.
+
+    The owner comes from `account`, never from the body, so there is no request that writes a
+    rule onto somebody else. Uniqueness is per account, so two accounts may each have a "Foo".
+    """
+    saved = use_cases.save_rule(rule, account.id)
     if saved is None:
         raise HTTPException(status_code=409, detail=f"A rule named {rule.name!r} is already saved.")
     return saved
 
 
 @router.get("/rules", response_model=list[SavedRule], responses=NOT_HERE)
-def saved_rules() -> list[SavedRule]:
-    """Every saved rule, whole: the list is what loads one back into the builder."""
-    _require_enabled()
-    return use_cases.list_rules()
+def saved_rules(account: SignedIn) -> list[SavedRule]:
+    """Your saved rules, whole: the list is what loads one back into the builder."""
+    return use_cases.list_rules(account.id)
 
 
 @router.delete("/rules/{rule_id}", status_code=204, responses=NOT_HERE)
-def remove_rule(rule_id: UUID) -> Response:
-    """Delete one saved rule. Unknown id is a 404, so a stale list says so rather than lying."""
-    _require_enabled()
-    if not use_cases.delete_rule(rule_id):
+def remove_rule(rule_id: UUID, account: SignedIn) -> Response:
+    """Delete one of your saved rules. Unknown id is a 404, so a stale list says so.
+
+    Another account's rule id is also a 404, not a 403: a 403 would confirm that the rule
+    exists, which is the disclosure AC-3 closes.
+    """
+    if not use_cases.delete_rule(rule_id, account.id):
         raise HTTPException(status_code=404, detail="No saved rule has that id.")
     return Response(status_code=204)

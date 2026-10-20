@@ -22,6 +22,7 @@ from pydantic_core import PydanticCustomError
 from .baseline import eligible_pool, sample
 from .contracts import (
     TEMPLATES,
+    Account,
     Assumptions,
     BacktestRequest,
     BacktestResponse,
@@ -89,6 +90,7 @@ FEATURE_NAMES = {
     11: "Exit types",
     12: "Exit lab",
     21: "Saved rules",
+    22: "Accounts",
 }
 
 
@@ -612,26 +614,73 @@ def backtest(request: BacktestRequest, market: Market) -> BacktestResponse:
     return _portfolio(request, market)
 
 
-def save_rule(rule: Rule) -> SavedRule | None:
-    """Save a rule under its own name, or `None` when that name is taken (spec 0014).
+def save_rule(rule: Rule, account_id: UUID) -> SavedRule | None:
+    """Save a rule for this account, or `None` when it already has one by that name.
 
     The repository is imported here, not at module scope, so the deployed function (where the
     rules routes answer 501) never pays `psycopg`'s import for code it cannot reach.
     """
     from .data.rules import save_rule as repository_save
 
-    return repository_save(rule)
+    return repository_save(rule, account_id)
 
 
-def list_rules() -> list[SavedRule]:
-    """Every saved rule, newest first, whole, so loading one back needs no second request."""
+def list_rules(account_id: UUID) -> list[SavedRule]:
+    """This account's saved rules, newest first, whole, so loading one back needs no second
+    request."""
     from .data.rules import list_rules as repository_list
 
-    return repository_list()
+    return repository_list(account_id)
 
 
-def delete_rule(rule_id: UUID) -> bool:
-    """Delete one saved rule. `False` when no rule has that id, which the route makes a 404."""
+def delete_rule(rule_id: UUID, account_id: UUID) -> bool:
+    """Delete one of this account's saved rules. `False` when it has no rule with that id.
+
+    Another account's id is indistinguishable from one that does not exist, so the route's 404
+    does not disclose that the rule is real (spec 0015, AC-3).
+    """
     from .data.rules import delete_rule as repository_delete
 
-    return repository_delete(rule_id)
+    return repository_delete(rule_id, account_id)
+
+
+# ---- Accounts (spec 0015) -------------------------------------------------------------------
+#
+# Each imports the repository inside the call, the same way the rules use cases do, so the
+# deployed function never pays `psycopg` or `argon2`'s import for a surface that answers 501.
+
+
+def register(email: str, password: str) -> Account | None:
+    """Register an account, or `None` when the email is already taken (a 409)."""
+    from .data.accounts import create_account
+
+    return create_account(email, password)
+
+
+def sign_in(email: str, password: str) -> Account | None:
+    """The account for these credentials, or `None` when either is wrong.
+
+    One answer for both, so the route has one 401 body and cannot leak whether the address
+    exists. The repository pays a full hash verify either way, so the timing cannot leak it.
+    """
+    from .data.accounts import verify_account
+
+    return verify_account(email, password)
+
+
+def account_by_id(account_id: UUID) -> Account | None:
+    """The account a signed cookie claims to be, or `None` when the row is gone.
+
+    Every gated request makes this read. It is the only thing that makes deleting an account
+    take effect, because a signed token has no sessions table to be revoked from.
+    """
+    from .data.accounts import account_by_id as repository_account
+
+    return repository_account(account_id)
+
+
+def delete_account(account_id: UUID) -> bool:
+    """Delete an account and, by the database's cascade, every rule it saved."""
+    from .data.accounts import delete_account as repository_delete
+
+    return repository_delete(account_id)

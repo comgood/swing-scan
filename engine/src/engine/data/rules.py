@@ -9,45 +9,23 @@ stays the only validator.
 
 from __future__ import annotations
 
-import os
 import uuid
-from collections.abc import Iterator
-from contextlib import contextmanager
 from typing import cast
 
 import psycopg
 
 from engine.contracts import Rule, SavedRule
 
-DATABASE_URL_ENV = "DATABASE_URL"
+from ._db import DATABASE_URL_ENV, configured, connect
+
+__all__ = ["DATABASE_URL_ENV", "configured", "delete_rule", "list_rules", "save_rule"]
 
 
-def configured() -> bool:
-    """Whether a database is configured at all. Absent means the routes answer 501."""
-    return bool(os.environ.get(DATABASE_URL_ENV))
+def save_rule(rule: Rule, account_id: uuid.UUID) -> SavedRule | None:
+    """Save a rule for this account, or `None` when it already has one by that name.
 
-
-@contextmanager
-def _connect() -> Iterator[psycopg.Connection[tuple[object, ...]]]:
-    """A connection for one request, opened and closed inside it.
-
-    Never a module level connection: on Lambda the execution environment is frozen between
-    invocations, so a socket held across one does not reliably survive, and the failure shows
-    up as a mystery error after an idle period rather than at the point of the mistake.
-
-    `prepare_threshold=0` because `DATABASE_URL` is the pooled endpoint, which is PgBouncer in
-    transaction mode: a prepared statement cannot outlive its checkout, and reusing one fails
-    with `prepared statement "_pg3_0" already exists`.
-    """
-    url = os.environ.get(DATABASE_URL_ENV)
-    if not url:
-        raise RuntimeError(f"{DATABASE_URL_ENV} is not set; saved rules are not available here.")
-    with psycopg.connect(url, prepare_threshold=0) as conn:
-        yield conn
-
-
-def save_rule(rule: Rule) -> SavedRule | None:
-    """Save a rule under its own name, or `None` when that name is already taken.
+    The owner is a parameter, never a field in the rule: the route takes it from the signed in
+    account, so a caller cannot write a row onto somebody else (spec 0015).
 
     `None` rather than an exception so the caller needs no import from this module, which keeps
     `psycopg` out of the import graph of a route that is disabled on the deployed function. It
@@ -56,29 +34,44 @@ def save_rule(rule: Rule) -> SavedRule | None:
     """
     new_id = uuid.uuid4()
     try:
-        with _connect() as conn:
+        with connect() as conn:
             conn.execute(
-                "insert into rules (id, name, rule) values (%s, %s, %s)",
-                (new_id, rule.name, rule.model_dump_json()),
+                "insert into rules (id, name, rule, account_id) values (%s, %s, %s, %s)",
+                (new_id, rule.name, rule.model_dump_json(), account_id),
             )
     except psycopg.errors.UniqueViolation:
+        # Unique on (account_id, lower(name)), so this is a name this account already used.
         return None
     return SavedRule(id=new_id, rule=rule)
 
 
-def list_rules() -> list[SavedRule]:
-    """Every saved rule, newest first. Returns whole rules, so loading one back needs no
-    second request."""
-    with _connect() as conn:
-        rows = conn.execute("select id, rule from rules order by created_at desc").fetchall()
+def list_rules(account_id: uuid.UUID) -> list[SavedRule]:
+    """This account's saved rules, newest first, whole, so loading one back needs no second
+    request.
+
+    Isolation is this `where`, not a filter applied after reading: a wrong owner returns no
+    rows rather than rows somebody then has to remember to drop (spec 0015, AC-3).
+    """
+    with connect() as conn:
+        rows = conn.execute(
+            "select id, rule from rules where account_id = %s order by created_at desc",
+            (account_id,),
+        ).fetchall()
     # psycopg types a row as tuple[object, ...]; the casts say what the two columns are.
     return [
         SavedRule(id=cast("uuid.UUID", row[0]), rule=Rule.model_validate(row[1])) for row in rows
     ]
 
 
-def delete_rule(rule_id: uuid.UUID) -> bool:
-    """Delete one rule. False when no rule has that id, which the route turns into a 404."""
-    with _connect() as conn:
-        cursor = conn.execute("delete from rules where id = %s", (rule_id,))
+def delete_rule(rule_id: uuid.UUID, account_id: uuid.UUID) -> bool:
+    """Delete one of this account's rules. False when it has no rule with that id.
+
+    The owner is in the `where`, so another account's rule matches nothing and is
+    indistinguishable from an id that was never real. The route answers 404 either way, which
+    is why it does not disclose that the rule exists (spec 0015, AC-3).
+    """
+    with connect() as conn:
+        cursor = conn.execute(
+            "delete from rules where id = %s and account_id = %s", (rule_id, account_id)
+        )
         return cursor.rowcount > 0

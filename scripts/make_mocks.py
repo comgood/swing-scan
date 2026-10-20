@@ -533,9 +533,10 @@ def app_with_no_market() -> TestClient:
     under a fresh empty directory, rather than at module scope. `make contracts` then writes
     the same mocks with or without a local `data/synthetic` from `make data`.
 
-    `DATABASE_URL` is dropped for the same reason: the rules routes read their gate once at
-    import (spec 0014), so `501.rules.json` would otherwise depend on whether the machine
-    running `make contracts` happens to have a database configured.
+    `DATABASE_URL` is dropped for the same reason: the rules and accounts routes read their
+    shared gate once at import (`api.auth`, specs 0014 and 0015), so `501.rules.json` would
+    otherwise depend on whether the machine running `make contracts` happens to have a
+    database configured.
     """
     import os  # local, so the whole no market fix stays in one region of this file
     from tempfile import TemporaryDirectory
@@ -545,13 +546,13 @@ def app_with_no_market() -> TestClient:
     with TemporaryDirectory(prefix="swing-scan-no-market-") as empty:
         os.environ[STORE_URI_ENV] = empty
         os.environ.pop("DATABASE_URL", None)
+        from api.auth import ENABLED
         from api.main import app  # loads its market from `empty`, and so finds none
-        from api.routes.rules import ENABLED
         from api.state import market
     if ENABLED:
         raise RuntimeError(
-            "the rules 501 mock needs the rules routes disabled, but they are enabled: "
-            "`api.routes.rules` was imported before DATABASE_URL was dropped"
+            "the rules and accounts 501 mocks need that surface disabled, but it is enabled: "
+            "`api.auth` was imported before DATABASE_URL was dropped"
         )
     if market is not None:
         raise RuntimeError(

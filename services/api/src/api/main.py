@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
+from typing import Any
 
 from fastapi import APIRouter, FastAPI, Request, Response
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
@@ -14,7 +17,8 @@ from engine.api import NotYetImplemented
 from engine.contracts import CONTRACT_VERSION
 
 from . import state
-from .routes import backtest, catalog, rules, scan
+from .auth import ENABLED as AUTH_ENABLED
+from .routes import auth, backtest, catalog, rules, scan
 from .settings import Settings
 
 settings = Settings.from_env()
@@ -37,6 +41,13 @@ app.add_middleware(
     # before the request is ever made.
     allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["Content-Type"],
+    # The session cookie (spec 0015). Without this the browser attaches it to nothing and
+    # every signed in request looks signed out, with no error anywhere to explain it.
+    #
+    # Only when accounts actually run here. The deployed function allows Vercel preview
+    # origins through `ALLOWED_ORIGIN_REGEX`, and there is no reason to make every one of them
+    # a credentialed origin on a public API for a feature that answers 501 there.
+    allow_credentials=AUTH_ENABLED,
 )
 
 
@@ -69,6 +80,7 @@ v1.include_router(catalog.router)
 v1.include_router(scan.router)
 v1.include_router(backtest.router)
 v1.include_router(rules.router)
+v1.include_router(auth.router)
 app.include_router(v1)
 
 
@@ -76,3 +88,24 @@ app.include_router(v1)
 async def not_yet_implemented(_: Request, exc: NotYetImplemented) -> JSONResponse:
     """Only this type maps to 501; a stray `NotImplementedError` stays a 500."""
     return JSONResponse(status_code=501, content={"detail": str(exc)})
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error(request: Request, exc: RequestValidationError) -> JSONResponse:
+    """FastAPI's 422 body, except that the auth routes never echo what was rejected.
+
+    The default body carries `input`, the value that failed. On `/auth/*` that value is the
+    password, so the default would hand a rejected password straight back in the response, and
+    AC-2 says a password is never readable anywhere. `SecretStr` masks `repr` but **not** this,
+    which a test pins.
+
+    Only the auth routes are stripped. Everywhere else `input` is what lets the rule builder
+    show which field went wrong (U-7), so dropping it project wide would break a real feature
+    to fix a problem those routes do not have.
+    """
+    errors: list[dict[str, Any]] = [dict(error) for error in exc.errors()]
+    if request.url.path.startswith("/api/v1/auth/"):
+        for error in errors:
+            error.pop("input", None)
+            error.pop("ctx", None)
+    return JSONResponse(status_code=422, content=jsonable_encoder({"detail": errors}))

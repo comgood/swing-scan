@@ -6,6 +6,7 @@ This package imports only the standard library, `pydantic` and `polars` (AC-15).
 """
 
 from ._errors import ContractModel, bounded
+from .account import Account, Credentials, Email, Password
 from .backtest import (
     Assumptions,
     BacktestRequest,
@@ -80,6 +81,7 @@ __all__ = [
     "SECURITIES_SCHEMA",
     "STOP_TYPES",
     "TEMPLATES",
+    "Account",
     "Assumptions",
     "BacktestRequest",
     "BacktestResponse",
@@ -90,9 +92,11 @@ __all__ = [
     "Condition",
     "ConfigRow",
     "ContractModel",
+    "Credentials",
     "DataMeta",
     "EdgeMetrics",
     "EdgeSplit",
+    "Email",
     "Entries",
     "Exit",
     "ExitConfig",
@@ -109,6 +113,7 @@ __all__ = [
     "NotImplementedBody",
     "Op",
     "Operand",
+    "Password",
     "Point",
     "PortfolioMetrics",
     "PortfolioResult",
