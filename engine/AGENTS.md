@@ -12,7 +12,7 @@ The `swing-engine` Python package (import name `engine`): all trading logic, mea
 | `tests/test_engine_boundary.py` | Proves the engine imports no web framework |
 | `src/engine/live/` | Local only Alpaca loader (feature 14, spec 0010): `python -m engine.live`, writing the same market schema to `data/live`. The HTTP transport is injected, so tests never call a vendor |
 | `src/engine/synthetic/` | Seeded synthetic market: `generate(seed) -> Market`, CLI `python -m engine.synthetic --seed 42 --out DIR` (spec 0006) |
-| `src/engine/data/store.py` | `read_market()`, `write_market()`, `market_dir()` (reads `SYNTHETIC_DATA_DIR`, default `data/synthetic`) |
+| `src/engine/data/store.py` | `read_market()`, `read_meta()`, `write_market()`, `market_uri()` (spec 0011): the dataset at `$MARKET_STORE_URI/$DATA_MODE`, default `data/synthetic`, a local directory or an `s3://` prefix read by the same code |
 | `src/engine/data/rules.py` | Saved rules in Postgres (spec 0014): four plain SQL statements, the whole `Rule` in one `jsonb` column, a connection opened per request |
 | `src/engine/data/sanity.py` | `check_market()`: `validate_market` plus the D-2 bar checks |
 | `src/engine/data/fixtures.py` | `load_fixture()` for bar numbered CSVs, `make_market()` from lists (spec 0002 fixture format) |
@@ -31,6 +31,7 @@ The `swing-engine` Python package (import name `engine`): all trading logic, mea
 uv run pytest engine/tests     # engine tests only
 make data                      # write the seed 42 market to data/synthetic
 make data-check                # CI: rebuild twice, same hashes, D-1 to D-3 hold
+make push-market STORE_URI=s3://bucket  # seed the store from data/synthetic (MODE=live needs ALLOW_LIVE=1)
 make load-live                 # local only: Alpaca daily bars into data/live, keys from env
 make dev-live                  # local only: the API in live mode on 127.0.0.1, with the web app
 ```
@@ -55,6 +56,9 @@ make dev-live                  # local only: the API in live mode on 127.0.0.1, 
 - Alpaca's free Basic plan has no SIP history: `feed=sip` answers 403, so the loader reads the IEX feed. IEX is a small share of real volume, so volume rules (`vol_ratio`, `avg_volume`) are not comparable to a full tape.
 - Rule compilation never uses `eval` or `exec`.
 - Tests for `data/` live in `engine/tests/dataset/`, because `.gitignore` ignores every folder named `data/`.
+- A dataset is three objects and `meta.parquet` is always written last: it carries the change key, so a reader that sees new meta is guaranteed the new bars behind it. `write_market()` keeps that order.
+- `store.py` reads `MARKET_STORE_URI` and `DATA_MODE` straight from the environment, never through the API's `Settings`: `api.state` loads the market at import, before `Settings` exists. The root is joined as a string, because `Path("s3://b/x")` collapses to `s3:/b/x`.
+- Only an absent dataset and a transient store failure become `FileNotFoundError`, which callers may tolerate (the routes answer 501). Everything else, access denied included, raises, so a broken store never serves. The classification matches Polars' message text; keep the `shortcut:` comment with it.
 - Saved rules use `psycopg` with plain SQL and no ORM: the `Rule` contract is the only validator, and the database owns identity (one name, case insensitive) and nothing else. Alembic is in the repo for the migration chain, not for models (`migrations/`, run with `make migrate`).
 - Never hold a connection across requests. `psycopg.connect(..., prepare_threshold=0)`: `DATABASE_URL` is Neon's pooled endpoint, which is PgBouncer in transaction mode, where a reused prepared statement fails. Migrations use `DATABASE_URL_UNPOOLED`.
 - Tests that need a real database skip when no `DATABASE_URL` is set, so CI stays green and the owner's local run is their evidence (the D-4 precedent).
@@ -74,6 +78,7 @@ make dev-live                  # local only: the API in live mode on 127.0.0.1, 
 - [0006 synthetic market](../docs/specs/0006-synthetic-market/index.md)
 - [0007 portfolio backtest core](../docs/specs/0007-portfolio-backtest-core/index.md) (exits, `step()`, the simulator, metrics)
 - [0009 exit lab](../docs/specs/0009-exit-lab/index.md) (trade mode, the random baseline, edge)
+- [0011 market data store](../docs/specs/0011-market-data-store/index.md) (`MARKET_STORE_URI`, `meta.parquet`, `scripts/push_market.py`)
 - [0014 saved rules](../docs/specs/0014-saved-rules/index.md) (`data/rules.py`, the use cases, the migration chain)
 
 _Drafted by /audit from the repo, worth a quick human pass. Edit freely: once a line stops matching this draft, later runs treat it as curated and will flag rather than overwrite it._

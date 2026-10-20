@@ -6,7 +6,9 @@ import { blockedStores, MemoryStorage, memoryStores } from "./memory-stores";
 import {
   isOverTrialLimit,
   recordTrial,
+  recordTrialData,
   SESSION_KEY,
+  TRIAL_DATA_KEY_PREFIX,
   TRIAL_KEY_PREFIX,
   TRIAL_WARNING_AT,
   type Trial,
@@ -172,6 +174,75 @@ describe("recordTrial edges (spec 0004 consequences)", () => {
       trialNumber: 4,
       sessionTotal: 5,
     });
+  });
+});
+
+// The dataset labels behind the counter's warning (spec 0013 AC-10). The fear this locks in is
+// in the spec's own words: folding the dataset into the existing array would wipe every count
+// ever recorded, because `readSet` treats a non array value as empty.
+describe("recordTrialData (spec 0013 AC-10)", () => {
+  it("records the dataset the run was computed on under a sibling key", () => {
+    const stores = memoryStores();
+    expect(recordTrialData(trial(STRUCTURE, "p1"), "2025-10-31", stores)).toEqual(["2025-10-31"]);
+    expect(stores.local().getItem(TRIAL_DATA_KEY_PREFIX + STRUCTURE)).toBe('["2025-10-31"]');
+  });
+
+  it("names every dataset seen, oldest first, when a count spans two of them", () => {
+    const stores = memoryStores();
+    recordTrialData(trial(STRUCTURE, "p1"), "2025-10-31", stores);
+    expect(recordTrialData(trial(STRUCTURE, "p2"), "2025-11-03", stores)).toEqual([
+      "2025-10-31",
+      "2025-11-03",
+    ]);
+  });
+
+  it("does not add the same dataset twice", () => {
+    const stores = memoryStores();
+    recordTrialData(trial(STRUCTURE, "p1"), "2025-10-31", stores);
+    expect(recordTrialData(trial(STRUCTURE, "p2"), "2025-10-31", stores)).toEqual(["2025-10-31"]);
+  });
+
+  it("leaves the counts completely alone, so a dataset change costs no trial", () => {
+    const stores = memoryStores();
+    recordTrial(trial(STRUCTURE, "p1", "p2"), stores);
+    const counts = stores.local().getItem(TRIAL_KEY_PREFIX + STRUCTURE);
+    const session = stores.session().getItem(SESSION_KEY);
+
+    recordTrialData(trial(STRUCTURE, "p1", "p2"), "2025-11-03", stores);
+
+    expect(stores.local().getItem(TRIAL_KEY_PREFIX + STRUCTURE)).toBe(counts);
+    expect(stores.session().getItem(SESSION_KEY)).toBe(session);
+    expect(recordTrial(trial(STRUCTURE, "p3"), stores)).toEqual({
+      trialNumber: 3,
+      sessionTotal: 3,
+    });
+  });
+
+  it("keeps a separate dataset list per structure key", () => {
+    const stores = memoryStores();
+    recordTrialData(trial(STRUCTURE, "p1"), "2025-10-31", stores);
+    expect(recordTrialData(trial("b".repeat(64), "p1"), "2025-11-03", stores)).toEqual([
+      "2025-11-03",
+    ]);
+  });
+
+  it("records nothing for a run with no pairs, exactly as recordTrial does", () => {
+    const stores = memoryStores();
+    expect(recordTrialData(trial(STRUCTURE), "2025-10-31", stores)).toEqual([]);
+    expect(stores.local().getItem(TRIAL_DATA_KEY_PREFIX + STRUCTURE)).toBeNull();
+  });
+
+  it("treats a corrupt stored value as empty and overwrites it", () => {
+    const local = new MemoryStorage();
+    local.setItem(TRIAL_DATA_KEY_PREFIX + STRUCTURE, '{"not":"a list"}');
+    const stores = { local: () => local, session: () => new MemoryStorage() };
+    expect(recordTrialData(trial(STRUCTURE, "p1"), "2025-11-03", stores)).toEqual(["2025-11-03"]);
+  });
+
+  it("returns an empty list when storage is blocked, rather than throwing", () => {
+    expect(recordTrialData(trial(STRUCTURE, "p1"), "2025-10-31", blockedStores("local"))).toEqual(
+      [],
+    );
   });
 });
 

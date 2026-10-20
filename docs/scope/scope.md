@@ -32,7 +32,7 @@ _Source of truth: acceptance criteria IDs (D, R, S, B, X, U) and settled default
 | 17 | Market data store | Slice 6 | in-progress |
 | 18 | One command local stack | Slice 6 | planned |
 | 19 | Market clock writer | Slice 6 | in-progress |
-| 20 | Live refresh and push | Slice 6 | in-progress |
+| 20 | Live refresh and push | Slice 6 | done |
 | 21 | Saved rules | Slice 7 | done |
 | 22 | Accounts | Slice 7 | planned |
 | 23 | Backtest runs as jobs | Slice 7 | planned |
@@ -304,7 +304,7 @@ Lane BE. A small job on a timer that appends one more simulated trading day to t
 - [ ] Test it: `/test market clock writer`
 Spec [0012](../specs/0012-market-clock-writer/index.md)
 
-### 20. Live refresh and push · in-progress
+### 20. Live refresh and push · done
 Lane FE and BE. The site notices new data by itself: an as of marker that moves, and the server pushing the change rather than the browser asking again and again. Holding a stream open rules out some hosting shapes, so this decision reaches past the UI. About 1 day, now closer to 2: spec 0013 found the honest version needs a contract change.
 **Done when:** an open page updates within seconds of the writer appending a day, with no reload; the as of date and the data mode banner stay honest; the page recovers on its own when the stream drops; and the hosted demo either works or falls back to asking on a timer.
 - [x] Design it (spec): `/architect live refresh and push` (signed off by the owner 2026-10-18; the decision is polling, not push, because Lambda bills a held open stream for every second it is open)
@@ -314,8 +314,8 @@ Lane FE and BE. The site notices new data by itself: an as of marker that moves,
   - [x] The poll: one query on a 30 s focused interval, failures swallowed, a null dataset rendering nothing (AC-1, AC-6, AC-7, AC-8, AC-11)
   - [x] The notice: a new component rather than `Banner`, with its `/ui` gallery entry, telling the person to reload rather than re-running anything for them (AC-4, AC-5, AC-13)
   - [x] Trial counts labelled with the dataset ends in a sibling key so no count is wiped, and the banner's existing behaviour confirmed unchanged (AC-9, AC-10)
-- [ ] Verify it: `/check verify live refresh and push`
-- [ ] Test it: `/test live refresh and push`
+- [x] Verify it: `/check verify live refresh and push` (2026-10-19, real Chrome over the DevTools protocol against the real API, with a stand in writer publishing a later dataset mid session: all 13 ACs met. AC-1 measured at 30 s from publish to notice, no reload; a blocked poll changed nothing and the next one recovered on its own)
+- [x] Test it: `/test live refresh and push` (2026-10-19: `recordTrialData` had no tests at all, so AC-10's sibling key is now locked in eight ways, including that recording a dataset never touches a count; plus one report level test that the notice changes no number and re-runs nothing, AC-5. 710 web tests green)
 Spec [0013](../specs/0013-live-refresh-push/index.md)
 
 ## Slice 7: Your own saved work

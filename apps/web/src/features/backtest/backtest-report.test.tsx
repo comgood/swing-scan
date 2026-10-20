@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 
+import { NEWER_DATA_TEXT } from "@/components/newer-data-notice";
 import { memoryStores } from "@/features/honesty/memory-stores";
 import { encodeRule } from "@/features/rule-builder";
 import { backtestHandler, mocks } from "@/mocks/handlers";
@@ -216,5 +217,31 @@ describe("BacktestReport with a ?r= link", () => {
     await runIt(user);
     await screen.findByRole("heading", { name: "Assumptions" });
     expect(bodies[0]!.rule).toEqual(mocks.templates[1]!.rule);
+  });
+
+  // covers: spec 0013 AC-5, the invariant in its own words: a poll may change a notice, it may
+  // never change a number. The component tests cover the notice itself; this is the one place
+  // the whole report is on screen, so it is the only place that can prove nothing re-ran.
+  it("shows the newer data notice without re-running anything or moving a number", async () => {
+    const bodies = recordBacktests();
+    server.use(
+      http.get("*/api/v1/meta", () =>
+        HttpResponse.json({ ...mocks.meta, data: { ...mocks.meta.data, end: "2026-01-02" } }),
+      ),
+    );
+    const { user } = renderReport();
+    await runIt(user);
+
+    const header = await screen.findByRole("region", { name: "Assumptions" });
+    const asOf = within(header).getByText(/^Data as of /).textContent;
+    const results = screen.getByRole("region", { name: "Results" });
+    const numbers = within(results).getByRole("table").textContent;
+
+    const notice = await screen.findByText(NEWER_DATA_TEXT);
+    // A status, never an alert: the numbers are still good, the dataset simply moved on.
+    expect(notice.closest('[role="status"]')).not.toBeNull();
+    expect(bodies).toHaveLength(1);
+    expect(within(header).getByText(/^Data as of /).textContent).toBe(asOf);
+    expect(within(results).getByRole("table").textContent).toBe(numbers);
   });
 });
